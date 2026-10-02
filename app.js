@@ -98,7 +98,8 @@ function showView(name){
   screen=name;for(const el of document.querySelectorAll('.view'))el.hidden=el.id!==name;
   document.body.classList.toggle('battle-active',name==='battle');if(name!=='battle')chosenTrio=null;
   // On a touch screen a battle goes full screen and asks for landscape.
-  if(name==='battle'&&matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>screen.orientation?.lock?.('landscape')).catch(()=>{});
+  if(name==='battle'&&matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});
+  if(name==='battle')window.scrollTo(0,0);
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle'].includes(name)));
   if(name!=='battle'){clearInput();sound.setScene('lobby');sound.resume();}
   if(name!=='wild')storyIntro=storyIntro&&name==='battle';
@@ -355,6 +356,9 @@ function bindControls(){
   $('difficulty').onchange=()=>{profile.level=$('difficulty').value;persist();};
   $('brand-home').onclick=()=>handleNavigation('lobby');document.querySelectorAll('[data-view]').forEach(el=>el.onclick=()=>handleNavigation(el.dataset.view));document.querySelectorAll('[data-home]').forEach(el=>el.onclick=()=>showView('lobby'));
   $('sound-toggle').onclick=()=>{profile.sound=!profile.sound;sound.unlock();sound.setEnabled(profile.sound);persist();};
+  // A pinch or double tap during a battle would zoom the page and move what the child sees.
+  for(const type of ['gesturestart','gesturechange','dblclick'])document.addEventListener(type,e=>{if(screen==='battle')e.preventDefault();},{passive:false});
+  document.addEventListener('touchmove',e=>{if(screen==='battle'&&(e.touches.length>1||!e.target.closest('dialog')))e.preventDefault();},{passive:false});
   $('rotate-skip').onclick=()=>{document.body.classList.add('portrait-ok');renderer.cam=null;};
   $('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{notify('אפשר לשחק גם בתצוגה הזאת.');}};
   $('help-open').onclick=openHelp;$('help-inline').onclick=openHelp;document.querySelectorAll('[data-close]').forEach(el=>el.onclick=()=>$(el.dataset.close).close());

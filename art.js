@@ -59,13 +59,13 @@ export function drawPortrait(canvas,p,id,t,dt,{active=false,locked=false,skin=nu
   for(let i=0;i<7;i++){const px=w*(.15+(i*.137)% .72),py=(h*.9-(t*14+i*32)%(h*.8));ellipse(ctx,px,py,1.5,1.5,c.color+(active?'aa':'44'));}
 }
 // Sideways phone: the whole play area, cropped tight. Upright phone: a close camera that follows the player.
-const PHONE_WIDE=window.matchMedia('(max-height:520px) and (orientation:landscape)'),PHONE_TALL=window.matchMedia('(max-width:620px) and (orientation:portrait)');
+const PHONE_WIDE=window.matchMedia('(max-height:600px) and (orientation:landscape)'),PHONE_TALL=window.matchMedia('(max-width:620px) and (orientation:portrait)');
 const PLAY_VIEW={x:72,y:26,w:1136,h:668};
 export class Renderer {
   constructor(canvas,art) {this.canvas=canvas;this.ctx=canvas.getContext('2d');this.art=art;this.puppets=[];this.skins=[null,null];this.clock=0;this.scale=1;this.offsetX=0;this.offsetY=0;this.shake=0;this.phone=false;this.cam=null;}
   swap(side,id,skin=null) {this.puppets[side]=createPuppet(id);this.skins[side]=skin;}
   setMatch(m,skins=[null,null]) {this.cam=null;this.puppets=m.actors.map(a=>createPuppet(a.id));this.skins=skins;}
-  resize() {this.wide=PHONE_WIDE.matches;this.phone=PHONE_TALL.matches;const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
+  resize() {this.wide=PHONE_WIDE.matches||PHONE_TALL.matches;this.phone=false;const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
     if(this.canvas.width!==Math.round(rect.width*dpr)||this.canvas.height!==Math.round(rect.height*dpr)){this.canvas.width=Math.round(rect.width*dpr);this.canvas.height=Math.round(rect.height*dpr);}
     this.scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height);this.offsetX=(rect.width-WORLD.width*this.scale)/2;this.offsetY=(rect.height-WORLD.height*this.scale)/2;
   }

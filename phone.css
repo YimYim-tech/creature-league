@@ -1,5 +1,9 @@
+/* During a battle the page itself never scrolls or zooms. */
+html:has(body.battle-active),body.battle-active{overflow:hidden;overscroll-behavior:none}
+body.battle-active .battle-view,body.battle-active .battle-view *{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+button{touch-action:manipulation}
 /* Phone battles: the arena fills the screen and the controls float over it. */
-@media (max-height:520px) and (orientation:landscape){
+@media (max-height:600px) and (orientation:landscape){
   .battle-active .battle-view{position:fixed;inset:0;max-width:none;padding:0;margin:0;min-height:0;display:block;z-index:20;background:#0b2026}
   .battle-active .arena-frame{position:absolute;inset:0;width:100%;height:100%;max-width:none;aspect-ratio:auto;border-radius:0;box-shadow:none;margin:0;background:#0b2026}
   /* The whole play area is shown; the HUD sits over the stands at the top, the controls in the bottom corners. */
@@ -33,7 +37,7 @@
   .battle-active:not(.portrait-ok) .rotate-hint{display:flex;position:fixed;inset:0;z-index:40;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;background:#0b1a22f2;color:#f3e6c8}
   .rotate-hint strong{font:900 28px var(--display,serif)}.rotate-hint span{font-size:16px;opacity:.85;max-width:260px}
   .rotate-phone{width:58px;height:98px;border:5px solid #e0b13a;border-radius:12px;animation:turn-phone 2.2s ease-in-out infinite}
-  .battle-active .arena-frame{aspect-ratio:1/1;max-width:none}
+  .battle-active .arena-frame{aspect-ratio:1136/668;max-width:none}
 }
 @keyframes turn-phone{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
 @media(prefers-reduced-motion:reduce){.rotate-phone{animation:none;transform:rotate(-90deg)}}
