@@ -1,0 +1,231 @@
+@charset "UTF-8";
+/* Crafted storybook theme. Materials, not outlines: parchment sheets with a paper grain,
+   dark walnut and thin antique-gold trim, embossed buttons, the painted map behind everything. */
+:root{
+  --night:#0d2330;--night-2:#143444;
+  --wood:#3a2416;--wood-2:#55361f;--wood-hi:#7a5232;
+  --gold:#b98f3e;--gold-hi:#e9cf8c;--gold-soft:#d6b46a;
+  --parchment:#f1e4c4;--parchment-2:#e4d0a2;--parchment-3:#d3b97f;
+  --ink:#2a1d11;--ink-soft:#5d4831;--ink-faint:#8d7553;
+  --brick:#b5402a;--brick-dark:#7a2615;--moss:#4f7d3a;--sea:#1f5a72;
+  --teal:var(--gold-hi);--muted:#c9d6d9;--line:#ffffff1f;
+  --display:'Frank Ruhl Libre','Heebo',serif;--text:'Rubik','Heebo',Arial,sans-serif;
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .25 0 0 0 0 .12 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --frame:0 0 0 1px #7d5a2e,0 0 0 4px var(--wood),0 0 0 5px var(--gold);
+  --sheet-shadow:var(--frame),0 18px 34px #0000006b;
+  font-family:var(--text);
+}
+body{color:var(--parchment);background:var(--night) url('./art/gen/story-map.jpg') center/cover fixed}
+body:before{display:block;background:radial-gradient(ellipse at 50% 20%,#0d233099,#0b1c27e6 60%,#08141cf5);z-index:-1}
+h1,h2,h3,.brand,.result-title,.card-name h2,.tcard-title h3,.cup-round h3,.upgrade-card h2{font-family:var(--display);font-weight:900;letter-spacing:0}
+em{color:var(--gold-hi);font-style:normal;text-decoration:none}
+.muted{color:#c4d0d2}
+
+/* Header: a walnut bar with a gold rule. */
+.header{background:linear-gradient(180deg,#3b2517,#24160c);border-bottom:0;box-shadow:0 2px 0 var(--gold),0 3px 0 #2a1a0e,0 10px 24px #0007;position:relative;z-index:2}
+.header:after{display:none}
+.brand{font-size:26px;color:var(--gold-hi);text-shadow:0 2px 0 #0008}
+.brand small{font-family:var(--text);font-weight:400;color:#d8c39a;font-size:12px}
+.brand-mark{width:46px;height:46px;border-radius:50%;clip-path:none;border:0;color:var(--wood);background:radial-gradient(circle at 35% 30%,#f6e2a6,var(--gold) 60%,#7e5d22);box-shadow:inset 0 0 0 2px #fff3c855,0 0 0 2px #2a1a0e,0 0 0 3px var(--gold),0 4px 10px #0008}
+.nav-item{font-family:var(--text);font-weight:500;font-size:16px;color:#e6d6b2;padding:8px 6px;margin:0;border:0;border-radius:0;background:none}
+.nav-item.active{color:var(--gold-hi);background:none}
+.nav-item.active:after{display:block;content:"";position:absolute;bottom:-25px;left:6px;right:6px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--gold-hi) 20%,var(--gold-hi) 80%,transparent)}
+.nav-badge{background:var(--brick);color:#fff3dc;border:0;box-shadow:0 0 0 2px var(--gold);animation:none}
+.icon-button{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 40% 30%,#6a4628,var(--wood));color:var(--gold-hi);border:0;box-shadow:0 0 0 2px var(--gold),0 3px 8px #0008}
+.icon-button:hover{background:radial-gradient(circle at 40% 30%,#7d5532,#4a2f1b);color:#fff3cf}
+.win-chip{color:#e6d6b2;font-family:var(--text)}.win-chip svg,.win-chip b{color:var(--gold-hi)}
+
+/* Small labels: gold lettering between two little stars. */
+.eyebrow{display:inline-flex;gap:8px;width:auto;font-family:var(--text);font-weight:700;font-size:13px;letter-spacing:.6px;color:var(--gold-hi);background:none;border:0;padding:0;transform:none;box-shadow:none}
+.eyebrow i{display:none}
+.eyebrow:before,.eyebrow:after{content:"✦";font-size:10px;color:var(--gold);opacity:.9}
+.micro-label{font-family:var(--text);color:var(--ink-faint);letter-spacing:.4px;font-weight:700}
+
+/* Headings */
+.lobby-heading h1,.section-heading h1,.cup-heading h1,.workshop-heading h1,.challenge-heading h1,.story-view h1,.castle-view h1,.wild-copy h1{font-size:clamp(36px,4.6vw,60px);line-height:1.1;color:var(--parchment);text-shadow:0 3px 0 #0009,0 0 24px #0006}
+.lobby-heading p,.cup-heading p,.workshop-heading p,.challenge-heading p,.castle-head p,.team-heading p,.album-progress,.wild-role{color:#dccfb0;font-size:16px}
+.subheading,.team-heading h2,.cup-path-title,.album-story-title,.wild-pick-title{font-family:var(--display);font-weight:900;color:var(--parchment);text-shadow:0 2px 0 #0009;font-size:26px}
+.team-heading h2 span{color:var(--gold-hi);font-family:var(--text);font-weight:500;font-size:16px}
+
+/* Buttons: embossed and trimmed in gold. */
+.button{font-family:var(--text);font-weight:700;letter-spacing:.2px;border:0;border-radius:12px;transition:transform .12s,filter .12s,box-shadow .12s}
+.button.primary{color:#fff4dc;background:linear-gradient(180deg,#d4593b 0%,#b5402a 55%,#953119 100%);text-shadow:0 1px 0 #5c1a0c;box-shadow:inset 0 1px 0 #ffcfaa88,inset 0 -3px 0 #0003,0 0 0 2px var(--gold),0 0 0 3px #3a1d0f,0 8px 16px #0007}
+.button.secondary{color:var(--ink);background:linear-gradient(180deg,#f7ecd2,#e2cd9c);box-shadow:inset 0 1px 0 #fff,inset 0 -3px 0 #0000001a,0 0 0 2px var(--gold),0 0 0 3px #3a1d0f,0 6px 12px #0006}
+.button:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.button:active{transform:translateY(1px);filter:brightness(.97)}
+.button:disabled{filter:grayscale(.4);opacity:.7}
+.back-link,.text-button{font-family:var(--text);font-weight:500;color:var(--gold-hi)}
+.back-link:hover,.text-button:hover{color:#fff3cf}
+
+/* Parchment sheets in a walnut-and-gold frame. */
+.journey-panel,.loadout,.training-options,.cup-build,.cup-ready,.cup-round,.winning-build,.total-card,.achievement,.table-wrap,.history-row,.wild-power,.wild-prize,.challenge-rules,.lobby-footer,.upgrade-card,.story-panel,.guide-bubble{
+  background:var(--grain),radial-gradient(ellipse at 50% 40%,#f6ead0,var(--parchment) 55%,var(--parchment-2));
+  color:var(--ink);border:0;border-radius:6px;box-shadow:var(--sheet-shadow)}
+.journey-panel *,.loadout *,.training-options *,.cup-build *,.cup-ready *,.cup-round *,.winning-build *,.total-card *,.achievement *,.table-wrap *,.history-row *,.wild-power *,.wild-prize *,.challenge-rules *,.lobby-footer *,.upgrade-card *,.story-panel *{color:inherit}
+.journey-panel p,.loadout p,.cup-round p,.wild-power p,.wild-prize small,.achievement small,.history-row small,.upgrade-card p,.challenge-rules p,.training-options p,.story-panel p{color:var(--ink-soft)!important}
+.journey-panel:before,.journey-panel:after{display:none}
+.journey-panel .eyebrow,.story-panel .eyebrow,.wild-prize strong,.cup-round .round-state{color:var(--brick)!important}
+.journey-panel h2,.story-panel h2{color:var(--ink)}
+.journey-track li>span,.cup-round .round-num{background:var(--parchment-2);border:1px solid var(--gold);color:var(--ink);box-shadow:inset 0 1px 0 #fff8}
+.journey-track .current>span{background:radial-gradient(circle at 40% 30%,#f6e2a6,var(--gold));color:var(--wood)}
+.journey-track .done>span{background:var(--moss);color:#f6ecd3}
+.journey-track small{color:var(--ink-faint)!important}
+.cup-round.current{box-shadow:0 0 0 1px #7d5a2e,0 0 0 4px var(--brick),0 0 0 5px var(--gold),0 18px 34px #0000006b}
+.cup-round.locked{filter:saturate(.6) brightness(.92)}
+.power-icon{background:radial-gradient(circle at 40% 30%,#fff7e0,var(--parchment-2));border:1px solid var(--gold);color:var(--brick)!important;box-shadow:inset 0 1px 0 #fff}
+.achievement.unlocked{background:var(--grain),radial-gradient(ellipse,#fff4d6,#f0d99f)}.achievement svg{color:var(--ink-faint)}.achievement.unlocked svg{color:var(--brick)}
+.history-outcome{border:1px solid var(--gold);color:var(--ink)!important;background:var(--parchment-2)}.history-outcome.won{background:var(--moss);color:#f6ecd3!important}
+th{color:var(--ink-soft)}td{border-color:#2a1d1120}
+.total-card strong{font-family:var(--display);color:var(--brick)!important}
+.build-chip{background:var(--parchment-2);border:1px solid var(--gold);color:var(--ink)}
+select{background:#fffaf0;color:var(--ink);border:1px solid var(--gold);border-radius:8px}
+.training-options summary{font-family:var(--text);font-weight:700}
+
+/* The team: each creature on a small framed stage. */
+.creature-card{background:var(--grain),linear-gradient(180deg,#f5e8ca,var(--parchment-2));color:var(--ink);border:0;border-radius:8px;box-shadow:0 0 0 1px #7d5a2e,0 0 0 3px var(--wood),0 0 0 4px var(--gold),0 12px 22px #0000005e;transition:transform .2s,box-shadow .2s}
+.creature-card:before{background:none}
+.creature-card .portrait{background:radial-gradient(ellipse at 50% 70%,color-mix(in srgb,var(--accent) 30%,#1d3a46),#0f2530 75%);border-bottom:2px solid var(--gold)}
+.creature-card:hover{transform:translateY(-4px)}
+.creature-card.selected{transform:translateY(-4px);box-shadow:0 0 0 1px #7d5a2e,0 0 0 3px var(--brick),0 0 0 5px var(--gold-hi),0 16px 28px #00000073}
+.creature-card .selected-mark{border:1px solid var(--gold);background:#0003}
+.creature-card.selected .selected-mark{background:var(--brick);color:#fff;border-color:var(--gold-hi)}
+.card-name h2{color:var(--ink);font-size:24px}.card-name span,.stat-grid small,.card-bottom,.card-bottom b{color:var(--ink-soft)!important}
+.stat-grid strong{color:var(--ink);font-family:var(--display)}
+.stat-bar{background:#2a1d1118;border-radius:3px}.stat-bar i{background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 65%,#000))!important}
+.element-label{color:#fff6e0;background:color-mix(in srgb,var(--accent) 55%,#2a1d11);border:1px solid var(--gold);border-radius:20px;padding:2px 9px;font-weight:700}
+.shirt-number{color:#ffffff14!important;font-family:var(--display)}
+.creature-card.locked{background:var(--grain),linear-gradient(180deg,#d9c79d,#c3ab78);filter:saturate(.75)}
+.creature-card.locked .card-name h2{color:var(--ink)}
+.wild-call{background:linear-gradient(180deg,#3d2717,#24160c);color:var(--gold-hi);border-radius:8px;box-shadow:0 0 0 1px var(--gold)}
+.creature-card.locked:hover .wild-call{background:linear-gradient(180deg,#d4593b,#953119);color:#fff}
+.team-heading .button{width:auto}
+
+/* Island intro */
+.wild-stage{border:0;border-radius:10px;box-shadow:0 0 0 2px #7d5a2e,0 0 0 6px var(--wood),0 0 0 7px var(--gold),0 22px 40px #0008}
+.wild-tag{background:linear-gradient(180deg,#3d2717,#24160c);color:var(--gold-hi);border:0;box-shadow:0 0 0 1px var(--gold);animation:none;font-family:var(--text);font-weight:700}
+.fighter-chip{background:var(--grain),var(--parchment);border:0;border-radius:10px;color:var(--ink);box-shadow:var(--frame),0 6px 12px #0006}
+.fighter-chip.chosen{box-shadow:0 0 0 1px #7d5a2e,0 0 0 3px var(--brick),0 0 0 5px var(--gold-hi),0 8px 16px #0007;transform:translateY(-2px)}
+.wild-prize svg{color:var(--brick)}
+
+/* Trading cards: printed frames with a gold hairline. */
+.tcard{--frame:#8fa9b3;background:linear-gradient(160deg,color-mix(in srgb,var(--frame) 80%,#fff),var(--frame) 40%,color-mix(in srgb,var(--frame) 70%,#000));border:0;box-shadow:0 0 0 1px #1b120a,inset 0 0 0 2px #ffffff55,0 14px 26px #00000073;border-radius:14px}
+.tcard.rarity-2{--frame:#8a6cc0}.tcard.rarity-3{--frame:#d6a73a}
+.tcard:before{background:var(--night-2);border:1px solid var(--gold);border-radius:10px}
+.tcard-art{border:0;box-shadow:0 0 0 1px var(--gold),0 0 0 3px #0b1a22}
+.tcard-title h3{text-shadow:0 2px 0 #000a;font-size:23px}
+.tcard-el{border:0;box-shadow:0 0 0 1px #0008}
+.tcard-bars i{background:#ffffff1a;border:0;box-shadow:inset 0 1px 2px #0008}.tcard-bars em{background:linear-gradient(90deg,color-mix(in srgb,var(--c) 75%,#fff),var(--c))}
+.tcard-special{background:#ffffff10;border:1px solid #e9cf8c40}
+.tcard.tcard-back{--frame:#d6a73a}
+.tcard.tcard-back:before{background:url('./art/gen/card-back.jpg') center/cover;border:1px solid var(--gold)}
+.tcard-back b{display:none}
+.tcard-back small{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:#0b1a22cc;padding:1px 10px;border-radius:10px;box-shadow:0 0 0 1px var(--gold)}
+.story-card .story-art{position:relative}.story-card .story-art img{position:absolute;inset:4% 6% 0;width:88%;height:96%;object-fit:contain;object-position:bottom center}
+.album-hint{font-family:var(--text);font-weight:700;background:linear-gradient(180deg,#3d2717,#24160c);color:var(--gold-hi);border:0;box-shadow:0 0 0 1px var(--gold)}
+.album-slot.fresh .album-hint{background:linear-gradient(180deg,#d4593b,#953119);color:#fff;animation:none}
+.album-slot.fresh .tcard{animation:none;transform:rotate(-2deg)}
+.album-meter{background:#0b1a22;border:0;height:14px;box-shadow:0 0 0 1px var(--gold),inset 0 2px 4px #000a}.album-meter i{background:linear-gradient(90deg,#f0d896,var(--gold))}
+
+/* Dialogs: a framed parchment page. */
+dialog{background:var(--grain),radial-gradient(ellipse at 50% 30%,#f8ecd2,var(--parchment) 60%,var(--parchment-2));color:var(--ink);border:0;border-radius:8px;box-shadow:0 0 0 1px #7d5a2e,0 0 0 6px var(--wood),0 0 0 7px var(--gold),0 30px 60px #000a}
+dialog::backdrop{background:#06121acc;backdrop-filter:blur(3px)}
+dialog h2,.result-title{color:var(--ink)}dialog p,.result-tip{color:var(--ink-soft)!important}
+.result-kicker{color:var(--brick);font-family:var(--text);font-weight:700}
+.result-icon{background:radial-gradient(circle at 40% 30%,#fff7e0,var(--parchment-2));border:0;box-shadow:0 0 0 2px var(--gold),0 6px 12px #0004;color:var(--brick)}
+.result-score strong,.result-stats strong{font-family:var(--display);color:var(--ink)}
+.result-stats>div,.result-score>div{background:#fff8e8aa;border:1px solid var(--gold-soft);color:var(--ink-soft)}
+.dialog-close{color:var(--ink)}
+.reveal-burst{background:repeating-conic-gradient(from 0deg,#d6a73a40 0 10deg,transparent 10deg 20deg)}
+#reveal-title{color:var(--ink);text-decoration:none}
+.reveal-dialog .eyebrow{color:var(--brick)}
+.skin-option{background:#fff8e8;border:1px solid var(--gold-soft);color:var(--ink)}.skin-option small{color:var(--ink-soft)}
+.skin-option.chosen{box-shadow:0 0 0 2px var(--brick),0 0 0 3px var(--gold-hi)}
+.skin-unlock{background:#fff4d6;border:1px solid var(--gold);color:var(--ink)}.skin-unlock small{color:var(--brick)}
+#card-dialog-title{color:var(--ink)!important;text-shadow:none;text-decoration:none}
+.card-dialog .eyebrow{color:var(--brick)}
+.notice{background:var(--grain),var(--parchment);color:var(--ink);border:0;box-shadow:var(--frame),0 10px 20px #0008;font-family:var(--text)}
+
+/* Battle: walnut-and-gold HUD around the painted arena. */
+.battle-active{background:var(--night)}
+.fighter-symbol{background:radial-gradient(circle at 40% 30%,#6a4628,var(--wood));color:var(--gold-hi)!important;border:0;box-shadow:0 0 0 2px var(--gold)}
+.fighter-lines b{font-family:var(--display);font-weight:900;font-size:21px}
+.health-track{background:#0b1a22;border:0;border-radius:6px;box-shadow:0 0 0 1px var(--gold),inset 0 2px 4px #000c}
+.health-track i{background:linear-gradient(180deg,#7fbf5e,#4f7d3a)!important;border-radius:5px}.rival-info .health-track i{background:linear-gradient(180deg,#e06a4c,#a3341f)!important}
+.match-clock{background:var(--grain),linear-gradient(180deg,#f6e9cb,var(--parchment-2));color:var(--ink);border:0;border-radius:10px;padding:4px 18px;box-shadow:var(--frame),0 8px 16px #0008}
+.match-clock small,.match-clock span{color:var(--ink-soft)!important}.match-clock strong{color:var(--ink);font-family:var(--display);font-weight:900}
+.match-clock.urgent strong{color:var(--brick)}
+.arena-frame{border:0;border-radius:8px;box-shadow:0 0 0 2px #7d5a2e,0 0 0 7px var(--wood),0 0 0 8px var(--gold),0 22px 44px #000a}
+.arena-tip,.match-toast{background:var(--grain),var(--parchment);color:var(--ink);border:0;box-shadow:0 0 0 1px var(--gold),0 6px 14px #0007;font-family:var(--text);font-weight:500}
+.boss-banner,.challenge-banner{background:linear-gradient(180deg,#3d2717,#24160c);color:var(--gold-hi);border:0;box-shadow:0 0 0 1px var(--gold);font-family:var(--text)}
+.action-button{font-family:var(--text);font-weight:700;border:0;border-radius:16px;color:var(--ink);background:linear-gradient(180deg,#f7ecd2,#dcc48e);box-shadow:inset 0 1px 0 #fff,inset 0 -4px 0 #0002,0 0 0 2px var(--gold),0 0 0 3px #3a1d0f,0 8px 16px #0007}
+.action-button.fire{color:#fff4dc;background:linear-gradient(180deg,#d4593b,#953119);text-shadow:0 1px 0 #5c1a0c}
+.action-button.special{background:linear-gradient(180deg,#f2d27e,#c99a3a)}
+.action-button small{color:inherit;opacity:.85}
+.action-button.held{transform:translateY(2px);filter:brightness(.95)}
+.joystick-ring{border:2px solid var(--gold);background:#0b1a2299;box-shadow:inset 0 2px 8px #000a}.joystick-knob{background:radial-gradient(circle at 40% 30%,#f7ecd2,#cdb27a);border:0;box-shadow:0 0 0 2px var(--gold),0 4px 8px #0008}
+.joystick small,.desktop-controls{color:#dccfb0}
+kbd{background:var(--parchment);color:var(--ink);border:1px solid var(--gold)}
+
+/* Story: the map in a gallery frame, the guide as a parchment speech bubble. */
+.story-panel{padding:18px;border-radius:6px}
+.story-panel h2{font-size:clamp(24px,2.8vw,34px)}
+.story-panel .button,.story-actions .button{width:auto}
+.story-panel .button.primary,.story-actions .button.primary,.castle-view .button.primary{border:0;border-radius:12px;box-shadow:inset 0 1px 0 #ffcfaa88,inset 0 -3px 0 #0003,0 0 0 2px var(--gold),0 0 0 3px #3a1d0f,0 8px 16px #0007}
+.story-panel .button.primary:hover,.story-actions .button.primary:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 #ffcfaa88,inset 0 -3px 0 #0003,0 0 0 2px var(--gold),0 0 0 3px #3a1d0f,0 10px 18px #0007}
+.story-map-mini,.map-frame{border:0;border-radius:4px;transform:none;box-shadow:0 0 0 2px #7d5a2e,0 0 0 7px var(--wood),0 0 0 8px var(--gold),0 18px 32px #0008}
+.story-map-mini:hover{transform:translateY(-2px)}
+.ship-marker{border:2px solid #3a1d0f;box-shadow:0 0 0 2px var(--gold),0 4px 8px #0008;background:var(--brick)}
+.ship-marker:after{background:var(--gold-hi)}
+.necklace{border-top:1px solid #b98f3e66}
+.story-view .necklace,.castle-view .necklace{background:linear-gradient(180deg,#3d2717,#24160c);border:0;box-shadow:0 0 0 1px var(--gold),0 8px 16px #0007}
+.gem{border:0;background:radial-gradient(circle at 35% 30%,#8f8676,#4a4338);box-shadow:0 0 0 2px var(--gold),inset 0 -3px 4px #0006}
+.gem.lit{background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--g) 40%,#fff),var(--g) 55%,color-mix(in srgb,var(--g) 60%,#000));box-shadow:0 0 0 2px var(--gold-hi),inset 0 -3px 4px #0005}
+.gem.lit:after{background:#ffffffd9}
+.gem.star{box-shadow:none;background:#4a4338}.gem.star.lit{background:linear-gradient(180deg,#fff0b8,#e0a72e)}
+.map-spot b{font-family:var(--text);font-weight:700;background:var(--grain),var(--parchment);border:0;box-shadow:0 0 0 1px var(--gold),0 4px 8px #0007;border-radius:20px;color:var(--ink)}
+.map-spot small{background:linear-gradient(180deg,#3d2717,#24160c);color:var(--gold-hi);box-shadow:0 0 0 1px var(--gold)}
+.spot-dot{border:0;box-shadow:0 0 0 2px var(--gold-hi),0 0 0 4px #3a1d0f,0 6px 12px #0008;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--g) 40%,#fff),var(--g))}
+.map-spot.locked .spot-dot{background:radial-gradient(circle at 35% 30%,#a59a87,#5d5546);color:#2a1d11}
+.map-spot.here .spot-dot{background:radial-gradient(circle at 35% 30%,#fff7d9,#f0cf74)}
+.guide-bubble{border-radius:14px 14px 14px 4px;padding:14px 20px}
+.guide-bubble b{color:var(--brick);font-family:var(--text);font-weight:700}
+.guide-bubble p{font-family:var(--text);font-weight:500;color:var(--ink)}
+.guide-face{filter:drop-shadow(0 8px 10px #0009)}
+.castle-stage{border:0;border-radius:6px;box-shadow:0 0 0 2px #7d5a2e,0 0 0 7px var(--wood),0 0 0 8px var(--gold),0 22px 40px #0008;background:radial-gradient(circle at 50% 45%,#fff5d6,#ecc970 45%,#9c7128 100%)}
+.star-piece{stroke:#3a1d0f;stroke-width:3}
+.castle-view .necklace .gem.spent{background:radial-gradient(circle at 35% 30%,#8f8676,#4a4338);box-shadow:0 0 0 2px var(--gold)}
+
+/* Loading */
+.loading-screen{background:var(--night) url('./art/gen/story-map.jpg') center/cover}
+.loading-screen:before{content:"";position:absolute;inset:0;background:#0b1c27d9}
+.loading-screen>*{position:relative}
+.loading-screen h1{font-family:var(--display);font-weight:900;color:var(--gold-hi);text-shadow:0 3px 0 #000a}
+.loading-mark{clip-path:none;border:0;border-radius:50%;color:var(--wood);background:radial-gradient(circle at 35% 30%,#f6e2a6,var(--gold) 60%,#7e5d22);box-shadow:0 0 0 2px #2a1a0e,0 0 0 3px var(--gold)}
+.load-track{background:#0b1a22;border:0;box-shadow:0 0 0 1px var(--gold)}.load-track i{background:linear-gradient(90deg,#f0d896,var(--gold))}
+
+@media(max-width:860px){.header{height:auto;flex-wrap:wrap;gap:8px 12px;padding:12px 16px 14px}.header nav{order:3;width:100%;justify-content:center;gap:18px}.nav-item.active:after{bottom:-12px}.win-chip span{display:none}.brand{font-size:22px}}
+@media(max-width:420px){.nav-item{font-size:14px}.header-tools{gap:6px}.header-tools .icon-button{width:34px;height:34px}}
+@media(prefers-reduced-motion:reduce){.button,.creature-card{transition:none}}
+.creature-card.selected{border:0}
+.tcard-back small{top:12px;bottom:auto}
+/* The painted walnut frame for the main sheets and every dialog. */
+.story-panel,.journey-panel,dialog{border:30px solid transparent;border-image:url('./art/gen/frame.png') 96 round;background-clip:padding-box;box-shadow:0 22px 40px #0000008c;border-radius:0}
+.story-panel,.journey-panel{padding:10px 14px}
+dialog{padding:16px 22px}
+@media(max-width:620px){.story-panel,.journey-panel,dialog{border-width:22px}}
+.story-panel,.journey-panel,dialog{border-width:36px;border-image:url('./art/gen/frame.png') 100 stretch}
+@media(max-width:620px){.story-panel,.journey-panel,dialog{border-width:26px}}
+.lobby-heading{justify-content:flex-start;gap:18px}.hero-guide{width:clamp(96px,14vw,170px);height:auto;flex-shrink:0;filter:drop-shadow(0 10px 14px #000b);animation:guide-bob 3.2s ease-in-out infinite}
+@keyframes guide-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+@media(prefers-reduced-motion:reduce){.hero-guide{animation:none}}
+/* Dialogs always fit the screen: the card shrinks with the viewport height instead of being cut. */
+dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
+.reveal-dialog{padding:8px 16px 12px;width:min(420px,calc(100vw - 24px))}
+.reveal-dialog .flip{width:min(250px,64vw,calc((100dvh - 360px) * .714));margin-top:8px}
+.reveal-dialog h2{margin:10px 0 2px;font-size:clamp(22px,4.2vh,30px)}
+.reveal-dialog p{font-size:13px;line-height:1.5;margin:0}
+.reveal-dialog .result-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.reveal-dialog .result-actions .button{margin:0;padding:11px 8px;font-size:15px;min-height:46px}
+.card-dialog .card-dialog-card{width:min(300px,100%,calc((100dvh - 140px) * .714));margin-inline:auto}
+@media(max-height:560px){.reveal-dialog p{display:none}.reveal-dialog .flip{width:min(200px,calc((100dvh - 250px) * .714))}}
+.reveal-dialog{overflow:hidden}

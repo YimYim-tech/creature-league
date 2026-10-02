@@ -1,0 +1,11 @@
+const CACHE='creature-league-v8';
+const FILES=['./','./index.html','./style.css','./app.js','./core.js','./art.js','./audio.js','./icon.svg','./manifest.webmanifest','./vendor/rig.js','./art/2026-09-15__Coastal-Arena__Background__v01__FINAL.png',...['water','storm','canyon','volcano','light','quake','nebula','forest','crystal'].map(n=>'./art/gen/card-'+n+'.jpg'),'./art/battle-music.mp3','./art/lobby-music.mp3',...['maimi','havzuk','slauz','lohatan','tehomon','zikuk','retetoz','tzlilon','shorshu','galgalor','windguard','seaguard','fireguard'].flatMap(id=>['rig.json','clips.json','parts.png'].map(ext=>'./art/'+id+'.'+ext))];
+FILES.push('./art/gen/card-back.jpg',...['sfx-card-flip','sfx-join-fanfare','voice-wild-battle','voice-victory','voice-new-creature','voice-new-card'].map(n=>'./art/gen/'+n+'.mp3'));
+FILES.push('./theme.css','./art/gen/frame.png',...['wind','sea','fire','mirror'].map(n=>'./art/gen/arena-'+n+'.jpg'),...['hello','castle','castle-door','wind-free','wind-guard','sea-free','sea-guard','fire-free','fire-guard','mirror-free','mirror-guard'].map(n=>'./art/gen/voice-shadow-'+n+'.mp3'),'./story.js',...['map.jpg','ron.png','little-shadow.png','egg.png','mask-shard.png'].map(n=>'./art/gen/story-'+n));
+FILES.push('./art/heebo-regular.ttf','./art/heebo-bold.ttf','./art/heebo-black.ttf','./upgrades.js');
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
+self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('creature-league-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET'||new URL(event.request.url).origin!==self.location.origin)return;
+  event.respondWith(fetch(event.request).then(response=>{if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(event.request,copy)));}return response;}).catch(async()=>{const cached=await caches.match(event.request);if(cached)return cached;if(event.request.mode==='navigate')return caches.match('./index.html');return Response.error();}));
+});
