@@ -58,16 +58,33 @@ export function drawPortrait(canvas,p,id,t,dt,{active=false,locked=false,skin=nu
   if(locked){ctx.save();ctx.font='900 '+Math.round(h*.22)+'px Heebo, Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=c.color;ctx.shadowColor=c.color;ctx.shadowBlur=18;ctx.fillText('?',w/2,h*.5);ctx.restore();}
   for(let i=0;i<7;i++){const px=w*(.15+(i*.137)% .72),py=(h*.9-(t*14+i*32)%(h*.8));ellipse(ctx,px,py,1.5,1.5,c.color+(active?'aa':'44'));}
 }
+const PHONE=window.matchMedia('(max-height:520px) and (orientation:landscape), (max-width:620px) and (orientation:portrait)');
 export class Renderer {
-  constructor(canvas,art) {this.canvas=canvas;this.ctx=canvas.getContext('2d');this.art=art;this.puppets=[];this.skins=[null,null];this.clock=0;this.scale=1;this.offsetX=0;this.offsetY=0;this.shake=0;}
-  setMatch(m,skins=[null,null]) {this.puppets=m.actors.map(a=>createPuppet(a.id));this.skins=skins;}
-  resize() {const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
+  constructor(canvas,art) {this.canvas=canvas;this.ctx=canvas.getContext('2d');this.art=art;this.puppets=[];this.skins=[null,null];this.clock=0;this.scale=1;this.offsetX=0;this.offsetY=0;this.shake=0;this.phone=false;this.cam=null;}
+  setMatch(m,skins=[null,null]) {this.cam=null;this.puppets=m.actors.map(a=>createPuppet(a.id));this.skins=skins;}
+  resize() {this.phone=PHONE.matches;const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
     if(this.canvas.width!==Math.round(rect.width*dpr)||this.canvas.height!==Math.round(rect.height*dpr)){this.canvas.width=Math.round(rect.width*dpr);this.canvas.height=Math.round(rect.height*dpr);}
     this.scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height);this.offsetX=(rect.width-WORLD.width*this.scale)/2;this.offsetY=(rect.height-WORLD.height*this.scale)/2;
   }
+  // On a phone the arena fills the screen and the camera follows the player up close.
+  follow(m,dt) {
+    if(!this.phone){this.cam=null;return;}
+    const w=this.w,h=this.h,k=Math.max(w/WORLD.width,h/WORLD.height)*1.25,[p,f]=m.actors,focus=m.ball&&m.ball.carrier!==0?m.ball:f;
+    const tx=p.x*.68+focus.x*.32,ty=(p.y-45)*.68+(focus.y-45)*.32;
+    if(!this.cam)this.cam={x:tx,y:ty};else{const t=Math.min(1,dt*4.5);this.cam.x+=(tx-this.cam.x)*t;this.cam.y+=(ty-this.cam.y)*t;}
+    const hw=w/2/k,hh=h/2/k,cx=hw*2>=WORLD.width?WORLD.width/2:Math.max(hw,Math.min(WORLD.width-hw,this.cam.x)),cy=hh*2>=WORLD.height?WORLD.height/2:Math.max(hh,Math.min(WORLD.height-hh,this.cam.y));
+    this.scale=k;this.offsetX=w/2-cx*k;this.offsetY=h/2-cy*k;
+  }
+  // A small arrow at the screen edge shows where an off-screen rival is.
+  drawOffscreen(m) {
+    const c=this.ctx,f=m.actors[1];if(f.out>0)return;const sx=this.offsetX+f.x*this.scale,sy=this.offsetY+(f.y-40)*this.scale,pad=26;
+    if(sx>pad&&sx<this.w-pad&&sy>pad&&sy<this.h-pad)return;
+    const x=Math.max(pad,Math.min(this.w-pad,sx)),y=Math.max(pad+40,Math.min(this.h-pad,sy)),ang=Math.atan2(sy-y,sx-x);
+    c.save();c.translate(x,y);c.rotate(ang);c.fillStyle=CREATURES[f.id].color;c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(16,0);c.lineTo(-10,-13);c.lineTo(-4,0);c.lineTo(-10,13);c.closePath();c.stroke();c.fill();c.restore();
+  }
   point(clientX,clientY) {const r=this.canvas.getBoundingClientRect();return {x:(clientX-r.left-this.offsetX)/this.scale,y:(clientY-r.top-this.offsetY)/this.scale+38};}
   render(m,dt,clock) {
-    this.resize();this.clock=clock;this.shadowed=!!m.story&&!m.mirror;const c=this.ctx;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.fillStyle='#0b2026';c.fillRect(0,0,this.w,this.h);
+    this.resize();this.follow(m,dt);this.clock=clock;this.shadowed=!!m.story&&!m.mirror;const c=this.ctx;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.fillStyle='#0b2026';c.fillRect(0,0,this.w,this.h);
     this.shake=Math.max(0,this.shake-dt*22);c.translate(this.offsetX,this.offsetY);c.scale(this.scale,this.scale);
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;if(!reduced&&this.shake>0)c.translate(Math.sin(clock*93)*this.shake,Math.cos(clock*117)*this.shake*.6);
     c.drawImage(this.art.arenas?.[m.arena]||this.art.arena,0,0,1280,720);
@@ -93,8 +110,10 @@ export class Renderer {
     for(const s of m.shots)this.drawShot(s,clock);
     for(const e of m.effects)this.drawEffect(e);
     if(m.wind)for(const a of m.actors)if(!(a.out>0))this.drawCarry(a,m);
+    if(this.phone){c.setTransform(this.dpr,0,0,this.dpr,0,0);this.drawOffscreen(m);}
     if(m.status==='countdown'){
-      const label=m.countdown>.3?String(Math.ceil(m.countdown-.3)):'קדימה!';c.save();c.fillStyle='#072c3b40';c.fillRect(0,0,1280,720);this.label(label,640,372,84,'#fff','center');this.label('קרב על הזירה',640,428,22,'#ffffff','center');c.restore();
+      if(this.phone){const k=this.h/720*.8;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.translate(this.w/2-640*k,this.h/2-390*k);c.scale(k,k);}
+      const label=m.countdown>.3?String(Math.ceil(m.countdown-.3)):'קדימה!';c.save();if(!this.phone){c.fillStyle='#072c3b40';c.fillRect(0,0,1280,720);}this.label(label,640,372,84,'#fff','center');this.label('קרב על הזירה',640,428,22,'#ffffff','center');c.restore();
     }
     if(m.status==='playing'&&m.time<5){this.label('אתם',m.actors[0].x,m.actors[0].y+42,18,'#08424b','center');}
   }

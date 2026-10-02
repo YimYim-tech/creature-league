@@ -87,9 +87,15 @@ export function confine(actor) {
 // Every mission keeps shooting, specials and dodges; only the goal changes.
 export const MODES={
   lava:{name:'טבעת הלבה',goal:'הלבה סוגרת את הזירה. שברו סלעים, אספו גחלי כוח ותגדלו.',duration:100},
-  wind:{name:'תפוס את הרוח',goal:'אספו 7 נוצות רוח והחזיקו אותן 10 שניות.',duration:120},
+  wind:{name:'תפוס את הרוח',goal:'אספו 6 נוצות רוח והחזיקו אותן 10 שניות.',duration:120},
+  ball:{name:'כדור הגאות',goal:'הכניסו את הפנינה לשער של היריב. מי שמבקיע 2 גולים מנצח.',duration:120},
+  trio:{name:'קרב השלישייה',goal:'שלושה יצורים מול שלושה. כשיצור נופל, הבא נכנס לזירה.',duration:150},
 };
-export const WIND_TARGET=6,WIND_HOLD=10,MAX_POWER=5;
+export const WIND_TARGET=6,WIND_HOLD=10,MAX_POWER=5,BALL_GOALS=2;
+// The goals sit at the two ends of the oval; the player defends the left one.
+export const GOALS=[{x:WORLD.cx-WORLD.rx+34,y:WORLD.cy,half:60},{x:WORLD.cx+WORLD.rx-34,y:WORLD.cy,half:60}];
+export const BALL_TUNE={aiKick:+(globalThis.process?.env?.AIKICK||260),drag:+(globalThis.process?.env?.DRAG||3),carry:0.82,rockX:150,rockY:100};
+const SPAWN=[{x:285,y:420},{x:995,y:420}];
 function setupMode(m,mode){
   m.mode=mode;m.duration=MODES[mode].duration;
   for(const a of m.actors){a.power=0;a.feathers=0;a.out=0;}
@@ -98,12 +104,52 @@ function setupMode(m,mode){
     for(const a of m.actors){a.spec={...a.spec,hp:Math.round(a.spec.hp*LAVA_STAMINA)};a.hp=a.spec.hp;}
     for(const [x,y] of [[640,300],[520,470],[760,470]])m.lava.embers.push({x,y,age:0});}
   if(mode==='wind'){m.wind={feathers:[],next:1.5,holder:-1,hold:0};m.covers=m.covers.filter((c,i)=>i<2);}
+  if(mode==='ball'){m.ball={x:WORLD.cx,y:WORLD.cy,vx:0,vy:0,carrier:-1,carryTime:0,noPick:[0,0],score:[0,0],overtime:false};m.covers=m.covers.filter((c,i)=>i>=2);
+    // Reef rocks guard each goal: a straight kick from far away usually hits one.
+    for(const G of GOALS)for(const dy of [-1,1])m.covers.push({x:G.x+(G.x<WORLD.cx?1:-1)*BALL_TUNE.rockX,y:G.y+dy*BALL_TUNE.rockY,r:30,hp:9999,maxHp:9999,reef:true});}
+  if(mode==='trio'){m.trio={teams:[m.teamIds[0],m.teamIds[1]],idx:[0,0]};}
 }
+// Respawning modes: a knocked-out creature leaves for a moment and comes back whole.
+function stepRespawns(m,dt,onKo){
+  for(const a of m.actors){
+    if(a.out>0){a.out-=dt;if(a.out<=0){a.out=0;a.hp=a.spec.hp;a.x=SPAWN[a.side].x;a.y=SPAWN[a.side].y;a.invincible=1.5;event(m,'respawn',{side:a.side});}continue;}
+    if(a.hp<=0){onKo(a);a.out=2.5;a.hp=0;event(m,'ko',{side:a.side});}}
+}
+function kickBall(m,a,big){const B=m.ball;if(B.carrier!==a.side||B.carryTime<.22)return;
+  B.carrier=-1;B.noPick[a.side]=.45;const sp=big?1050:740;B.vx=Math.cos(a.aim)*sp;B.vy=Math.sin(a.aim)*sp*.85;B.x=a.x+Math.cos(a.aim)*(a.radius+18);B.y=a.y+Math.sin(a.aim)*(a.radius+18);
+  a.attack=.2;event(m,'kick',{side:a.side,big});if(big)effect(m,'big-kick',a.x,a.y,{color:a.spec.color});}
+function looseBall(m,a,push=260){const B=m.ball;if(B.carrier!==a.side)return;B.carrier=-1;B.noPick[a.side]=.6;const ang=m.random()*Math.PI*2;B.vx=Math.cos(ang)*push;B.vy=Math.sin(ang)*push*.8;event(m,'ball-loose',{side:a.side});}
+function scoreGoal(m,side){const B=m.ball;B.score[side]++;event(m,'goal',{side,score:[...B.score]});effect(m,'goal',GOALS[1-side].x,GOALS[1-side].y,{color:'#ffe08a'});
+  if(B.score[side]>=BALL_GOALS||B.overtime){finish(m,side,'goals');return;}
+  Object.assign(B,{x:WORLD.cx,y:WORLD.cy,vx:0,vy:0,carrier:-1,carryTime:0,noPick:[0,0]});
+  for(const a of m.actors){a.x=SPAWN[a.side].x;a.y=SPAWN[a.side].y;a.hp=a.spec.hp;a.out=0;a.invincible=0;}
+  m.shots=[];m.waves=[];m.zones=[];m.status='countdown';m.countdown=1.6;}
+function stepBall(m,dt){const B=m.ball;
+  stepRespawns(m,dt,a=>looseBall(m,a,200));
+  for(let i=0;i<2;i++)B.noPick[i]=Math.max(0,B.noPick[i]-dt);
+  if(B.carrier>=0){const a=m.actors[B.carrier];B.carryTime+=dt;B.x=a.x+a.facing*(a.radius+12);B.y=a.y+6;}
+  else{B.carryTime=0;const drag=Math.max(0,1-dt*BALL_TUNE.drag);B.vx*=drag;B.vy*=drag;B.x+=B.vx*dt;B.y+=B.vy*dt;
+    for(const c of m.covers)if(c.hp>0){const dx=B.x-c.x,dy=B.y-c.y,d=length(dx,dy),r=c.r+16;if(d<r){const n=norm(dx||.01,dy);B.x=c.x+n.x*r;B.y=c.y+n.y*r;const dot=B.vx*n.x+B.vy*n.y;if(dot<0){B.vx-=1.7*dot*n.x;B.vy-=1.7*dot*n.y;}}}
+    for(const a of m.actors)if(!(a.out>0)&&a.hp>0&&B.noPick[a.side]<=0&&length(a.x-B.x,a.y-B.y)<a.radius+20){B.carrier=a.side;B.carryTime=0;event(m,'ball-pick',{side:a.side});break;}}
+  // A goal: the ball crosses either end inside the goal mouth.
+  for(let g=0;g<2;g++){const G=GOALS[g];if(Math.abs(B.y-G.y)<G.half&&(g===0?B.x<G.x:B.x>G.x)){scoreGoal(m,1-g);return;}}
+  const od=length((B.x-WORLD.cx)/(WORLD.rx-14),(B.y-WORLD.cy)/(WORLD.ry-10));
+  if(od>1){const nx=(B.x-WORLD.cx)/(WORLD.rx*WORLD.rx),ny=(B.y-WORLD.cy)/(WORLD.ry*WORLD.ry),n=norm(nx,ny);B.x=WORLD.cx+(B.x-WORLD.cx)/od;B.y=WORLD.cy+(B.y-WORLD.cy)/od;const dot=B.vx*n.x+B.vy*n.y;if(dot>0){B.vx-=1.6*dot*n.x;B.vy-=1.6*dot*n.y;}}
+}
+function stepTrio(m,dt){const T=m.trio;
+  for(let side=0;side<2;side++){const a=m.actors[side];if(a.hp>0)continue;
+    if(T.idx[side]>=2){finish(m,1-side,'trio');return;}
+    T.idx[side]++;const next=actor(T.teams[side][T.idx[side]],side);next.x=SPAWN[side].x;next.y=SPAWN[side].y;next.invincible=1.5;next.power=0;next.out=0;
+    m.actors[side]=next;m.shots=m.shots.filter(s=>s.owner!==1-side);effect(m,'swap',next.x,next.y,{color:next.spec.color});event(m,'swap',{side,id:next.id,left:2-T.idx[side]});}
+}
+export const trioLeft=(m,side)=>m.trio?2-m.trio.idx[side]+(m.actors[side].hp>0?1:0):0;
 // How much of the arena is still safe: 1 is the full oval, it closes to .45.
 export const LAVA_STAMINA=5.5;
 export const lavaScale=t=>1-.6*clamp((t-3)/40,0,1);
 const ovalDistance=(x,y)=>length((x-WORLD.cx)/WORLD.rx,(y-WORLD.cy)/WORLD.ry);
 function stepMode(m,dt){
+  if(m.ball){stepBall(m,dt);return;}
+  if(m.trio){stepTrio(m,dt);return;}
   if(m.lava){const L=m.lava;L.scale=lavaScale(m.time);
     if(m.time>1&&m.time<4&&!L.warned){L.warned=true;event(m,'lava-warning');}
     for(const a of m.actors){if(a.hp<=0)continue;
@@ -146,6 +192,11 @@ function modeGoal(m,a,p,d){
     if(best){const q=norm(best.e.x-a.x,best.e.y-a.y);return {x:q.x*2,y:q.y*2,keep:.35};}
     if(L.scale<.9){const target=m.covers.find(c=>c.hp>0&&a.power<MAX_POWER);if(target&&m.level!=='rookie'){/* shooting covers is left to the normal aim */}}
     return null;}
+  if(m.ball){const B=m.ball;
+    if(B.carrier===1){const G=GOALS[0],q=norm(G.x-a.x,G.y-a.y);return {x:q.x*2.4,y:q.y*2.4,keep:.25};}
+    if(B.carrier===0&&!(p.out>0)){const q=norm(p.x-a.x,p.y-a.y);return {x:q.x*1.8,y:q.y*1.8,keep:.4};}
+    if(B.carrier<0){const q=norm(B.x-a.x,B.y-a.y);return {x:q.x*2.2,y:q.y*2.2,keep:.3};}
+    return null;}
   if(m.wind){const W=m.wind;
     if(W.holder===1){const q=norm(a.x-p.x||.01,a.y-p.y);return {x:q.x*1.4,y:q.y*1.4,keep:.6};}
     if(W.holder===0&&p.out<=0){const q=norm(p.x-a.x,p.y-a.y);return {x:q.x*1.5,y:q.y*1.5,keep:.5};}
@@ -160,8 +211,11 @@ function actor(id,side,ids=[]) {
   return {id,side,spec,upgrades,x:side===0?285:995,y:420,hp:spec.hp,radius:spec.radius,fireCd:0,specialCd:0,dashCd:0,invincible:0,guard:0,stun:0,slow:0,root:0,windup:0,hit:0,attack:0,moveX:0,moveY:0,facing:side===0?1:-1,aim:side===0?0:Math.PI,
     stats:{shots:0,hits:0,damage:0,blocked:0,specials:0,dodges:0,healed:0,weakHits:0},trail:[]};
 }
-export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null}={}) {
+export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null}={}) {
   if(!LEVELS[level])throw new Error('Unknown difficulty');
+  // A trio match starts with the first creature of each team.
+  const teamIds=mode==='trio'?[(team||[player,'havzuk','slauz']).filter(id=>CREATURES[id]).slice(0,3),(rivalTeam||[rival,'lohatan','zikuk']).filter(id=>CREATURES[id]).slice(0,3)]:null;
+  if(teamIds){if(teamIds[0].length<3||teamIds[1].length<3)throw new Error('A trio needs three creatures');player=teamIds[0][0];rival=teamIds[1][0];upgrades=[];}
   const enemy=actor(rival,1);
   // An island guardian is the same creature, grown huge by the shadow.
   if(giant){enemy.spec={...enemy.spec,hp:Math.round(enemy.spec.hp*1.6),height:enemy.spec.height*1.3,radius:Math.round(enemy.spec.radius*1.25),damage:Math.round(enemy.spec.damage*1.1)};enemy.hp=enemy.spec.hp;enemy.radius=enemy.spec.radius;enemy.giant=true;}
@@ -169,6 +223,7 @@ export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date
   const match={id:seed+'-'+player+'-'+rival,random:seeded(seed),level,challenge:challenge===CHALLENGE.id?challenge:null,wild:WILD.includes(wild)&&wild===rival?wild:null,story:typeof story==='string'?story:null,arena:typeof arena==='string'?arena:null,mirror:!!mirror,actors:[actor(player,0,upgrades),enemy],time:0,duration:90,countdown:2.3,status:'countdown',winner:null,
     shots:[],waves:[],zones:[],effects:[],events:[],nextId:0,pickup:null,pickupAt:12,ai:{timer:0,angle:0,strafe:1,strafeTime:0,moveX:0,moveY:0,aimX:0,aimY:0,fire:false,special:false,dash:false},
     covers:[{x:449,y:350,r:35,hp:80,maxHp:80},{x:831,y:440,r:35,hp:80,maxHp:80},{x:650,y:237,r:28,hp:65,maxHp:65},{x:630,y:555,r:28,hp:65,maxHp:65}].map((c,i)=>({...c,...(challenge===CHALLENGE.id?{collapseAt:5+i*4}:{})}))};
+  match.teamIds=teamIds;
   if(MODES[mode])setupMode(match,mode);
   return match;
 }
@@ -180,6 +235,7 @@ function damage(m,a,raw,source,{pushX=0,pushY=0,special=false,hitAngle=null}={})
   const exposed=a.boss?.phase==='recover',front=a.boss&&['guard','windup'].includes(a.boss.phase)&&hitAngle!=null&&Math.cos(hitAngle-a.boss.angle)>Math.cos(1.05);
   if(source?.power)raw*=1+.12*source.power;
   if(m.wind&&special&&a.feathers>0&&a.invincible<=0)dropFeathers(m,a,1);
+  if(m.ball&&special&&m.ball.carrier===a.side&&a.invincible<=0)looseBall(m,a,320);
   const reduction=exposed?0:front?.8:a.guard>0?.72:a.spec.armor,amount=raw*(exposed?1.5:1)*(1-reduction),actual=Math.min(a.hp,amount);
   a.stats.blocked+=Math.max(0,raw-amount);a.hp=Math.max(0,a.hp-amount);a.hit=.17;
   if(front)effect(m,'guard-block',a.x,a.y,{color:'#ffe5a7'});
@@ -194,7 +250,7 @@ function resolveCover(m,a) {
   confine(a);
 }
 function move(m,a,x,y,dt,scale=1) {
-  const n=length(x,y)>1?norm(x,y):{x,y};const speed=a.spec.speed*scale*(a.slow>0?.55:1)*(a.windup>0?.2:1)*(a.root>0?0:1);
+  const n=length(x,y)>1?norm(x,y):{x,y};const speed=a.spec.speed*scale*(a.slow>0?.55:1)*(a.windup>0?.2:1)*(a.root>0?0:1)*(m.ball?.carrier===a.side?BALL_TUNE.carry:1);
   a.moveX=n.x;a.moveY=n.y;a.x+=n.x*speed*dt;a.y+=n.y*speed*dt*.8;confine(a);resolveCover(m,a);
 }
 export function shoot(m,a,angle,scale=1) {
@@ -263,6 +319,7 @@ export function dodge(m,a,input={}) {
   let n=norm(input.moveX||0,input.moveY||0);if(!input.moveX&&!input.moveY)n={x:Math.cos(a.aim),y:Math.sin(a.aim)};
   const start={x:a.x,y:a.y};for(let i=0;i<10;i++){a.x+=n.x*9;a.y+=n.y*7;confine(a);resolveCover(m,a);}
   a.dashCd=a.spec.dashCooldown;a.invincible=.24;
+  if(m.ball&&m.ball.carrier===1-a.side){const c=m.actors[1-a.side];if(length(c.x-a.x,c.y-a.y)<a.radius+c.radius+40&&c.invincible<=0){m.ball.carrier=a.side;m.ball.carryTime=0;m.ball.noPick[1-a.side]=.6;event(m,'steal',{side:a.side});effect(m,'steal',c.x,c.y,{color:a.spec.color});}}
   if(a.upgrades.includes('trail')){
     const kind=trailKind(a.id);
     if(kind==='shield')a.guard=Math.max(a.guard,1.6);
@@ -309,8 +366,10 @@ function aiInput(m,dt) {
   const lead=m.level==='rookie'?0:d/a.spec.shotSpeed*.55;
   const angle=Math.atan2(dy+p.moveY*p.spec.speed*lead*.8,dx+p.moveX*p.spec.speed*lead)+(m.random()-.5)*level.aimError*2;
   ai.aimX=a.x+Math.cos(angle)*500;ai.aimY=a.y+Math.sin(angle)*500;ai.fire=d<760&&!(p.out>0);
+  if(m.ball?.carrier===1){const G=GOALS[0],gd=length(G.x-a.x,G.y-a.y);ai.aimX=G.x;ai.aimY=G.y+(m.random()-.5)*G.half;ai.fire=gd<BALL_TUNE.aiKick*(m.level==='rookie'?.8:1);ai.special=gd<BALL_TUNE.aiKick*1.5&&gd>BALL_TUNE.aiKick&&a.specialCd<=0;}
   ai.special=m.time>level.specialDelay&&d<(a.spec.specialRange||300)&&d>(a.spec.specialMin||0)&&p.stun<=0;
-  ai.dash=m.level==='champion'&&d<130&&!['slauz','tehomon','seaguard'].includes(a.id)&&a.dashCd<=0;return ai;
+  ai.dash=m.level==='champion'&&d<130&&!['slauz','tehomon','seaguard'].includes(a.id)&&a.dashCd<=0;
+  if(m.ball?.carrier===0&&d<150&&a.dashCd<=0&&!(p.invincible>0))ai.dash=true;return ai;
 }
 function stepActor(m,a,input,dt,scale=1) {
   for(const key of ['fireCd','specialCd','dashCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);
@@ -324,6 +383,10 @@ function stepActor(m,a,input,dt,scale=1) {
   else {const target=m.actors[1-a.side],distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*.72,speed=target.spec.speed*(target.side?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
   if(Math.abs(Math.cos(a.aim))>.15)a.facing=Math.cos(a.aim)>0?1:-1;
   if(input.dash)dodge(m,a,input);
+  if(m.ball&&m.ball.carrier===a.side){
+    if(input.aimX==null){const G=GOALS[1-a.side];a.aim=Math.atan2(G.y-a.y,G.x-a.x);a.facing=Math.cos(a.aim)>0?1:-1;}
+    if(input.special&&a.specialCd<=0&&m.ball.carryTime>=.22){a.specialCd=a.spec.specialCooldown;kickBall(m,a,true);}else if(input.fire)kickBall(m,a,false);
+    return;}
   if(input.special)useSpecial(m,a,input);
   if(input.fire)shoot(m,a,a.aim,a.side?LEVELS[m.level].fireScale:1);
 }
@@ -333,6 +396,7 @@ function updateProjectiles(m,dt) {
     let hit=null,t=2;
     const target=m.actors[1-s.owner],enemyT=target.out>0?null:segmentCircle(s.x,s.y,x,y,target.x,target.y,s.r+target.radius);
     if(enemyT!=null){hit=target;t=enemyT;}
+    if(m.ball&&m.ball.carrier<0){const bt=segmentCircle(s.x,s.y,x,y,m.ball.x,m.ball.y,s.r+16);if(bt!=null&&bt<t){s.life=0;m.ball.vx+=s.vx*.4;m.ball.vy+=s.vy*.4;effect(m,'stone',m.ball.x,m.ball.y,{color:'#d6f1ff'});continue;}}
     for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){hit=c;t=ct;}}
     if(hit){s.x+=(x-s.x)*t;s.y+=(y-s.y)*t;s.life=0;if(s.explode)burst(m,s);
       if(hit.side!=null){damage(m,hit,s.damage,m.actors[s.owner],{hitAngle:Math.atan2(-s.vy,-s.vx),pushX:s.kind==='maimi'?s.vx*.018:0,pushY:s.kind==='maimi'?s.vy*.018:0});}
@@ -386,6 +450,8 @@ export function step(m,input={},dt=1/60) {
   if(m.pickup){m.pickup.life-=dt;for(const actor of m.actors)if(m.pickup&&actor.hp>0&&actor.hp<actor.spec.hp&&length(actor.x-m.pickup.x,actor.y-m.pickup.y)<actor.radius+22){
     const amount=Math.min(30,actor.spec.hp-actor.hp);actor.hp+=amount;actor.stats.healed+=amount;effect(m,'heal',actor.x,actor.y,{amount,color:'#91f5be'});event(m,'heal',{side:actor.side,amount});m.pickup=null;
   }if(m.pickup?.life<=0)m.pickup=null;}
+  if(m.ball){if(m.time>=m.duration){const B=m.ball;if(B.score[0]!==B.score[1])finish(m,B.score[0]>B.score[1]?0:1,'time');else if(!B.overtime){B.overtime=true;m.duration+=40;event(m,'overtime');}else{const difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,Math.abs(difference)<.002?-1:difference>0?0:1,'time');}}return;}
+  if(m.trio){if(m.time>=m.duration){const l0=trioLeft(m,0),l1=trioLeft(m,1),x=m.actors[0],y=m.actors[1],difference=x.hp/x.spec.hp-y.hp/y.spec.hp;finish(m,l0!==l1?(l0>l1?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
   if(m.wind){if(m.time>=m.duration){const lead=a.feathers-b.feathers,difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,lead?(lead>0?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
   if(a.hp<=0||b.hp<=0)finish(m,a.hp<=0&&b.hp<=0?-1:a.hp<=0?1:0);
   else if(m.time>=m.duration){const difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,Math.abs(difference)<.002?-1:difference>0?0:1,'time');}

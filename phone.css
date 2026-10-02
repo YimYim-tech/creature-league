@@ -1,0 +1,35 @@
+/* Phone battles: the arena fills the screen and the controls float over it. */
+@media (max-height:520px) and (orientation:landscape){
+  .battle-active .battle-view{position:fixed;inset:0;max-width:none;padding:0;margin:0;min-height:0;display:block;z-index:20;background:#0b2026}
+  .battle-active .arena-frame{position:absolute;inset:0;width:100%;height:100%;max-width:none;aspect-ratio:auto;border-radius:0;box-shadow:none;margin:0}
+  .battle-active .battle-top{position:absolute;top:max(6px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));z-index:6;max-width:none;margin:0;grid-template-columns:1fr 84px 1fr 36px;gap:10px;pointer-events:none}
+  .battle-active .battle-top .pause-button{pointer-events:auto;width:36px;height:36px}
+  .battle-active .fighter-info{background:#0b1a22b8;border-radius:12px;padding:4px 10px;gap:8px}
+  .battle-active .fighter-symbol{display:none}
+  .battle-active .fighter-lines b{font-size:15px}.battle-active .fighter-lines span,.battle-active .fighter-lines small{font-size:10px}
+  .battle-active .health-track{height:9px}
+  .battle-active .match-clock{padding:3px 6px;min-height:0}.battle-active .match-clock small,.battle-active .match-clock span{display:none}.battle-active .match-clock strong{font-size:24px;line-height:1.1}
+  .battle-active .mode-banner{top:60px}.battle-active .hold-count{top:92px}
+  .battle-active .arena-tip{display:none}
+  .battle-active .battle-controls{position:absolute;left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));z-index:6;max-width:none;margin:0;padding:0;background:none;border:0;box-shadow:none;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none}
+  .battle-active .battle-controls>*{pointer-events:auto}
+  .battle-active .joystick{display:block;width:132px;height:132px;opacity:.88;touch-action:none}.battle-active .joystick-ring{inset:6px;width:auto;height:auto}.battle-active .joystick-knob{width:50px;height:50px;inset:auto;left:41px;top:41px}.battle-active .joystick small{display:none}
+  .battle-active .desktop-controls{display:none}
+  .battle-active .action-buttons{display:flex;align-items:flex-end;gap:10px;width:auto}
+  .battle-active .action-button{flex:none;min-width:0;max-width:none;border-radius:50%;padding:0;min-height:0;display:grid;place-content:center;justify-items:center;gap:0;opacity:.92}
+  .battle-active .action-button kbd,.battle-active .action-button small{display:none}
+  .battle-active .action-button span{font-size:12px}
+  .battle-active .action-button.fire{width:82px;height:82px}.battle-active .action-button.special{width:66px;height:66px;margin-bottom:34px}.battle-active .action-button.dash{width:56px;height:56px;margin-bottom:62px}
+  .battle-active .action-button svg{width:22px;height:22px}
+  .battle-active .match-toast{top:auto;bottom:28%}
+}
+/* Upright phone: ask to turn it; the child can still play upright. */
+.rotate-hint{display:none}
+@media (max-width:620px) and (orientation:portrait){
+  .battle-active:not(.portrait-ok) .rotate-hint{display:flex;position:fixed;inset:0;z-index:40;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;background:#0b1a22f2;color:#f3e6c8}
+  .rotate-hint strong{font:900 28px var(--display,serif)}.rotate-hint span{font-size:16px;opacity:.85;max-width:260px}
+  .rotate-phone{width:58px;height:98px;border:5px solid #e0b13a;border-radius:12px;animation:turn-phone 2.2s ease-in-out infinite}
+  .battle-active .arena-frame{aspect-ratio:1/1;max-width:none}
+}
+@keyframes turn-phone{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
+@media(prefers-reduced-motion:reduce){.rotate-phone{animation:none;transform:rotate(-90deg)}}
