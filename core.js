@@ -88,13 +88,13 @@ export function confine(actor) {
 export const MODES={
   lava:{name:'טבעת הלבה',goal:'הלבה סוגרת את הזירה. שברו סלעים, אספו גחלי כוח ותגדלו.',duration:100},
   wind:{name:'תפוס את הרוח',goal:'אספו 6 נוצות רוח והחזיקו אותן 10 שניות.',duration:120},
-  ball:{name:'כדור הגאות',goal:'הכניסו את הפנינה לשער של היריב. מי שמבקיע 2 גולים מנצח.',duration:120},
+  ball:{name:'כדור הגאות',goal:'הכניסו את הפנינה לשער של היריב! מי שמגיע ראשון ל־5 גולים מנצח.',duration:90},
   trio:{name:'קרב השלישייה',goal:'שלושה יצורים מול שלושה. כשיצור נופל, הבא נכנס לזירה.',duration:150},
 };
-export const WIND_TARGET=6,WIND_HOLD=10,MAX_POWER=5,BALL_GOALS=2;
+export const WIND_TARGET=6,WIND_HOLD=10,MAX_POWER=5,BALL_GOALS=5;
 // The goals sit at the two ends of the oval; the player defends the left one.
 export const GOALS=[{x:WORLD.cx-WORLD.rx+34,y:WORLD.cy,half:60},{x:WORLD.cx+WORLD.rx-34,y:WORLD.cy,half:60}];
-export const BALL_TUNE={aiKick:+(globalThis.process?.env?.AIKICK||260),drag:+(globalThis.process?.env?.DRAG||3),carry:0.82,rockX:150,rockY:100};
+export const BALL_TUNE={aiKick:260,drag:3,carry:.75,fumble:3,rockX:150,rockY:100};
 const SPAWN=[{x:285,y:420},{x:995,y:420}];
 function setupMode(m,mode){
   m.mode=mode;m.duration=MODES[mode].duration;
@@ -104,7 +104,7 @@ function setupMode(m,mode){
     for(const a of m.actors){a.spec={...a.spec,hp:Math.round(a.spec.hp*LAVA_STAMINA)};a.hp=a.spec.hp;}
     for(const [x,y] of [[640,300],[520,470],[760,470]])m.lava.embers.push({x,y,age:0});}
   if(mode==='wind'){m.wind={feathers:[],next:1.5,holder:-1,hold:0};m.covers=m.covers.filter((c,i)=>i<2);}
-  if(mode==='ball'){m.ball={x:WORLD.cx,y:WORLD.cy,vx:0,vy:0,carrier:-1,carryTime:0,noPick:[0,0],score:[0,0],overtime:false};m.covers=m.covers.filter((c,i)=>i>=2);
+  if(mode==='ball'){m.ball={x:WORLD.cx,y:WORLD.cy,vx:0,vy:0,carrier:-1,carryTime:0,hits:0,noPick:[0,0],score:[0,0],overtime:false};m.covers=m.covers.filter((c,i)=>i>=2);
     // Reef rocks guard each goal: a straight kick from far away usually hits one.
     for(const G of GOALS)for(const dy of [-1,1])m.covers.push({x:G.x+(G.x<WORLD.cx?1:-1)*BALL_TUNE.rockX,y:G.y+dy*BALL_TUNE.rockY,r:30,hp:9999,maxHp:9999,reef:true});}
   if(mode==='trio'){m.trio={teams:[m.teamIds[0],m.teamIds[1]],idx:[0,0]};}
@@ -118,10 +118,10 @@ function stepRespawns(m,dt,onKo){
 function kickBall(m,a,big){const B=m.ball;if(B.carrier!==a.side||B.carryTime<.22)return;
   B.carrier=-1;B.noPick[a.side]=.45;const sp=big?1050:740;B.vx=Math.cos(a.aim)*sp;B.vy=Math.sin(a.aim)*sp*.85;B.x=a.x+Math.cos(a.aim)*(a.radius+18);B.y=a.y+Math.sin(a.aim)*(a.radius+18);
   a.attack=.2;event(m,'kick',{side:a.side,big});if(big)effect(m,'big-kick',a.x,a.y,{color:a.spec.color});}
-function looseBall(m,a,push=260){const B=m.ball;if(B.carrier!==a.side)return;B.carrier=-1;B.noPick[a.side]=.6;const ang=m.random()*Math.PI*2;B.vx=Math.cos(ang)*push;B.vy=Math.sin(ang)*push*.8;event(m,'ball-loose',{side:a.side});}
+function looseBall(m,a,push=260){const B=m.ball;if(B.carrier!==a.side)return;B.carrier=-1;B.hits=0;B.noPick[a.side]=.6;const ang=Math.atan2(WORLD.cy-a.y,WORLD.cx-a.x)+(m.random()-.5)*2.2;B.vx=Math.cos(ang)*push;B.vy=Math.sin(ang)*push*.8;event(m,'ball-loose',{side:a.side});}
 function scoreGoal(m,side){const B=m.ball;B.score[side]++;event(m,'goal',{side,score:[...B.score]});effect(m,'goal',GOALS[1-side].x,GOALS[1-side].y,{color:'#ffe08a'});
   if(B.score[side]>=BALL_GOALS||B.overtime){finish(m,side,'goals');return;}
-  Object.assign(B,{x:WORLD.cx,y:WORLD.cy,vx:0,vy:0,carrier:-1,carryTime:0,noPick:[0,0]});
+  Object.assign(B,{x:WORLD.cx,y:WORLD.cy,vx:0,vy:0,carrier:1-side,carryTime:0,hits:0,noPick:[0,0]});
   for(const a of m.actors){a.x=SPAWN[a.side].x;a.y=SPAWN[a.side].y;a.hp=a.spec.hp;a.out=0;a.invincible=0;}
   m.shots=[];m.waves=[];m.zones=[];m.status='countdown';m.countdown=1.6;}
 function stepBall(m,dt){const B=m.ball;
@@ -130,7 +130,7 @@ function stepBall(m,dt){const B=m.ball;
   if(B.carrier>=0){const a=m.actors[B.carrier];B.carryTime+=dt;B.x=a.x+a.facing*(a.radius+12);B.y=a.y+6;}
   else{B.carryTime=0;const drag=Math.max(0,1-dt*BALL_TUNE.drag);B.vx*=drag;B.vy*=drag;B.x+=B.vx*dt;B.y+=B.vy*dt;
     for(const c of m.covers)if(c.hp>0){const dx=B.x-c.x,dy=B.y-c.y,d=length(dx,dy),r=c.r+16;if(d<r){const n=norm(dx||.01,dy);B.x=c.x+n.x*r;B.y=c.y+n.y*r;const dot=B.vx*n.x+B.vy*n.y;if(dot<0){B.vx-=1.7*dot*n.x;B.vy-=1.7*dot*n.y;}}}
-    for(const a of m.actors)if(!(a.out>0)&&a.hp>0&&B.noPick[a.side]<=0&&length(a.x-B.x,a.y-B.y)<a.radius+20){B.carrier=a.side;B.carryTime=0;event(m,'ball-pick',{side:a.side});break;}}
+    for(const a of m.actors)if(!(a.out>0)&&a.hp>0&&B.noPick[a.side]<=0&&length(a.x-B.x,a.y-B.y)<a.radius+20){B.carrier=a.side;B.carryTime=0;B.hits=0;event(m,'ball-pick',{side:a.side});break;}}
   // A goal: the ball crosses either end inside the goal mouth.
   for(let g=0;g<2;g++){const G=GOALS[g];if(Math.abs(B.y-G.y)<G.half&&(g===0?B.x<G.x:B.x>G.x)){scoreGoal(m,1-g);return;}}
   const od=length((B.x-WORLD.cx)/(WORLD.rx-14),(B.y-WORLD.cy)/(WORLD.ry-10));
@@ -194,7 +194,7 @@ function modeGoal(m,a,p,d){
     return null;}
   if(m.ball){const B=m.ball;
     if(B.carrier===1){const G=GOALS[0],q=norm(G.x-a.x,G.y-a.y);return {x:q.x*2.4,y:q.y*2.4,keep:.25};}
-    if(B.carrier===0&&!(p.out>0)){const q=norm(p.x-a.x,p.y-a.y);return {x:q.x*1.8,y:q.y*1.8,keep:.4};}
+    if(B.carrier===0&&!(p.out>0)){const G=GOALS[1],near=length(p.x-a.x,p.y-a.y)<170,tx=near?p.x:p.x+(G.x-p.x)*.35,ty=near?p.y:p.y+(G.y-p.y)*.35,q=norm(tx-a.x,ty-a.y);return {x:q.x*2.2,y:q.y*2.2,keep:.3};}
     if(B.carrier<0){const q=norm(B.x-a.x,B.y-a.y);return {x:q.x*2.2,y:q.y*2.2,keep:.3};}
     return null;}
   if(m.wind){const W=m.wind;
@@ -235,7 +235,7 @@ function damage(m,a,raw,source,{pushX=0,pushY=0,special=false,hitAngle=null}={})
   const exposed=a.boss?.phase==='recover',front=a.boss&&['guard','windup'].includes(a.boss.phase)&&hitAngle!=null&&Math.cos(hitAngle-a.boss.angle)>Math.cos(1.05);
   if(source?.power)raw*=1+.12*source.power;
   if(m.wind&&special&&a.feathers>0&&a.invincible<=0)dropFeathers(m,a,1);
-  if(m.ball&&special&&m.ball.carrier===a.side&&a.invincible<=0)looseBall(m,a,320);
+  if(m.ball&&m.ball.carrier===a.side&&a.invincible<=0){m.ball.hits++;if(special||m.ball.hits>=BALL_TUNE.fumble)looseBall(m,a,320);else event(m,'ball-hit',{side:a.side,hits:m.ball.hits});}
   const reduction=exposed?0:front?.8:a.guard>0?.72:a.spec.armor,amount=raw*(exposed?1.5:1)*(1-reduction),actual=Math.min(a.hp,amount);
   a.stats.blocked+=Math.max(0,raw-amount);a.hp=Math.max(0,a.hp-amount);a.hit=.17;
   if(front)effect(m,'guard-block',a.x,a.y,{color:'#ffe5a7'});
@@ -319,7 +319,7 @@ export function dodge(m,a,input={}) {
   let n=norm(input.moveX||0,input.moveY||0);if(!input.moveX&&!input.moveY)n={x:Math.cos(a.aim),y:Math.sin(a.aim)};
   const start={x:a.x,y:a.y};for(let i=0;i<10;i++){a.x+=n.x*9;a.y+=n.y*7;confine(a);resolveCover(m,a);}
   a.dashCd=a.spec.dashCooldown;a.invincible=.24;
-  if(m.ball&&m.ball.carrier===1-a.side){const c=m.actors[1-a.side];if(length(c.x-a.x,c.y-a.y)<a.radius+c.radius+40&&c.invincible<=0){m.ball.carrier=a.side;m.ball.carryTime=0;m.ball.noPick[1-a.side]=.6;event(m,'steal',{side:a.side});effect(m,'steal',c.x,c.y,{color:a.spec.color});}}
+  if(m.ball&&m.ball.carrier===1-a.side){const c=m.actors[1-a.side];if(length(c.x-a.x,c.y-a.y)<a.radius+c.radius+40&&c.invincible<=0){m.ball.carrier=a.side;m.ball.carryTime=0;m.ball.hits=0;m.ball.noPick[1-a.side]=.6;event(m,'steal',{side:a.side});effect(m,'steal',c.x,c.y,{color:a.spec.color});}}
   if(a.upgrades.includes('trail')){
     const kind=trailKind(a.id);
     if(kind==='shield')a.guard=Math.max(a.guard,1.6);
@@ -458,7 +458,7 @@ export function step(m,input={},dt=1/60) {
 }
 export function resultStats(m) {const a=m.actors[0];return {damage:Math.round(a.stats.damage),blocked:Math.round(a.stats.blocked),accuracy:a.stats.shots?Math.round(a.stats.hits/a.stats.shots*100):0,specials:a.stats.specials,healed:Math.round(a.stats.healed),weakHits:a.stats.weakHits,seconds:Math.round(m.time)};}
 export const STORAGE_KEY='creature-league.v1';
-export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0},storyCards:[],missionStars:{},missionLosses:{}};}
+export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{}};}
 export function readProfile(storage) {
   const fresh=freshProfile();try{const data=JSON.parse(storage.getItem(STORAGE_KEY));if(!data||data.version!==1)return fresh;
     for(const key of ['wins','played','cups','challengeWins','bestStreak','streak'])fresh[key]=Number.isFinite(data[key])?clamp(Math.floor(data[key]),0,1e8):0;
@@ -468,7 +468,10 @@ export function readProfile(storage) {
     for(const id of Object.keys(CREATURES)){const c=data.creatures?.[id];if(c&&Number.isFinite(c.wins)&&Number.isFinite(c.played))fresh.creatures[id]={wins:clamp(c.wins,0,1e8),played:clamp(c.played,0,1e8),damage:Number.isFinite(c.damage)?clamp(c.damage,0,1e10):0};}
     if(data.cup&&Number.isInteger(data.cup.stage)&&data.cup.stage>=0&&data.cup.stage<3)fresh.cup={stage:data.cup.stage,player:CREATURES[data.cup.player]?data.cup.player:fresh.selected,upgrades:cleanUpgrades(data.cup.upgrades).slice(0,data.cup.stage)};
     fresh.unlocked=Array.isArray(data.unlocked)?[...new Set(data.unlocked.filter(id=>WILD.includes(id)))]:[];
-    fresh.story={done:Number.isInteger(data.story?.done)?clamp(data.story.done,0,100):0};
+    {let done=Number.isInteger(data.story?.done)?clamp(data.story.done,0,100):0;
+    // Version 3 added the tide ball before the sea guardian (step 6) and the trio gate before the castle (step 13).
+    if((data.story?.v||2)<3)done+=(done>6?1:0)+(done>13?1:0);
+    fresh.story={done,v:3};}
     for(const key of ['missionStars','missionLosses'])if(data[key]&&typeof data[key]==='object')for(const [id,n] of Object.entries(data[key]))if(/^[a-z0-9-]{1,32}$/.test(id)&&Number.isFinite(n))fresh[key][id]=clamp(Math.floor(n),0,key==='missionStars'?3:99);
     fresh.storyCards=Array.isArray(data.storyCards)?[...new Set(data.storyCards.filter(id=>typeof id==='string'&&/^[a-zA-Z]{1,24}$/.test(id)))]:[];
     if(Array.isArray(data.newCards))fresh.newCards=[...new Set(data.newCards.filter(id=>isUnlocked(fresh,id)||fresh.storyCards.includes(id)))];

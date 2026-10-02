@@ -1,8 +1,8 @@
 import {Skeleton,Animator,drawSkeleton} from './vendor/rig.js';
-import {CREATURES,WORLD,clamp,skinById} from './core.js';
+import {CREATURES,WORLD,clamp,skinById,GOALS,BALL_GOALS} from './core.js';
 export const ARENA_URL='./art/2026-09-15__Coastal-Arena__Background__v01__FINAL.png';
 // Each island of the necklace journey has its own painted arena; a missing one falls back to the coast.
-export const ISLAND_ARENAS=['wind','sea','fire','mirror'];
+export const ISLAND_ARENAS=['wind','sea','fire','mirror','castle'];
 const loaded=new Map();
 function loadImage(url) {return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Image failed: '+url));img.src=url;});}
 export async function loadArt(onProgress=()=>{}) {
@@ -61,6 +61,7 @@ export function drawPortrait(canvas,p,id,t,dt,{active=false,locked=false,skin=nu
 const PHONE=window.matchMedia('(max-height:520px) and (orientation:landscape), (max-width:620px) and (orientation:portrait)');
 export class Renderer {
   constructor(canvas,art) {this.canvas=canvas;this.ctx=canvas.getContext('2d');this.art=art;this.puppets=[];this.skins=[null,null];this.clock=0;this.scale=1;this.offsetX=0;this.offsetY=0;this.shake=0;this.phone=false;this.cam=null;}
+  swap(side,id,skin=null) {this.puppets[side]=createPuppet(id);this.skins[side]=skin;}
   setMatch(m,skins=[null,null]) {this.cam=null;this.puppets=m.actors.map(a=>createPuppet(a.id));this.skins=skins;}
   resize() {this.phone=PHONE.matches;const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
     if(this.canvas.width!==Math.round(rect.width*dpr)||this.canvas.height!==Math.round(rect.height*dpr)){this.canvas.width=Math.round(rect.width*dpr);this.canvas.height=Math.round(rect.height*dpr);}
@@ -95,6 +96,7 @@ export class Renderer {
     for(const cover of m.covers)if(cover.hp<=0)this.drawRubble(cover);
     if(m.lava)for(const e of m.lava.embers)this.drawEmber(e,clock);
     if(m.wind)for(const f of m.wind.feathers)this.drawFeather(f,clock);
+    if(m.ball){this.drawGoals(m,clock);if(m.ball.carrier<0)this.drawBall(m,clock);}
     for(const z of m.zones)this.drawZone(z,clock);
     for(const a of m.actors)if(a.boss)this.drawBossPlan(a,clock);
     if(m.pickup)this.drawPickup(m.pickup,clock);
@@ -110,6 +112,7 @@ export class Renderer {
     for(const s of m.shots)this.drawShot(s,clock);
     for(const e of m.effects)this.drawEffect(e);
     if(m.wind)for(const a of m.actors)if(!(a.out>0))this.drawCarry(a,m);
+    if(m.ball&&m.ball.carrier>=0)this.drawBall(m,clock);
     if(this.phone){c.setTransform(this.dpr,0,0,this.dpr,0,0);this.drawOffscreen(m);}
     if(m.status==='countdown'){
       if(this.phone){const k=this.h/720*.8;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.translate(this.w/2-640*k,this.h/2-390*k);c.scale(k,k);}
@@ -161,6 +164,32 @@ export class Renderer {
     c.fillStyle=hold?'#ffcf3a':'#f3e6c8';c.strokeStyle='#2a1d11';c.lineWidth=2;c.beginPath();c.roundRect(-26,-13,52,26,13);c.fill();c.stroke();
     c.save();c.translate(-12,0);c.rotate(-.6);c.beginPath();c.moveTo(-8,0);c.quadraticCurveTo(0,-6,9,0);c.quadraticCurveTo(0,6,-8,0);c.fillStyle='#3cc7c9';c.fill();c.restore();
     c.restore();this.label(String(a.feathers),a.x+9,y+1,18,'#2a1d11','center');}
+  // Tide gates: the left one is yours to defend, the right one is where you score.
+  drawGoals(m,t){const c=this.ctx;
+    for(let g=0;g<2;g++){const G=GOALS[g],dir=g===0?-1:1,col=g===0?'#59c9ff':'#ffcf5a',top=G.y-G.half,bot=G.y+G.half,H=78;
+      c.save();c.globalAlpha=.22+.06*Math.sin(t*3);ellipse(c,G.x,G.y,110,G.half+34,col);c.restore();
+      // Water curtain and net between the posts.
+      c.save();c.beginPath();c.moveTo(G.x,top-H);c.lineTo(G.x,bot-H);c.lineTo(G.x,bot);c.lineTo(G.x,top);c.closePath();
+      c.beginPath();c.moveTo(G.x,top);c.lineTo(G.x+dir*34,top-12);c.lineTo(G.x+dir*34,bot-12);c.lineTo(G.x,bot);c.closePath();c.fillStyle=col+'55';c.fill();
+      c.beginPath();c.rect(G.x-6,top-H,12,bot-top);c.fillStyle=col+'66';c.fill();
+      c.strokeStyle='#ffffffaa';c.lineWidth=1.5;for(let i=0;i<=6;i++){const y=top+(bot-top)*i/6;c.beginPath();c.moveTo(G.x,y-H*(1-i/6)*0);c.lineTo(G.x+dir*34,y-12);c.stroke();}
+      for(let i=0;i<4;i++){const y0=top-H+((t*50+i*36)%(bot-top+H*0));c.strokeStyle='#ffffffcc';c.lineWidth=2;c.beginPath();c.moveTo(G.x-7,y0);c.quadraticCurveTo(G.x,y0-5,G.x+7,y0);c.stroke();}
+      c.restore();
+      // Posts and crossbar.
+      for(const py of [top,bot]){ellipse(c,G.x,py+4,16,6,'#00000055');c.fillStyle='#efe2c4';c.strokeStyle='#4a2f14';c.lineWidth=3;c.beginPath();c.roundRect(G.x-9,py-H,18,H+4,6);c.fill();c.stroke();}
+      c.lineWidth=10;c.strokeStyle='#4a2f14';c.beginPath();c.moveTo(G.x,top-H);c.lineTo(G.x,bot-H);c.stroke();c.lineWidth=6;c.strokeStyle='#efe2c4';c.stroke();
+      for(const py of [top,bot]){glow(c,G.x,py-H-4,22,col+'aa');ellipse(c,G.x,py-H-4,9,9,col,'#4a2f14',2);}
+      const name=g===0?'השער שלכם':'שער היריב',show=m.time<8||m.status==='countdown';
+      if(show)this.label(name,G.x-dir*70,top-H-26,22,g===0?'#0d4f78':'#7a4a00','center');
+    }
+    if(m.ball.carrier===0&&m.time>=8){const G=GOALS[1],a=.6+.4*Math.sin(t*6);c.save();c.globalAlpha=a;this.label('תבקיעו כאן!',G.x-80,G.y-G.half-104,26,'#7a4a00','center');c.restore();}
+  }
+  drawBall(m,t){const c=this.ctx,B=m.ball,free=B.carrier<0,carrier=free?null:m.actors[B.carrier],lift=free?16+Math.sin(t*4)*3:(carrier.spec.height*.45);
+    const x=B.x,y=B.y;if(free){ellipse(c,x,y,16,6,'#00000044');c.save();c.globalAlpha=.45+.25*Math.sin(t*5);ellipse(c,x,y,30+6*Math.sin(t*5),11,null,'#bffcff',3);c.restore();}
+    const g=c.createRadialGradient(x-5,y-lift-6,2,x,y-lift,17);g.addColorStop(0,'#ffffff');g.addColorStop(.45,'#f7dcea');g.addColorStop(1,'#a58ccf');
+    glow(c,x,y-lift,30,'#e8f6ff88');c.fillStyle=g;c.strokeStyle='#3a2a4a';c.lineWidth=2;c.beginPath();c.arc(x,y-lift,18,0,Math.PI*2);c.fill();c.stroke();ellipse(c,x-5,y-lift-6,4,2.5,'#ffffff');
+    if(carrier){const hy=carrier.y-carrier.spec.height*(1+.07*(carrier.power||0))-34;for(let i=0;i<3;i++)ellipse(c,carrier.x-18+i*18,hy,6.5,6.5,i<B.hits?'#e8432c':'#f3e6c8','#2a1d11',2);}
+  }
   drawDizzy(a){const c=this.ctx,y=a.y-a.spec.height-30,t=this.clock;c.save();c.globalAlpha=.9;ellipse(c,a.x,y,34,11,null,'#c9a7ff',3);
     for(let i=0;i<3;i++){const ang=t*5+i*2.09;star(c,a.x+Math.cos(ang)*34,y+Math.sin(ang)*11,7,i?'#ffe57a':'#ffffff');}this.label('מהופנט!',a.x,y-24,17,'#5b2ea6');c.restore();}
   drawRoots(a){const c=this.ctx;c.save();for(let i=0;i<7;i++){const ang=i*.9+.3,len=a.radius*1.6;line(c,[[a.x+Math.cos(ang)*a.radius*1.4,a.y+Math.sin(ang)*a.radius*.6+6],[a.x+Math.cos(ang)*a.radius*.4,a.y-len*.5],[a.x+Math.cos(ang+1)*a.radius*.25,a.y-len]],i%2?'#5c8c2c':'#8fcf55',6);}c.restore();}
@@ -228,6 +257,10 @@ export class Renderer {
     if(e.type==='ember'){for(let i=0;i<10;i++){const ang=i*.63,r=10+p*70;ellipse(c,e.x+Math.cos(ang)*r,e.y-50+Math.sin(ang)*r*.6,4*(1-p),4*(1-p),'#ffb43a');}this.label('+כוח',e.x,e.y-130-p*30,22,'#8a2c0a');}
     if(e.type==='burn')ellipse(c,e.x,e.y-20-p*30,6*(1-p),6*(1-p),'#ff7a2c');
     if(e.type==='blown'){for(let i=0;i<12;i++){const ang=i*.52,r=p*120;ellipse(c,e.x+Math.cos(ang)*r,e.y-50+Math.sin(ang)*r*.6,7*(1-p),3*(1-p),'#cfffff');}this.label('נוצות עפו!',e.x,e.y-110-p*30,22,'#16626a');}
+    if(e.type==='goal'){for(let i=0;i<18;i++){const ang=i*.35,r=20+p*190;ellipse(c,e.x+Math.cos(ang)*r*.6,e.y-40+Math.sin(ang)*r,8*(1-p),8*(1-p),i%2?'#ffe08a':'#ffffff');}this.label('גול!',e.x+(e.x<640?90:-90),e.y-90-p*40,72,'#ffd23a');}
+    if(e.type==='steal')this.label('נחטף!',e.x,e.y-120-p*40,30,'#ffffff');
+    if(e.type==='swap'){ellipse(c,e.x,e.y,40+p*120,(40+p*120)*.4,null,e.color||'#fff',5);}
+    if(e.type==='big-kick'){ellipse(c,e.x,e.y,30+p*90,(30+p*90)*.4,null,e.color||'#fff',4);}
     if(e.type==='dizzy')this.label('מהופנט!',e.x,e.y-125-p*30,22,'#6b3fbf');
     if(e.type==='rooted')this.label('נתפס!',e.x,e.y-120-p*30,22,'#2f6a1c');
     if(e.type==='burrow'){for(let i=0;i<6;i++){const q=i/5;ellipse(c,e.from.x+(e.x-e.from.x)*q,e.from.y+(e.y-e.from.y)*q,16*(1-p),7*(1-p),'#8a5a2c99');}ellipse(c,e.x,e.y,40+p*40,16+p*16,null,'#e0a96d',4);}

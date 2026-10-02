@@ -22,6 +22,11 @@ export class Sound {
   effect(event){if(event.type==='shoot'){if(event.side===1&&Math.random()>.3)return;const voice={havzuk:[560,'sine'],maimi:[340,'sine'],slauz:[95,'triangle'],lohatan:[150,'sawtooth'],tehomon:[220,'sine'],zikuk:[880,'square'],retetoz:[260,'triangle'],tzlilon:[720,'sine'],shorshu:[300,'triangle'],galgalor:[640,'triangle']}[event.kind]||[340,'sine'];this.tone(voice[0],.11,voice[1],voice[1]==='square'||voice[1]==='sawtooth'?.035:.065,-90);}
     if(event.type==='hit')this.tone(event.side===0?130:210,.13,'triangle',.11,-80);
     if(event.type==='special'){this.tone(180,.35,'sawtooth',.075,580);this.tone(530,.4,'sine',.12,-130,.08);}
+    if(event.type==='goal'){[523,659,784,1047].forEach((f,i)=>this.tone(event.side===0?f:f/2,.3,'triangle',.12,0,i*.09));}
+    if(event.type==='steal'){this.tone(700,.15,'square',.06,500);}
+    if(event.type==='kick'){this.tone(event.big?220:320,.18,'sine',.1,-160);}
+    if(event.type==='ball-hit'){this.tone(980,.06,'sine',.05);}
+    if(event.type==='swap'){[392,523].forEach((f,i)=>this.tone(f,.2,'triangle',.09,0,i*.1));}
     if(event.type==='feather'){this.tone(event.side===0?880:520,.12,'sine',.07,240);}
     if(event.type==='ember'){this.tone(330,.25,'triangle',.11,330);this.tone(660,.3,'sine',.08,0,.08);}
     if(event.type==='hold-start'){[523,659,784].forEach((f,i)=>this.tone(f,.25,'triangle',.11,0,i*.1));}

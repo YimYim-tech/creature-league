@@ -1,6 +1,6 @@
 // The necklace journey from Michael's story: four islands, four lights, then the golden castle.
 // Everything here is data plus small pure functions, so the browser and the tests share it.
-import {CREATURES,WILD,LEVELS,MODES,isUnlocked,makeMatch,clamp} from './core.js';
+import {CREATURES,WILD,LEVELS,MODES,isUnlocked,makeMatch,clamp,trioLeft} from './core.js';
 
 export const ISLANDS = [
   {id:'wind', name:'אי הרוחות', gem:'#4f9d58', gemName:'הירוק'},
@@ -30,6 +30,10 @@ export const STEPS = [
   {id:'sea-free2', island:'sea', kind:'free', rival:'tehomon', level:'challenger',
     intro:'תהומון הענק נבהל מהצל ושוקע למעמקים. אל תיבהל מהגודל שלו. הוא צריך מישהו שיהיה אמיץ בשבילו.',
     after:'תהומון עלה מהמעמקים. איזה ענק טוב!'},
+  {id:'sea-mission', island:'sea', kind:'mission', mode:'ball', opponent:'galgalor', level:'challenger',
+    intro:'הצל גנב את פנינת הגאות! תכניס אותה לשער שלו. כשהפנינה אצלך אי אפשר לירות, אז ירי בועט אותה. ושים לב: שלוש פגיעות והיא נופלת.',
+    easier:'הפעם הים קצת יותר רגוע. אתה יכול!',
+    after:'איזה גולים! הגאות חוזרת לזרום, ושומר הים מחכה לך.'},
   {id:'sea-guard', island:'sea', kind:'guardian', rival:'seaguard', level:'challenger', title:'שומר הים',
     intro:'שומר הים שולט בגאות ובזרמים. אם הוא מושך אותך למערבולת, חמיקה ומיד החוצה!',
     after:'האור הכחול נדלק! הים שקט שוב, והצב העתיק מצטרף לנבחרת.'},
@@ -52,6 +56,10 @@ export const STEPS = [
   {id:'mirror-guard', island:'mirror', kind:'mirror', level:'champion', title:'הבבואה שלך',
     intro:'כאן לא נלחמים באויב. נלחמים בבבואה שלך, בפחדים שלך. אומץ זה לא בלי פחד. אומץ זה לפעול למרות הפחד.',
     after:'האור הלבן נדלק! ותראה... כוכב זהוב חמישי מופיע בשרשרת.'},
+  {id:'castle-gate', island:'castle', kind:'mission', mode:'trio', opponent:'lohatan', rivals:['lohatan','tzlilon','zikuk'], level:'challenger',
+    intro:'שלושה יצורים בצל שומרים על שער הטירה. כאן נלחמים שלושה מול שלושה. תבחר נבחרת: כשיצור נופל, הבא בתור נכנס לזירה.',
+    easier:'הפעם שומרי הצל קצת עייפים. אתה יכול!',
+    after:'השער נפתח! הנבחרת שלך עבדה ביחד. עכשיו לטירה.'},
   {id:'castle', island:'castle', kind:'castle',
     intro:'זו הטירה הזהובה. פעם שמרתי עליה... ואני זה ששבר את הכוכב. אני לא בורח מזה יותר. בוא נתקן אותו ביחד.',
     after:'מישהו מנתק את הגשרים בין העולמות... המפריד במסכה. הוא השאיר שבר מהמסכה שלו. ההרפתקה הבאה מתחילה.'},
@@ -81,7 +89,8 @@ export function litIslands(profile) {
   return ISLANDS.filter(island => {const last = STEPS.map(s => s.island).lastIndexOf(island.id); return profile.story.done > last;}).map(i => i.id);
 }
 export const starLit = profile => litIslands(profile).length === ISLANDS.length;
-export const islandOf = id => ISLANDS.find(i => i.id === id);
+const CASTLE = {id:'castle', name:'הטירה הזהובה', gem:'#e8b931', gemName:'הזהוב'};
+export const islandOf = id => ISLANDS.find(i => i.id === id) ?? (id === 'castle' ? CASTLE : undefined);
 // Which island a still-shadowed creature waits on.
 export const homeIsland = creature => STEPS.find(s => s.rival === creature)?.island ?? null;
 
@@ -96,13 +105,23 @@ export function missionLevel(profile, step) {
 export function missionStars(step, m) {
   if (m.winner !== 0) return 0;
   if (step.mode === 'lava') {const a = m.actors[0], left = a.hp / a.spec.hp; return left >= .5 ? 3 : left >= .25 ? 2 : 1;}
+  if (step.mode === 'ball') {const lead = m.ball.score[0] - m.ball.score[1]; return lead >= 4 ? 3 : lead >= 2 ? 2 : 1;}
+  if (step.mode === 'trio') return trioLeft(m, 0);
   return m.time < 35 ? 3 : m.time < 60 ? 2 : 1;
+}
+// A trio team: three different released creatures, the chosen one first.
+export function trioTeam(profile, wanted = null) {
+  const ok = (wanted || []).filter((id, i, all) => isUnlocked(profile, id) && all.indexOf(id) === i);
+  if (ok.length === 3) return ok;
+  const first = isUnlocked(profile, profile.selected) ? profile.selected : 'maimi';
+  return [first, ...Object.keys(CREATURES).filter(id => id !== first && isUnlocked(profile, id))].slice(0, 3);
 }
 export function makeStoryMatch(profile, options = {}) {
   const step = currentStep(profile);
   if (!step || step.kind === 'castle') return null;
   const player = isUnlocked(profile, profile.selected) ? profile.selected : 'maimi';
-  if (step.kind === 'mission') return makeMatch({...options, player, rival:step.opponent, level:missionLevel(profile, step), story:step.id, arena:step.island, mode:step.mode});
+  if (step.kind === 'mission') return makeMatch({...options, player, rival:step.opponent, level:missionLevel(profile, step), story:step.id, arena:step.island, mode:step.mode,
+    team:step.mode === 'trio' ? trioTeam(profile, options.team) : null, rivalTeam:step.rivals || null});
   const rival = step.kind === 'mirror' ? player : step.rival;
   return makeMatch({...options, player, rival, level:step.level, story:step.id, arena:step.island, giant:step.kind === 'guardian', mirror:step.kind === 'mirror'});
 }

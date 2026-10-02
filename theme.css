@@ -237,3 +237,17 @@ dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
 @keyframes hold-beat{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.1)}}
 @media(prefers-reduced-motion:reduce){.hold-count{animation:none}}
 @media(max-width:620px){.mode-banner{font-size:12px;gap:8px;padding:4px 10px}.hold-count{font-size:38px;top:46px}}
+
+/* Tide ball score and trio dots in the mission banner. */
+.mb-score{font:900 22px var(--display);color:#fff6d8;margin-inline:4px}
+.trio-dots{display:inline-flex;gap:4px;vertical-align:middle;margin-inline:4px}.trio-dots i{width:11px;height:11px;border-radius:50%;border:2px solid #f3e6c8;background:transparent}.trio-dots.you i.on{background:#59c9ff}.trio-dots.foe i.on{background:#e8432c}
+/* Trio picker */
+.team-dialog{width:min(640px,calc(100vw - 24px))}
+.team-dialog h2{font:900 28px var(--display);margin:6px 0}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;margin:14px 0;max-height:calc(100dvh - 300px);overflow:auto;padding:4px}
+.team-pick{position:relative;display:grid;justify-items:center;gap:2px;padding:6px 4px 8px;border-radius:14px;border:2px solid #c9ad7a;background:#fbf3e1;cursor:pointer;font:inherit;color:#2a1d11}
+.team-pick canvas{width:84px;height:84px}
+.team-pick b{font-size:14px}
+.team-pick.picked{border-color:var(--c);box-shadow:0 0 0 3px var(--c);background:#fff}
+.team-order{position:absolute;top:6px;inset-inline-start:6px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:900 15px var(--display);color:#fff;background:var(--c)}
+.team-order:empty{display:none}
