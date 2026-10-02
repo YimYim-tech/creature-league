@@ -8,7 +8,7 @@ export class Sound {
   static CLIPS=['sfx-card-flip','sfx-join-fanfare','voice-wild-battle','voice-victory','voice-new-creature','voice-new-card'];
   play(name,{delay=0,volume=.9}={}){if(!this.ctx||!this.enabled||!this.clips?.[name])return;const source=this.ctx.createBufferSource(),gain=this.ctx.createGain();source.buffer=this.clips[name];gain.gain.value=volume;source.connect(gain);gain.connect(this.master);source.start(this.ctx.currentTime+delay);}
   async load(){this.clips={};await Promise.all(Sound.CLIPS.map(async name=>{try{const r=await fetch('./art/gen/'+name+'.mp3');this.clips[name]=await this.ctx.decodeAudioData(await r.arrayBuffer());}catch{/* A missing clip is silent. */}}));
-    for(const id of ['lobby','battle'])try{const r=await fetch('./art/'+id+'-music.mp3');this.buffers[id]=await this.ctx.decodeAudioData(await r.arrayBuffer());}catch{/* Sound never blocks a playable game. */}this.schedule();}
+    for(const id of ['lobby','battle'])try{const r=await fetch('./art/gen/'+({lobby:'music-map',battle:'music-battle'})[id]+'.mp3');this.buffers[id]=await this.ctx.decodeAudioData(await r.arrayBuffer());}catch{/* Sound never blocks a playable game. */}this.schedule();}
   setEnabled(value){this.enabled=value;if(this.ctx){this.master.gain.setTargetAtTime(value?.55:0,this.ctx.currentTime,.05);if(value)this.ctx.resume().catch(()=>{});}this.schedule();}
   setScene(scene){if(scene===this.scene)return;this.scene=scene;this.stopMusic();this.schedule();}
   stopMusic(){if(!this.ctx)return;for(const s of this.sources){try{s.gain.gain.cancelScheduledValues(this.ctx.currentTime);s.gain.gain.setTargetAtTime(0,this.ctx.currentTime,.15);s.source.stop(this.ctx.currentTime+.6);}catch{}}this.sources=[];this.next=0;}
