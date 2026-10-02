@@ -1,6 +1,7 @@
 import {CREATURES,LEVELS,CUP,CHALLENGE,challengeUnlocked,journeyView,makeChallengeMatch,makeMatch,step,readProfile,saveProfile,recordResult,resultStats,clamp,startCup,needsUpgrade,chooseUpgrade,STARTERS,WILD,RARITY,SKINS,isUnlocked,releasedCount,wildLevel,makeWildMatch,skinById,skinUnlocked,skinOf,chooseSkin,flipCard,cardStats} from './core.js';
 import {upgradeOptions,cleanUpgrades} from './upgrades.js';
-import {ISLANDS,STEPS,STORY_CARDS,STORY_CARD_IDS,currentStep,storyComplete,litIslands,starLit,islandOf,homeIsland,makeStoryMatch,recordStory,completeCastle,storyCardOwned} from './story.js';
+import {MODES,WIND_TARGET,WIND_HOLD,MAX_POWER} from './core.js';
+import {missionEased,missionLevel,ISLANDS,STEPS,STORY_CARDS,STORY_CARD_IDS,currentStep,storyComplete,litIslands,starLit,islandOf,homeIsland,makeStoryMatch,recordStory,completeCastle,storyCardOwned} from './story.js';
 import {loadArt,createPuppet,drawPortrait,Renderer} from './art.js';
 import {Sound} from './audio.js';
 const $=id=>document.getElementById(id);
@@ -20,7 +21,7 @@ let wildTarget=null,cardTarget=null,storyIntro=false,storyEvent=null,castle={pha
 const MAP_SPOTS={wind:[17,30],sea:[24,66],fire:[78,70],mirror:[84,30],castle:[50,17]};
 function necklaceHTML(){const lit=litIslands(profile);return ISLANDS.map(i=>`<span class="gem${lit.includes(i.id)?' lit':''}" style="--g:${i.gem}" title="האור ${i.gemName}"></span>`).join('')+`<span class="gem star${starLit(profile)?' lit':''}" title="הכוכב הזהוב"></span>`;}
 function say(id,line,{who='shadow',voice=null}={}){const g=$(id);if(!g)return;if(voice)sound.line(voice);g.querySelector('.guide-line').textContent=line;g.querySelector('.guide-name').textContent=who==='ron'?'רון':'הצל הקטן';g.querySelector('.guide-face').src=who==='ron'?'./art/gen/story-ron.png':'./art/gen/story-little-shadow.png';g.classList.remove('pop');void g.offsetWidth;g.classList.add('pop');}
-function stepLabel(step){if(!step)return 'המסע הושלם!';if(step.kind==='castle')return 'הטירה הזהובה · מתקנים את הכוכב';const isl=islandOf(step.island);return isl.name+' · '+(step.kind==='free'?'משחררים את '+CREATURES[step.rival].name:step.kind==='mirror'?'הבבואה שלך':step.title);}
+function stepLabel(step){if(!step)return 'המסע הושלם!';if(step.kind==='castle')return 'הטירה הזהובה · מתקנים את הכוכב';const isl=islandOf(step.island);return isl.name+' · '+(step.kind==='mission'?'משימה: '+MODES[step.mode].name:step.kind==='free'?'משחררים את '+CREATURES[step.rival].name:step.kind==='mirror'?'הבבואה שלך':step.title);}
 function renderStoryPanel(){
   const step=currentStep(profile),done=profile.story.done;
   $('story-panel-title').textContent=stepLabel(step);
@@ -119,24 +120,25 @@ function openWild(id){wildTarget=id;showView('wild');}
 function renderWild(){
   const step=storyIntro?currentStep(profile):null;
   if(storyIntro&&(!step||step.kind==='castle')){storyIntro=false;showView('story');return;}
-  if(step)wildTarget=step.kind==='mirror'?(isUnlocked(profile,profile.selected)?profile.selected:'maimi'):step.rival;
+  if(step)wildTarget=step.kind==='mission'?step.opponent:step.kind==='mirror'?(isUnlocked(profile,profile.selected)?profile.selected:'maimi'):step.rival;
   if(!step&&(!wildTarget||isUnlocked(profile,wildTarget))){wildTarget=WILD.find(id=>!isUnlocked(profile,id));if(!wildTarget){showView('cards');return;}}
   const c=CREATURES[wildTarget],level=step?step.level:wildLevel(profile);
   $('wild-stage').style.setProperty('--c',c.color);$('wild-stage').dataset.el=ELEMENT_ART[c.element]||'water';
   $('wild-progress').textContent=step?(islandOf(step.island).name+' · שלב '+(STEPS.filter(s=>s.island===step.island).indexOf(step)+1)+' מתוך '+STEPS.filter(s=>s.island===step.island).length):releasedCount(profile)+' מתוך '+WILD.length+' יצורי פרא כבר בנבחרת שלך';
-  $('wild-guide').hidden=!step;if(step)say('wild-guide',step.intro,{voice:'voice-shadow-'+step.id});
-  document.querySelector('#wild .wild-tag').textContent=step?.kind==='guardian'?'שומר האי':step?.kind==='mirror'?'הבבואה':'אחוז בצל';
-  $('wild-name').textContent=step?.kind==='mirror'?'הבבואה של '+c.name:step?.title||c.name;$('wild-name').style.color=c.color;$('wild-role').textContent=c.role+' · כוח '+c.element+' · '+c.rarity;
-  $('wild-power-icon').innerHTML=icon(c.specialIcon);$('wild-power-icon').style.color=c.color;$('wild-power-title').textContent=c.special;$('wild-power-description').textContent=c.description;
-  $('wild-level').textContent='רמת היריב: '+levelName(level)+'. '+(step?.kind==='mirror'?'הבבואה יודעת כל מה שאתה יודע. תפתיע אותה.':rivalAdvice[c.id]||'');
-  document.querySelector('#wild .wild-prize strong').textContent=step?(step.kind==='free'?'הפרס: '+c.name+' והקלף שלו':step.kind==='guardian'?'הפרס: האור '+islandOf(step.island).gemName+', '+c.name+' והקלף שלו':'הפרס: האור הלבן והכוכב הזהוב'):'הפרס: היצור והקלף שלו';
+  $('wild-guide').hidden=!step;if(step)say('wild-guide',missionEased(profile,step)?step.easier+' '+step.intro:step.intro,{voice:step.kind==='mission'?null:'voice-shadow-'+step.id});
+  document.querySelector('#wild .wild-tag').textContent=step?.kind==='mission'?'משימת האי':step?.kind==='guardian'?'שומר האי':step?.kind==='mirror'?'הבבואה':'אחוז בצל';
+  $('wild-name').textContent=step?.kind==='mission'?MODES[step.mode].name:step?.kind==='mirror'?'הבבואה של '+c.name:step?.title||c.name;$('wild-name').style.color=c.color;$('wild-role').textContent=c.role+' · כוח '+c.element+' · '+c.rarity;
+  $('wild-power-icon').innerHTML=icon(step?.kind==='mission'?(step.mode==='lava'?'flame':'swirl'):c.specialIcon);$('wild-power-icon').style.color=c.color;$('wild-power-title').textContent=step?.kind==='mission'?'איך מנצחים':c.special;$('wild-power-description').textContent=step?.kind==='mission'?MODES[step.mode].goal:c.description;
+  if(step?.kind==='mission')$('wild-role').textContent='היריב: '+c.name+' בצל · '+(profile.missionStars[step.id]?'השיא שלך: '+stars(profile.missionStars[step.id]):'עד שלושה כוכבים');
+  $('wild-level').textContent='רמת היריב: '+levelName(step?.kind==='mission'?missionLevel(profile,step):level)+'. '+(step?.kind==='mission'?(step.mode==='lava'?'זוזו מהעיגולים המהבהבים והישארו בתוך הטבעת.':'מי שנופל מפיל את כל הנוצות. שמרו עליהן!'):'')+(step?.kind==='mirror'?'הבבואה יודעת כל מה שאתה יודע. תפתיע אותה.':rivalAdvice[c.id]||'');
+  document.querySelector('#wild .wild-prize strong').textContent=step?(step.kind==='mission'?'הפרס: עד שלושה כוכבים, והדרך לשומר':step.kind==='free'?'הפרס: '+c.name+' והקלף שלו':step.kind==='guardian'?'הפרס: האור '+islandOf(step.island).gemName+', '+c.name+' והקלף שלו':'הפרס: האור הלבן והכוכב הזהוב'):'הפרס: היצור והקלף שלו';
   if(!isUnlocked(profile,profile.selected))profile.selected='maimi';
   $('wild-fighters').innerHTML=Object.values(CREATURES).filter(f=>isUnlocked(profile,f.id)).map(f=>`<button class="fighter-chip${f.id===profile.selected?' chosen':''}" data-fighter="${f.id}" aria-pressed="${f.id===profile.selected}" style="--c:${f.color}"><canvas id="chip-${f.id}" aria-hidden="true"></canvas><b>${f.name}</b></button>`).join('');
   for(const f of Object.values(CREATURES))if(isUnlocked(profile,f.id))livePortrait('chip-'+f.id,f.id,{skin:skinOf(profile,f.id)});
   livePortrait('wild-portrait',c.id,{big:true,skin:step?.kind==='mirror'?'night':null});
   document.querySelectorAll('[data-fighter]').forEach(el=>el.onclick=()=>{profile.selected=el.dataset.fighter;persist();sound.click();renderWild();});
   $('wild-start').onclick=()=>startBattle(step?'story':'wild');
-  $('wild-start').innerHTML=(step?.kind==='guardian'?'לקרב מול השומר!':step?.kind==='mirror'?'מול הבבואה!':step?'לשחרר מהצל!':'לקרב הפרא!')+' '+icon('arrow');
+  $('wild-start').innerHTML=(step?.kind==='mission'?'למשימה!':step?.kind==='guardian'?'לקרב מול השומר!':step?.kind==='mirror'?'מול הבבואה!':step?'לשחרר מהצל!':'לקרב הפרא!')+' '+icon('arrow');
 }
 function renderAlbum(){
   const owned=[...Object.keys(CREATURES).filter(id=>isUnlocked(profile,id)),...profile.storyCards],total=Object.keys(CREATURES).length+STORY_CARD_IDS.length;
@@ -240,17 +242,18 @@ function startBattle(nextMode=mode){
   let rival=$('rival').value,level=profile.level,player=isUnlocked(profile,profile.selected)?profile.selected:'maimi',upgrades=[];
   if(mode==='cup'){startCup(profile);if(needsUpgrade(profile)){showView('workshop');return;}const r=CUP[profile.cup.stage];rival=r.rival;level=r.level;cupFinal=profile.cup.stage===2;player=profile.cup.player;upgrades=profile.cup.upgrades;persist();}
   const seed=Date.now()+Math.floor(Math.random()*1e5);
-  match=mode==='challenge'?makeChallengeMatch(profile,{seed}):mode==='story'?makeStoryMatch(profile,{seed}):mode==='wild'?makeWildMatch(profile,wildTarget,{seed}):makeMatch({player,rival,level,upgrades,boss:rival==='slauz',seed});
+  match=mode==='challenge'?makeChallengeMatch(profile,{seed}):mode==='story'?makeStoryMatch(profile,{seed}):mode==='wild'?makeWildMatch(profile,wildTarget,{seed}):makeMatch({player,rival,level,upgrades,boss:rival==='slauz'&&!(mode==='quick'&&$('training-mode').value),seed,mode:mode==='quick'?$('training-mode').value||null:null,arena:mode==='quick'?({lava:'fire',wind:'wind'})[$('training-mode').value]||null:null});
   player=match.actors[0].id;rival=match.actors[1].id;level=match.level;upgrades=match.actors[0].upgrades;renderer.setMatch(match,[skinOf(profile,match.actors[0].id),match.mirror?'night':null]);clearInput();accumulator=0;
   document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');sound.unlock();sound.setScene('battle');sound.resume();if(mode==='wild')sound.play('voice-wild-battle',{delay:.2});
   const p=match.actors[0].spec,r=match.actors[1].spec;
   const storyStep=match.story?STEPS.find(s=>s.id===match.story):null;
   $('player-name').textContent=p.name;$('rival-name').textContent=storyStep?.kind==='mirror'?'הבבואה שלך':storyStep?.title||r.name;$('player-symbol').innerHTML=icon(p.specialIcon);$('rival-symbol').innerHTML=icon(r.specialIcon);$('rival-level').textContent=LEVELS[level].name;
-  $('match-label').textContent=mode==='cup'?CUP[profile.cup.stage].title:mode==='challenge'?CHALLENGE.title:mode==='story'?islandOf(storyStep.island).name:mode==='wild'?'קרב פרא':'אימון';$('round-label').textContent=mode==='cup'?`שלב ${profile.cup.stage+1} מתוך 4`:mode==='challenge'?'שלב 4 מתוך 4':mode==='story'?(storyStep.kind==='free'?'ניצחון משחרר את '+r.name+' מהצל':storyStep.kind==='mirror'?'אומץ זה לפעול למרות הפחד':'ניצחון מדליק את האור '+islandOf(storyStep.island).gemName):mode==='wild'?'ניצחון משחרר את '+r.name:'קרב בודד · אינו מקדם את המסע';
+  $('match-label').textContent=mode==='cup'?CUP[profile.cup.stage].title:mode==='challenge'?CHALLENGE.title:match.mode?MODES[match.mode].name:mode==='story'?islandOf(storyStep.island).name:mode==='wild'?'קרב פרא':'אימון';$('round-label').textContent=match.mode?(match.mode==='wind'?'אספו '+WIND_TARGET+' נוצות והחזיקו '+WIND_HOLD+' שניות':'גחלי כוח מגדילים אתכם · הלבה סוגרת'):mode==='cup'?`שלב ${profile.cup.stage+1} מתוך 4`:mode==='challenge'?'שלב 4 מתוך 4':mode==='story'?(storyStep.kind==='free'?'ניצחון משחרר את '+r.name+' מהצל':storyStep.kind==='mirror'?'אומץ זה לפעול למרות הפחד':'ניצחון מדליק את האור '+islandOf(storyStep.island).gemName):mode==='wild'?'ניצחון משחרר את '+r.name:'קרב בודד · אינו מקדם את המסע';
   $('special-action-icon').innerHTML=icon(p.specialIcon);$('special-action-name').textContent=p.special;
   $('arena-tip').textContent=rival==='slauz'&&match.actors[1].boss?bossAdvice:(mode==='wild'||mode==='story')&&rivalAdvice[rival]&&!match.mirror?rivalAdvice[rival]:'רווח או כפתור ירי מכוונים ליריב. זוזו כדי להתחמק.';$('arena-tip').style.opacity='1';$('match-toast').classList.remove('visible');toastUntil=0;
   $('battle-build').innerHTML=buildChips(player,upgrades);$('battle-build').hidden=!upgrades.length;$('boss-banner').hidden=!match.actors[1].boss;
-  $('challenge-banner').hidden=mode!=='challenge';
+  $('challenge-banner').hidden=mode!=='challenge';$('mode-banner').hidden=!match.mode;$('hold-count').hidden=true;
+  if(match.mode)$('arena-tip').textContent=MODES[match.mode].goal;
   $('leave-button').textContent=mode==='story'?'הפסקה · חזרה למפה':mode==='quick'||mode==='wild'?'חזרה לבחירת יצור':'הפסקה · חזרה למסע';
   renderHUD();$('arena').focus({preventScroll:true});
 }
@@ -263,6 +266,9 @@ function renderHUD(){if(!match)return;const [a,b]=match.actors;
   }
   if(match.time>8)$('arena-tip').style.opacity='0';
   if(b.boss){const phase=b.boss.phase;$('boss-banner').dataset.phase=phase;$('boss-banner').textContent={guard:'מגן קדמי · נסו מהצד',windup:'הסתערות בדרך · זוזו הצדה!',charge:'הסתערות!',recover:'עכשיו! פגיעות חזקות ב־50%'}[phase];}
+  if(match.mode){const [me,foe]=match.actors;
+    if(match.wind){$('mode-banner').innerHTML=`<span class="mb-you">${icon('swirl')} אתם ${me.feathers}</span><span class="mb-goal">מתוך ${WIND_TARGET}</span><span class="mb-foe">היריב ${foe.feathers}</span>`;const h=match.wind.holder;$('hold-count').hidden=h<0;if(h>=0){$('hold-count').textContent=Math.ceil(match.wind.hold);$('hold-count').classList.toggle('foe',h===1);}}
+    else{$('mode-banner').innerHTML=`<span class="mb-you">${icon('flame')} גחלי כוח ${me.power}/${MAX_POWER}</span><span class="mb-goal">${match.lava.scale<.99?'הלבה סוגרת!':'הלבה מתעוררת...'}</span><span class="mb-foe">היריב ${foe.power}/${MAX_POWER}</span>`;}}
   if(match.challenge){const next=match.covers.filter(c=>c.hp>0).sort((a,b)=>a.collapseAt-b.collapseAt)[0];$('challenge-banner').textContent=next?`מחסה מתפורר בעוד ${Math.max(0,Math.ceil(next.collapseAt-match.time))} שנ׳ · המשיכו לזוז`:'הזירה פתוחה · אין יותר מחסות!';}
   if(clock>toastUntil)$('match-toast').classList.remove('visible');
 }
@@ -278,8 +284,9 @@ function onFinish(){
   const winsAfter=profile.creatures[hero]?.wins||0,newSkin=SKINS.find(k=>k.wins>winsBefore&&k.wins<=winsAfter),released=wasLocked&&isUnlocked(profile,wildId);
   const p=match.actors[0],r=match.actors[1],stats=resultStats(match),win=match.winner===0,draw=match.winner===-1;
   const challengeWin=mode==='challenge'&&win;
-  const title=storyResult?.step.kind==='mirror'?'ניצחת את הפחד!':storyResult?.lit&&!released?'האור נדלק!':released?CREATURES[wildId].name+(mode==='story'?' השתחרר מהצל!':' שוחרר!'):finalWin?'אלוף החופים!':challengeWin?'אלוף הזירה הפתוחה!':win?'ניצחון!':draw?'צמוד עד הסוף!':'הקרב הבא שלך.';
-  const sub=storyResult?.step.kind==='mirror'?'האור הלבן נדלק בשרשרת, והכוכב הזהוב מוביל לטירה.':mode==='story'&&!win?(draw?'כמעט! עוד ניסיון אחד.':'הצל הקטן מאמין בך. מנסים שוב, אולי בדרך אחרת?'):released&&storyResult?.lit?CREATURES[wildId].name+' השתחרר, והאור '+islandOf(storyResult.lit).gemName+' נדלק בשרשרת!':released?CREATURES[wildId].name+' מצטרף לנבחרת שלך, והקלף שלו מחכה שתהפוך אותו!':mode==='wild'?(draw?'כמעט! '+r.spec.name+' עדיין פראי. עוד ניסיון?':r.spec.name+' עדיין פראי. כל ניסיון מלמד משהו חדש.'):finalWin?'זכית בגביע! נפתחה הזירה המתפוררת, והשילוב שלך ממשיך איתך.':challengeWin?'השלמת את כל ארבעת האתגרים! תג האלוף נוסף להישגים שלך.':win?(mode==='cup'?`השלמת ${profile.cup.stage} מתוך 4 אתגרים. עכשיו בוחרים כוח, ואז ${CUP[profile.cup.stage].title} מול ${CREATURES[CUP[profile.cup.stage].rival].name}.`:'ניצחון באימון! כדי לפתוח כוחות ואתגרים, ממשיכים במסע.'):draw?'אותו אחוז חיים נשאר לשני היצורים. השלב והכוחות נשמרו לניסיון הבא.':mode==='quick'?'לכל יריב יש נקודת חולשה. מנסים דרך אחרת?':'השלב והכוחות שלך נשמרו. מנסים שוב עם דרך אחרת?';
+  const missionStep=match.story&&STEPS.find(s=>s.id===match.story&&s.kind==='mission');
+  const title=match.mode&&win?(missionStep?'המשימה הושלמה!':'ניצחון במשימה!'):match.mode&&!win&&missionStep?'כמעט!':storyResult?.step.kind==='mirror'?'ניצחת את הפחד!':storyResult?.lit&&!released?'האור נדלק!':released?CREATURES[wildId].name+(mode==='story'?' השתחרר מהצל!':' שוחרר!'):finalWin?'אלוף החופים!':challengeWin?'אלוף הזירה הפתוחה!':win?'ניצחון!':draw?'צמוד עד הסוף!':'הקרב הבא שלך.';
+  const sub=match.mode&&win?(storyResult?.stars?stars(storyResult.stars)+'  '+(storyResult.stars===3?'מושלם!':'נסו שוב מהאימון כדי להשיג שלושה כוכבים.'):match.mode==='wind'?'החזקתם את הרוח עד הסוף!':'שרדתם את טבעת הלבה!'):match.mode&&missionStep?(missionEased(profile,missionStep)?'בניסיון הבא '+(match.mode==='lava'?'הלבה':'הרוח')+' תהיה קצת יותר רגועה.':match.mode==='lava'?'אספו גחלים כדי לגדול, וזוזו מהעיגולים המהבהבים.':'מי שנופל מפיל את הנוצות. החזיקו מרחק כשאתם מובילים.'):storyResult?.step.kind==='mirror'?'האור הלבן נדלק בשרשרת, והכוכב הזהוב מוביל לטירה.':mode==='story'&&!win?(draw?'כמעט! עוד ניסיון אחד.':'הצל הקטן מאמין בך. מנסים שוב, אולי בדרך אחרת?'):released&&storyResult?.lit?CREATURES[wildId].name+' השתחרר, והאור '+islandOf(storyResult.lit).gemName+' נדלק בשרשרת!':released?CREATURES[wildId].name+' מצטרף לנבחרת שלך, והקלף שלו מחכה שתהפוך אותו!':mode==='wild'?(draw?'כמעט! '+r.spec.name+' עדיין פראי. עוד ניסיון?':r.spec.name+' עדיין פראי. כל ניסיון מלמד משהו חדש.'):finalWin?'זכית בגביע! נפתחה הזירה המתפוררת, והשילוב שלך ממשיך איתך.':challengeWin?'השלמת את כל ארבעת האתגרים! תג האלוף נוסף להישגים שלך.':win?(mode==='cup'?`השלמת ${profile.cup.stage} מתוך 4 אתגרים. עכשיו בוחרים כוח, ואז ${CUP[profile.cup.stage].title} מול ${CREATURES[CUP[profile.cup.stage].rival].name}.`:'ניצחון באימון! כדי לפתוח כוחות ואתגרים, ממשיכים במסע.'):draw?'אותו אחוז חיים נשאר לשני היצורים. השלב והכוחות נשמרו לניסיון הבא.':mode==='quick'?'לכל יריב יש נקודת חולשה. מנסים דרך אחרת?':'השלב והכוחות שלך נשמרו. מנסים שוב עם דרך אחרת?';
   let tip=r.boss?(stats.weakHits>0?`ניצלת את רגע ההתאוששות של סלעוז ${stats.weakHits} פעמים!`:bossAdvice):win?p.spec.tip:r.id==='havzuk'?'הבזוק מהיר אבל יש לו פחות חיים. חכו לרגע שאחרי ההבזק.':'הגל של מיימי רחב. זנקו הצדה עם חמיקה ושובו לירות.';
   if(match.reason==='time')tip='הזמן נגמר: הניצחון נקבע לפי אחוז החיים שנותר לכל יצור.';
   $('result-content').innerHTML=`${newSkin?`<div class="skin-unlock" style="--c:${p.spec.color}"><span class="skin-swatch skin-${newSkin.id}"></span><div><small>מראה חדש נפתח!</small><b>${p.spec.name} ${newSkin.name}</b></div></div>`:''}${finalWin||released?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${finalWin?'gold':win?'':'loss'}">${icon(finalWin?'trophy':win?'star':draw?'shield':'bolt')}</div><span class="result-kicker">${mode==='cup'?'גביע החופים':'קרב מהיר'} · ${LEVELS[match.level].name}</span><h2 class="result-title">${title}</h2><p>${sub}</p><div class="result-score"><div><strong>${Math.round(p.hp/p.spec.hp*100)}%</strong>${p.spec.name}</div><span>:</span><div><strong>${Math.round(r.hp/r.spec.hp*100)}%</strong>${r.spec.name}</div></div><div class="result-stats"><div><strong>${stats.damage}</strong><small>נזק ליריב</small></div><div><strong>${stats.accuracy}%</strong><small>דיוק בירי</small></div><div><strong>${stats.blocked}</strong><small>נזק שנחסם בשריון</small></div></div><p class="result-tip">${tip}</p>`;
@@ -289,7 +296,13 @@ function onFinish(){
   $('result-secondary').textContent=mode==='story'?'הפסקה · חזרה למפה':mode==='quick'||mode==='wild'?'חזרה לבחירת יצור':'הפסקה · ההתקדמות נשמרת';$('result-secondary').onclick=leaveBattle;
   $('result-dialog').showModal();
 }
+// The loop must survive any drawing error: a frozen game is worse than one missed frame.
+let frameErrors=0;
 function frame(timestamp){
+  try{frameBody(timestamp);}catch(error){if(frameErrors++<5)console.error('frame',error);window.__LEAGUE_LAST_ERROR__=String(error?.stack||error);}
+  requestAnimationFrame(frame);
+}
+function frameBody(timestamp){
   if(!frameTime)frameTime=timestamp;const dt=Math.min(.1,(timestamp-frameTime)/1000);frameTime=timestamp;clock+=dt;
   if(screen!=='battle')for(const [canvasId,entry] of portraits){const el=$(canvasId);if(!el){portraits.delete(canvasId);continue;}if(!el.offsetParent&&!el.closest('dialog[open]'))continue;
     const locked=!isUnlocked(profile,entry.id);drawPortrait(el,entry.puppet,entry.id,clock,dt,{active:entry.opts.roster?entry.id===profile.selected:true,locked:entry.opts.roster&&locked,skin:entry.opts.roster?(locked?null:skinOf(profile,entry.id)):entry.opts.skin});}
@@ -298,13 +311,16 @@ function frame(timestamp){
       accumulator+=dt;
       while(accumulator>=1/60){
         step(match,currentInput(),1/60);input.special=false;input.dash=false;accumulator-=1/60;
-        for(const e of match.events){sound.effect(e);if(e.type==='hit'&&e.side===0)renderer.shake=3;if(e.type==='quake')renderer.shake=5;if(e.type==='collapse')toast('מחסה התפורר · מחפשים מקום חדש',1.5);if(e.type==='pickup-ready')toast('גביש חיים הופיע במרכז');if(e.type==='heal'&&e.side===0)toast('+'+Math.round(e.amount)+' חיים!');if(e.type==='go')toast('קדימה!',1);}
+        for(const e of match.events){sound.effect(e);if(e.type==='hit'&&e.side===0)renderer.shake=3;if(e.type==='quake')renderer.shake=5;if(e.type==='collapse')toast('מחסה התפורר · מחפשים מקום חדש',1.5);if(e.type==='pickup-ready')toast('גביש חיים הופיע במרכז');if(e.type==='heal'&&e.side===0)toast('+'+Math.round(e.amount)+' חיים!');if(e.type==='go')toast('קדימה!',1);
+          if(e.type==='lava-warning')toast('הלבה מתעוררת! הישארו בתוך הטבעת',2);if(e.type==='ember'&&e.side===0)toast('גחלת כוח! גדלת! ('+e.power+'/'+MAX_POWER+')',1.4);
+          if(e.type==='hold-start')toast(e.side===0?'החזיקו מעמד! עוד '+WIND_HOLD+' שניות!':'היריב מחזיק את הרוח! תפילו אותו!',2);
+          if(e.type==='ko')toast(e.side===1?'הפלתם אותו! הנוצות שלו עפו!':'נפלתם! הנוצות עפו... חוזרים בעוד רגע',2);}
         if(match.status==='finished'){onFinish();break;}
       }
     }
     renderer.render(match,dt,clock);if(clock-lastHUD>.05){renderHUD();lastHUD=clock;}
   }
-  requestAnimationFrame(frame);
+
 }
 function openHelp(){pauseBattle();if(!$('help-dialog').open)$('help-dialog').showModal();}
 function handleNavigation(view){sound.click();if(screen==='battle'&&match?.status!=='finished'){pauseBattle();return;}match=null;showView(view);}
@@ -342,7 +358,9 @@ function bindControls(){
   document.addEventListener('pointerdown',()=>sound.unlock(),{once:true});
 }
 // Read-only diagnostics. Browser journeys still operate the real controls.
-window.__LEAGUE__=Object.freeze({snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,maxHp:a.spec.hp,specialCd:a.specialCd,dashCd:a.dashCd,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
+// Verification only: advance a battle by simulated time and draw one frame, even in a hidden tab.
+const advance=(seconds,input={})=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match.status!=='finished';i++){step(match,{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish')onFinish();}renderer.render(match,1/60,clock+=seconds);renderHUD();return match.status;};
+window.__LEAGUE__=Object.freeze({advance,snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,maxHp:a.spec.hp,specialCd:a.specialCd,dashCd:a.dashCd,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
 async function boot(){
   $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);buildRoster();renderStoryPanel();bindControls();updateHeader();showView(journeyView(profile));$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);
     if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});

@@ -229,3 +229,11 @@ dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
 .card-dialog .card-dialog-card{width:min(300px,100%,calc((100dvh - 140px) * .714));margin-inline:auto}
 @media(max-height:560px){.reveal-dialog p{display:none}.reveal-dialog .flip{width:min(200px,calc((100dvh - 250px) * .714))}}
 .reveal-dialog{overflow:hidden}
+/* Mission HUD: who holds what, and the big hold countdown. */
+.mode-banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:14px;align-items:center;padding:6px 16px;border-radius:20px;background:linear-gradient(180deg,#3d2717,#24160c);color:var(--gold-hi);box-shadow:0 0 0 1px var(--gold),0 6px 14px #0008;font-weight:700;font-size:15px;white-space:nowrap;z-index:3}
+.mode-banner svg{width:18px;height:18px;vertical-align:-3px}.mode-banner .mb-goal{color:#f1e4c4;font-weight:500;font-size:13px}.mode-banner .mb-foe{color:#ffb8a8}
+.hold-count{position:absolute;top:56px;left:50%;transform:translateX(-50%);min-width:84px;padding:2px 18px;border-radius:16px;text-align:center;font-family:var(--display);font-weight:900;font-size:52px;line-height:1.1;color:#2a1d11;background:radial-gradient(circle at 40% 30%,#fff3c4,#f0c64e);box-shadow:0 0 0 3px #3a1d0f,0 0 0 5px var(--gold-hi),0 10px 22px #0009;z-index:3;animation:hold-beat 1s ease-in-out infinite}
+.hold-count.foe{background:radial-gradient(circle at 40% 30%,#ffd2c4,#e0603f);color:#fff}
+@keyframes hold-beat{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.1)}}
+@media(prefers-reduced-motion:reduce){.hold-count{animation:none}}
+@media(max-width:620px){.mode-banner{font-size:12px;gap:8px;padding:4px 10px}.hold-count{font-size:38px;top:46px}}

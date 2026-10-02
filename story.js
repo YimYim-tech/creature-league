@@ -1,6 +1,6 @@
 // The necklace journey from Michael's story: four islands, four lights, then the golden castle.
 // Everything here is data plus small pure functions, so the browser and the tests share it.
-import {CREATURES,WILD,isUnlocked,makeMatch,clamp} from './core.js';
+import {CREATURES,WILD,LEVELS,MODES,isUnlocked,makeMatch,clamp} from './core.js';
 
 export const ISLANDS = [
   {id:'wind', name:'אי הרוחות', gem:'#4f9d58', gemName:'הירוק'},
@@ -17,6 +17,10 @@ export const STEPS = [
   {id:'wind-free2', island:'wind', kind:'free', rival:'zikuk', level:'rookie',
     intro:'זיקוק מהיר כמו קרן אור. הצל שכנע אותו שהוא חייב לנצח לבד. תראה לו שביחד חזקים יותר.',
     after:'זיקוק חופשי! הוא כבר מחכה לרוץ איתך.'},
+  {id:'wind-mission', island:'wind', kind:'mission', mode:'wind', opponent:'zikuk', level:'challenger',
+    intro:'הרוח מפזרת נוצות קסם מגלגל הרוחות. אסוף שש נוצות והחזק אותן עשר שניות. אבל זהירות: מי שנופל, הנוצות שלו עפות!',
+    easier:'הפעם הרוח קצת יותר רגועה. אתה יכול!',
+    after:'תפסת את הרוח! גלגל הרוחות מסתובב שוב.'},
   {id:'wind-guard', island:'wind', kind:'guardian', rival:'windguard', level:'challenger', title:'שומר הרוחות',
     intro:'שומר הרוחות שומר על גלגל הרוחות. הצל לחש לו שאסור לסמוך על אף אחד. תראה לו שאתה חזק, וגם טוב.',
     after:'האור הירוק נדלק בשרשרת! ושומר הרוחות עצמו בחר להצטרף אליך.'},
@@ -35,6 +39,10 @@ export const STEPS = [
   {id:'fire-free2', island:'fire', kind:'free', rival:'lohatan', level:'challenger',
     intro:'לוהטן כועס, והכעס שלו מאכיל את הצל. אל תכעס בחזרה. תזוז, תחכה, ותפגע ברגע הנכון.',
     after:'לוהטן נרגע. הלהבה שלו חמה עכשיו, לא שורפת.'},
+  {id:'fire-mission', island:'fire', kind:'mission', mode:'lava', opponent:'lohatan', level:'veteran',
+    intro:'הלבה סוגרת את הזירה! שבור את הסלעים, אסוף גחלי כוח ותגדל. ואל תעמוד בעיגולים שמהבהבים: שם הלבה מתפרצת!',
+    easier:'הפעם הלבה קצת יותר רגועה. אתה יכול!',
+    after:'שרדת את טבעת הלבה! עכשיו אתה מוכן לשומר האש.'},
   {id:'fire-guard', island:'fire', kind:'guardian', rival:'fireguard', level:'champion', title:'שומר האש',
     intro:'שומר האש שומר על לב הר הגעש. הצל משתמש בכעס שלו. כשהוא יבין את זה, הוא יפסיק להילחם.',
     after:'האור האדום נדלק! אריה האש הבין שמישהו ניצל את הכעס שלו, ועכשיו הוא איתנו.'},
@@ -77,22 +85,39 @@ export const islandOf = id => ISLANDS.find(i => i.id === id);
 // Which island a still-shadowed creature waits on.
 export const homeIsland = creature => STEPS.find(s => s.rival === creature)?.island ?? null;
 
+// Two losses in the same mission bring the opponent down one level: no child stays stuck.
+const LEVEL_ORDER = ['rookie', 'challenger', 'veteran', 'champion'];
+export const missionEased = (profile, step) => step?.kind === 'mission' && (profile.missionLosses[step.id] || 0) >= 2;
+export function missionLevel(profile, step) {
+  if (!missionEased(profile, step)) return step.level;
+  return LEVEL_ORDER[Math.max(0, LEVEL_ORDER.indexOf(step.level) - 1)];
+}
+// Stars reward doing it well, so there is a reason to play a mission again.
+export function missionStars(step, m) {
+  if (m.winner !== 0) return 0;
+  if (step.mode === 'lava') {const a = m.actors[0], left = a.hp / a.spec.hp; return left >= .5 ? 3 : left >= .25 ? 2 : 1;}
+  return m.time < 35 ? 3 : m.time < 60 ? 2 : 1;
+}
 export function makeStoryMatch(profile, options = {}) {
   const step = currentStep(profile);
   if (!step || step.kind === 'castle') return null;
   const player = isUnlocked(profile, profile.selected) ? profile.selected : 'maimi';
+  if (step.kind === 'mission') return makeMatch({...options, player, rival:step.opponent, level:missionLevel(profile, step), story:step.id, arena:step.island, mode:step.mode});
   const rival = step.kind === 'mirror' ? player : step.rival;
   return makeMatch({...options, player, rival, level:step.level, story:step.id, arena:step.island, giant:step.kind === 'guardian', mirror:step.kind === 'mirror'});
 }
 // Called after a finished story match. Returns what changed, for the screens to celebrate.
 export function recordStory(profile, m) {
   const step = currentStep(profile);
-  if (!step || m.status !== 'finished' || m.winner !== 0 || m.story !== step.id) return null;
+  if (!step || m.status !== 'finished' || m.story !== step.id) return null;
+  if (m.winner !== 0) {if (step.kind === 'mission') profile.missionLosses[step.id] = (profile.missionLosses[step.id] || 0) + 1; return null;}
   profile.story.done++;
+  const stars = step.kind === 'mission' ? missionStars(step, m) : 0;
+  if (stars) profile.missionStars[step.id] = Math.max(profile.missionStars[step.id] || 0, stars);
   let released = null;
-  if (WILD.includes(step.rival) && !isUnlocked(profile, step.rival)) {profile.unlocked.push(step.rival); profile.newCards.push(step.rival); released = step.rival;}
-  const lit = step.kind !== 'free' ? step.island : null;
-  return {step, released, lit};
+  if (step.kind !== 'mission' && WILD.includes(step.rival) && !isUnlocked(profile, step.rival)) {profile.unlocked.push(step.rival); profile.newCards.push(step.rival); released = step.rival;}
+  const lit = step.kind === 'guardian' || step.kind === 'mirror' ? step.island : null;
+  return {step, released, lit, stars};
 }
 export function completeCastle(profile) {
   const step = currentStep(profile);

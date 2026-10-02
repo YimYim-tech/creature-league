@@ -20,6 +20,7 @@ export const CREATURES = Object.freeze({
 export const LEVELS = {
   rookie:{name:'חימום', subtitle:'לומדים את הזירה', reaction:.50, fireScale:2.2, aimError:.27, speedScale:.80, specialDelay:4},
   challenger:{name:'אתגר', subtitle:'כבר יודעים להתחמק', reaction:.30, fireScale:1.65, aimError:.18, speedScale:.92, specialDelay:2.5},
+  veteran:{name:'ותיקים', subtitle:'כמעט אלופים', reaction:.25, fireScale:1.45, aimError:.14, speedScale:.96, specialDelay:1.8},
   champion:{name:'אלופים', subtitle:'היריב לא מוותר', reaction:.20, fireScale:1.25, aimError:.105, speedScale:1, specialDelay:1},
 };
 export const CUP = [
@@ -82,21 +83,94 @@ export function confine(actor) {
   const x=(actor.x-WORLD.cx)/rx,y=(actor.y-WORLD.cy)/ry,d=length(x,y);
   if(d>1){actor.x=WORLD.cx+x/d*rx;actor.y=WORLD.cy+y/d*ry;}
 }
+// ------------------------------------------------------------------ island missions
+// Every mission keeps shooting, specials and dodges; only the goal changes.
+export const MODES={
+  lava:{name:'טבעת הלבה',goal:'הלבה סוגרת את הזירה. שברו סלעים, אספו גחלי כוח ותגדלו.',duration:100},
+  wind:{name:'תפוס את הרוח',goal:'אספו 7 נוצות רוח והחזיקו אותן 10 שניות.',duration:120},
+};
+export const WIND_TARGET=6,WIND_HOLD=10,MAX_POWER=5;
+function setupMode(m,mode){
+  m.mode=mode;m.duration=MODES[mode].duration;
+  for(const a of m.actors){a.power=0;a.feathers=0;a.out=0;}
+  if(mode==='lava'){m.lava={scale:1,next:6,eruptions:[],embers:[],nextEmber:16};
+    // A long fight is the point: both sides get the stamina to collect, grow and outlast the lava.
+    for(const a of m.actors){a.spec={...a.spec,hp:Math.round(a.spec.hp*LAVA_STAMINA)};a.hp=a.spec.hp;}
+    for(const [x,y] of [[640,300],[520,470],[760,470]])m.lava.embers.push({x,y,age:0});}
+  if(mode==='wind'){m.wind={feathers:[],next:1.5,holder:-1,hold:0};m.covers=m.covers.filter((c,i)=>i<2);}
+}
+// How much of the arena is still safe: 1 is the full oval, it closes to .45.
+export const LAVA_STAMINA=5.5;
+export const lavaScale=t=>1-.6*clamp((t-3)/40,0,1);
+const ovalDistance=(x,y)=>length((x-WORLD.cx)/WORLD.rx,(y-WORLD.cy)/WORLD.ry);
+function stepMode(m,dt){
+  if(m.lava){const L=m.lava;L.scale=lavaScale(m.time);
+    if(m.time>1&&m.time<4&&!L.warned){L.warned=true;event(m,'lava-warning');}
+    for(const a of m.actors){if(a.hp<=0)continue;
+      if(ovalDistance(a.x,a.y)>L.scale){a.burn=(a.burn||0)-dt;a.slow=Math.max(a.slow,.2);if(a.burn<=0){a.burn=.33;damage(m,a,3,null,{special:true});effect(m,'burn',a.x,a.y,{color:'#ff7a2c'});}}}
+    for(const c of m.covers)if(c.hp<=0&&!c.dropped){c.dropped=true;L.embers.push({x:c.x,y:c.y,age:0});event(m,'ember-drop');}
+    if(m.time>=L.nextEmber){L.nextEmber=m.time+20;const ang=m.random()*Math.PI*2,r=m.random()*L.scale*.6;L.embers.push({x:WORLD.cx+Math.cos(ang)*WORLD.rx*r,y:WORLD.cy+Math.sin(ang)*WORLD.ry*r,age:0});event(m,'ember-drop');}
+    for(const e of L.embers){e.age+=dt;if(ovalDistance(e.x,e.y)>L.scale){const k=L.scale*.9/ovalDistance(e.x,e.y);e.x=WORLD.cx+(e.x-WORLD.cx)*k;e.y=WORLD.cy+(e.y-WORLD.cy)*k;}
+      for(const a of m.actors)if(!e.taken&&a.hp>0&&a.power<MAX_POWER&&length(a.x-e.x,a.y-e.y)<a.radius+20){e.taken=true;a.power++;a.spec={...a.spec,hp:a.spec.hp+20};a.hp+=20;effect(m,'ember',a.x,a.y,{color:'#ffb43a'});event(m,'ember',{side:a.side,power:a.power});}}
+    L.embers=L.embers.filter(e=>!e.taken);
+    if(m.time>=L.next){L.next=m.time+(m.time>30?3.5:4.5);const target=m.actors[m.random()<.5?0:1],spot=m.random()<.6?{x:target.x,y:target.y}:{x:WORLD.cx+(m.random()-.5)*WORLD.rx*L.scale,y:WORLD.cy+(m.random()-.5)*WORLD.ry*L.scale};L.eruptions.push({...spot,r:72,delay:1.2,age:0});}
+    for(const e of L.eruptions){e.age+=dt;if(!e.done&&e.age>=e.delay){e.done=true;m.waves.push({kind:'blast',visual:true,owner:-1,x:e.x,y:e.y,age:0,r:e.r,life:.5,hit:[]});event(m,'blast',{side:-1});
+      for(const a of m.actors)if(a.hp>0&&a.invincible<=0&&length(a.x-e.x,a.y-e.y)<e.r+a.radius)damage(m,a,18,null,{special:true,pushX:Math.sign(a.x-e.x||1)*30});}}
+    L.eruptions=L.eruptions.filter(e=>e.age<e.delay+.6);
+  }
+  if(m.wind){const W=m.wind;
+    for(const a of m.actors){
+      if(a.out>0){a.out-=dt;if(a.out<=0){a.out=0;a.hp=a.spec.hp;a.x=a.side?995:285;a.y=420;a.invincible=1.5;event(m,'respawn',{side:a.side});}continue;}
+      if(a.hp<=0){dropFeathers(m,a,a.feathers);a.out=2.5;a.hp=0;effect(m,'blown',a.x,a.y,{color:'#cfffff'});event(m,'ko',{side:a.side});}}
+    if(m.time>=W.next&&W.feathers.length<8){W.next=m.time+3;const ang=m.random()*Math.PI*2;W.feathers.push({x:WORLD.cx,y:WORLD.cy,vx:Math.cos(ang)*90,vy:Math.sin(ang)*70,age:0});event(m,'feather-spawn');}
+    for(const f of W.feathers){f.age+=dt;const drag=Math.max(0,1-dt*1.6);f.vx*=drag;f.vy*=drag;f.x+=f.vx*dt;f.y+=f.vy*dt;
+      if(ovalDistance(f.x,f.y)>.92){const k=.92/ovalDistance(f.x,f.y);f.x=WORLD.cx+(f.x-WORLD.cx)*k;f.y=WORLD.cy+(f.y-WORLD.cy)*k;f.vx*=-.4;f.vy*=-.4;}
+      if(f.age<.5)continue;
+      for(const a of m.actors)if(!f.taken&&a.out<=0&&a.hp>0&&length(a.x-f.x,a.y-f.y)<a.radius+18){f.taken=true;a.feathers++;event(m,'feather',{side:a.side,count:a.feathers});}}
+    W.feathers=W.feathers.filter(f=>!f.taken);
+    const [p,e]=m.actors,holder=p.feathers>=WIND_TARGET&&p.feathers>e.feathers?0:e.feathers>=WIND_TARGET&&e.feathers>p.feathers?1:-1;
+    if(holder!==W.holder){W.holder=holder;W.hold=WIND_HOLD;if(holder>=0)event(m,'hold-start',{side:holder});}
+    if(holder>=0){W.hold-=dt;if(W.hold<=0)finish(m,holder,'feathers');}
+  }
+}
+function dropFeathers(m,a,count){
+  for(let i=0;i<count&&a.feathers>0;i++){a.feathers--;const ang=m.random()*Math.PI*2,sp=140+m.random()*120;m.wind.feathers.push({x:a.x,y:a.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp*.8,age:0});}
+  if(count)event(m,'feathers-drop',{side:a.side});
+}
+// What the opponent wants in a mission, blended with how it fights.
+function modeGoal(m,a,p,d){
+  if(m.lava){const L=m.lava,od=ovalDistance(a.x,a.y);
+    if(od>L.scale-.08){const q=norm(WORLD.cx-a.x,WORLD.cy-a.y);return {x:q.x*2.2,y:q.y*2.2,keep:.4};}
+    for(const e of L.eruptions)if(!e.done&&length(a.x-e.x,a.y-e.y)<e.r+a.radius+30){const q=norm(a.x-e.x||.01,a.y-e.y);return {x:q.x*2.5,y:q.y*2.5,keep:.3};}
+    let best=null;for(const e of L.embers){const dist=length(e.x-a.x,e.y-a.y);if(a.power<MAX_POWER&&(dist<d*.9||dist<420)&&(!best||dist<best.dist))best={e,dist};}
+    if(best){const q=norm(best.e.x-a.x,best.e.y-a.y);return {x:q.x*2,y:q.y*2,keep:.35};}
+    if(L.scale<.9){const target=m.covers.find(c=>c.hp>0&&a.power<MAX_POWER);if(target&&m.level!=='rookie'){/* shooting covers is left to the normal aim */}}
+    return null;}
+  if(m.wind){const W=m.wind;
+    if(W.holder===1){const q=norm(a.x-p.x||.01,a.y-p.y);return {x:q.x*1.4,y:q.y*1.4,keep:.6};}
+    if(W.holder===0&&p.out<=0){const q=norm(p.x-a.x,p.y-a.y);return {x:q.x*1.5,y:q.y*1.5,keep:.5};}
+    let best=null;for(const f of W.feathers){const dist=length(f.x-a.x,f.y-a.y);if(!best||dist<best.dist)best={f,dist};}
+    if(best&&(best.dist<320||p.out>0)){const q=norm(best.f.x-a.x,best.f.y-a.y);return {x:q.x*1.7,y:q.y*1.7,keep:.45};}
+    return null;}
+  return null;
+}
 function actor(id,side,ids=[]) {
   if(!CREATURES[id])throw new Error('Unknown creature');
   const upgrades=cleanUpgrades(ids),spec=buildSpec(CREATURES[id],upgrades);
   return {id,side,spec,upgrades,x:side===0?285:995,y:420,hp:spec.hp,radius:spec.radius,fireCd:0,specialCd:0,dashCd:0,invincible:0,guard:0,stun:0,slow:0,root:0,windup:0,hit:0,attack:0,moveX:0,moveY:0,facing:side===0?1:-1,aim:side===0?0:Math.PI,
     stats:{shots:0,hits:0,damage:0,blocked:0,specials:0,dodges:0,healed:0,weakHits:0},trail:[]};
 }
-export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null}={}) {
+export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null}={}) {
   if(!LEVELS[level])throw new Error('Unknown difficulty');
   const enemy=actor(rival,1);
   // An island guardian is the same creature, grown huge by the shadow.
   if(giant){enemy.spec={...enemy.spec,hp:Math.round(enemy.spec.hp*1.6),height:enemy.spec.height*1.3,radius:Math.round(enemy.spec.radius*1.25),damage:Math.round(enemy.spec.damage*1.1)};enemy.hp=enemy.spec.hp;enemy.radius=enemy.spec.radius;enemy.giant=true;}
   if(boss&&rival==='slauz')enemy.boss={phase:'guard',timer:3.8,angle:Math.PI,hit:false};
-  return {id:seed+'-'+player+'-'+rival,random:seeded(seed),level,challenge:challenge===CHALLENGE.id?challenge:null,wild:WILD.includes(wild)&&wild===rival?wild:null,story:typeof story==='string'?story:null,arena:typeof arena==='string'?arena:null,mirror:!!mirror,actors:[actor(player,0,upgrades),enemy],time:0,duration:90,countdown:2.3,status:'countdown',winner:null,
+  const match={id:seed+'-'+player+'-'+rival,random:seeded(seed),level,challenge:challenge===CHALLENGE.id?challenge:null,wild:WILD.includes(wild)&&wild===rival?wild:null,story:typeof story==='string'?story:null,arena:typeof arena==='string'?arena:null,mirror:!!mirror,actors:[actor(player,0,upgrades),enemy],time:0,duration:90,countdown:2.3,status:'countdown',winner:null,
     shots:[],waves:[],zones:[],effects:[],events:[],nextId:0,pickup:null,pickupAt:12,ai:{timer:0,angle:0,strafe:1,strafeTime:0,moveX:0,moveY:0,aimX:0,aimY:0,fire:false,special:false,dash:false},
     covers:[{x:449,y:350,r:35,hp:80,maxHp:80},{x:831,y:440,r:35,hp:80,maxHp:80},{x:650,y:237,r:28,hp:65,maxHp:65},{x:630,y:555,r:28,hp:65,maxHp:65}].map((c,i)=>({...c,...(challenge===CHALLENGE.id?{collapseAt:5+i*4}:{})}))};
+  if(MODES[mode])setupMode(match,mode);
+  return match;
 }
 function event(m,type,data={}) {m.events.push({type,...data});}
 function effect(m,type,x,y,data={}) {m.effects.push({type,x,y,age:0,...data});}
@@ -104,6 +178,8 @@ function damage(m,a,raw,source,{pushX=0,pushY=0,special=false,hitAngle=null}={})
   if(a.hp<=0)return;
   if(a.invincible>0){a.stats.dodges++; effect(m,'evade',a.x,a.y,{color:'#ffffff'});return;}
   const exposed=a.boss?.phase==='recover',front=a.boss&&['guard','windup'].includes(a.boss.phase)&&hitAngle!=null&&Math.cos(hitAngle-a.boss.angle)>Math.cos(1.05);
+  if(source?.power)raw*=1+.12*source.power;
+  if(m.wind&&special&&a.feathers>0&&a.invincible<=0)dropFeathers(m,a,1);
   const reduction=exposed?0:front?.8:a.guard>0?.72:a.spec.armor,amount=raw*(exposed?1.5:1)*(1-reduction),actual=Math.min(a.hp,amount);
   a.stats.blocked+=Math.max(0,raw-amount);a.hp=Math.max(0,a.hp-amount);a.hit=.17;
   if(front)effect(m,'guard-block',a.x,a.y,{color:'#ffe5a7'});
@@ -228,15 +304,17 @@ function aiInput(m,dt) {
   }
   for(const c of m.covers)if(c.hp>0){const ax=a.x-c.x,ay=a.y-c.y,dist=length(ax,ay),r=c.r+a.radius+45;
     if(dist<r){const push=(r-dist)/45;mx+=ax/(dist||1)*push*2;my+=ay/(dist||1)*push*2;}}
+  const goal=modeGoal(m,a,p,d);if(goal){mx=mx*goal.keep+goal.x;my=my*goal.keep+goal.y;}
   const move=norm(mx,my);ai.moveX=move.x;ai.moveY=move.y;
   const lead=m.level==='rookie'?0:d/a.spec.shotSpeed*.55;
   const angle=Math.atan2(dy+p.moveY*p.spec.speed*lead*.8,dx+p.moveX*p.spec.speed*lead)+(m.random()-.5)*level.aimError*2;
-  ai.aimX=a.x+Math.cos(angle)*500;ai.aimY=a.y+Math.sin(angle)*500;ai.fire=d<760;
+  ai.aimX=a.x+Math.cos(angle)*500;ai.aimY=a.y+Math.sin(angle)*500;ai.fire=d<760&&!(p.out>0);
   ai.special=m.time>level.specialDelay&&d<(a.spec.specialRange||300)&&d>(a.spec.specialMin||0)&&p.stun<=0;
   ai.dash=m.level==='champion'&&d<130&&!['slauz','tehomon','seaguard'].includes(a.id)&&a.dashCd<=0;return ai;
 }
 function stepActor(m,a,input,dt,scale=1) {
   for(const key of ['fireCd','specialCd','dashCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);
+  if(a.out>0){a.moveX=0;a.moveY=0;return;}
   if(a.stun>0){a.moveX=0;a.moveY=0;return;}
   if(a.boss){stepBoss(m,a,dt);return;}
   if(a.windup>0){a.windup-=dt;if(a.windup<=0){const surge=a.upgrades.includes('surge');m.waves.push({kind:'quake',owner:a.side,x:a.x,y:a.y,age:0,r:surge?235:182,damage:surge?65:46,life:.7,hit:[]});event(m,'quake',{side:a.side});}}
@@ -253,7 +331,7 @@ function updateProjectiles(m,dt) {
   for(const s of m.shots){
     const x=s.x+s.vx*dt,y=s.y+s.vy*dt;s.life-=dt;
     let hit=null,t=2;
-    const target=m.actors[1-s.owner],enemyT=segmentCircle(s.x,s.y,x,y,target.x,target.y,s.r+target.radius);
+    const target=m.actors[1-s.owner],enemyT=target.out>0?null:segmentCircle(s.x,s.y,x,y,target.x,target.y,s.r+target.radius);
     if(enemyT!=null){hit=target;t=enemyT;}
     for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){hit=c;t=ct;}}
     if(hit){s.x+=(x-s.x)*t;s.y+=(y-s.y)*t;s.life=0;if(s.explode)burst(m,s);
@@ -302,16 +380,19 @@ export function step(m,input={},dt=1/60) {
   const [a,b]=m.actors,d=length(a.x-b.x,a.y-b.y),r=a.radius+b.radius;
   if(d<r){const n=norm(a.x-b.x||.01,a.y-b.y),shift=(r-d)/2;a.x+=n.x*shift;a.y+=n.y*shift;b.x-=n.x*shift;b.y-=n.y*shift;resolveCover(m,a);resolveCover(m,b);}
   updateProjectiles(m,dt);
-  if(!m.pickup&&m.time>=m.pickupAt){m.pickup={x:640,y:395,life:12};m.pickupAt=m.time+20;event(m,'pickup-ready');}
+  if(m.mode)stepMode(m,dt);
+  if(m.status==='finished')return;
+  if(!m.pickup&&m.time>=m.pickupAt&&!m.mode){m.pickup={x:640,y:395,life:12};m.pickupAt=m.time+20;event(m,'pickup-ready');}
   if(m.pickup){m.pickup.life-=dt;for(const actor of m.actors)if(m.pickup&&actor.hp>0&&actor.hp<actor.spec.hp&&length(actor.x-m.pickup.x,actor.y-m.pickup.y)<actor.radius+22){
     const amount=Math.min(30,actor.spec.hp-actor.hp);actor.hp+=amount;actor.stats.healed+=amount;effect(m,'heal',actor.x,actor.y,{amount,color:'#91f5be'});event(m,'heal',{side:actor.side,amount});m.pickup=null;
   }if(m.pickup?.life<=0)m.pickup=null;}
+  if(m.wind){if(m.time>=m.duration){const lead=a.feathers-b.feathers,difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,lead?(lead>0?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
   if(a.hp<=0||b.hp<=0)finish(m,a.hp<=0&&b.hp<=0?-1:a.hp<=0?1:0);
   else if(m.time>=m.duration){const difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,Math.abs(difference)<.002?-1:difference>0?0:1,'time');}
 }
 export function resultStats(m) {const a=m.actors[0];return {damage:Math.round(a.stats.damage),blocked:Math.round(a.stats.blocked),accuracy:a.stats.shots?Math.round(a.stats.hits/a.stats.shots*100):0,specials:a.stats.specials,healed:Math.round(a.stats.healed),weakHits:a.stats.weakHits,seconds:Math.round(m.time)};}
 export const STORAGE_KEY='creature-league.v1';
-export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0},storyCards:[]};}
+export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0},storyCards:[],missionStars:{},missionLosses:{}};}
 export function readProfile(storage) {
   const fresh=freshProfile();try{const data=JSON.parse(storage.getItem(STORAGE_KEY));if(!data||data.version!==1)return fresh;
     for(const key of ['wins','played','cups','challengeWins','bestStreak','streak'])fresh[key]=Number.isFinite(data[key])?clamp(Math.floor(data[key]),0,1e8):0;
@@ -322,6 +403,7 @@ export function readProfile(storage) {
     if(data.cup&&Number.isInteger(data.cup.stage)&&data.cup.stage>=0&&data.cup.stage<3)fresh.cup={stage:data.cup.stage,player:CREATURES[data.cup.player]?data.cup.player:fresh.selected,upgrades:cleanUpgrades(data.cup.upgrades).slice(0,data.cup.stage)};
     fresh.unlocked=Array.isArray(data.unlocked)?[...new Set(data.unlocked.filter(id=>WILD.includes(id)))]:[];
     fresh.story={done:Number.isInteger(data.story?.done)?clamp(data.story.done,0,100):0};
+    for(const key of ['missionStars','missionLosses'])if(data[key]&&typeof data[key]==='object')for(const [id,n] of Object.entries(data[key]))if(/^[a-z0-9-]{1,32}$/.test(id)&&Number.isFinite(n))fresh[key][id]=clamp(Math.floor(n),0,key==='missionStars'?3:99);
     fresh.storyCards=Array.isArray(data.storyCards)?[...new Set(data.storyCards.filter(id=>typeof id==='string'&&/^[a-zA-Z]{1,24}$/.test(id)))]:[];
     if(Array.isArray(data.newCards))fresh.newCards=[...new Set(data.newCards.filter(id=>isUnlocked(fresh,id)||fresh.storyCards.includes(id)))];
     for(const id of Object.keys(CREATURES)){const skin=data.skins?.[id];if(typeof skin==='string'&&SKINS.some(s=>s.id===skin))fresh.skins[id]=skin;}
