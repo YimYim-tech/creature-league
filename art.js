@@ -58,17 +58,20 @@ export function drawPortrait(canvas,p,id,t,dt,{active=false,locked=false,skin=nu
   if(locked){ctx.save();ctx.font='900 '+Math.round(h*.22)+'px Heebo, Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=c.color;ctx.shadowColor=c.color;ctx.shadowBlur=18;ctx.fillText('?',w/2,h*.5);ctx.restore();}
   for(let i=0;i<7;i++){const px=w*(.15+(i*.137)% .72),py=(h*.9-(t*14+i*32)%(h*.8));ellipse(ctx,px,py,1.5,1.5,c.color+(active?'aa':'44'));}
 }
-const PHONE=window.matchMedia('(max-height:520px) and (orientation:landscape), (max-width:620px) and (orientation:portrait)');
+// Sideways phone: the whole play area, cropped tight. Upright phone: a close camera that follows the player.
+const PHONE_WIDE=window.matchMedia('(max-height:520px) and (orientation:landscape)'),PHONE_TALL=window.matchMedia('(max-width:620px) and (orientation:portrait)');
+const PLAY_VIEW={x:72,y:26,w:1136,h:668};
 export class Renderer {
   constructor(canvas,art) {this.canvas=canvas;this.ctx=canvas.getContext('2d');this.art=art;this.puppets=[];this.skins=[null,null];this.clock=0;this.scale=1;this.offsetX=0;this.offsetY=0;this.shake=0;this.phone=false;this.cam=null;}
   swap(side,id,skin=null) {this.puppets[side]=createPuppet(id);this.skins[side]=skin;}
   setMatch(m,skins=[null,null]) {this.cam=null;this.puppets=m.actors.map(a=>createPuppet(a.id));this.skins=skins;}
-  resize() {this.phone=PHONE.matches;const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
+  resize() {this.wide=PHONE_WIDE.matches;this.phone=PHONE_TALL.matches;const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
     if(this.canvas.width!==Math.round(rect.width*dpr)||this.canvas.height!==Math.round(rect.height*dpr)){this.canvas.width=Math.round(rect.width*dpr);this.canvas.height=Math.round(rect.height*dpr);}
     this.scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height);this.offsetX=(rect.width-WORLD.width*this.scale)/2;this.offsetY=(rect.height-WORLD.height*this.scale)/2;
   }
   // On a phone the arena fills the screen and the camera follows the player up close.
   follow(m,dt) {
+    if(this.wide){const V=PLAY_VIEW,k=Math.min(this.w/V.w,this.h/V.h);this.scale=k;this.offsetX=(this.w-V.w*k)/2-V.x*k;this.offsetY=(this.h-V.h*k)/2-V.y*k;this.cam=null;return;}
     if(!this.phone){this.cam=null;return;}
     const w=this.w,h=this.h,k=Math.max(w/WORLD.width,h/WORLD.height)*1.25,[p,f]=m.actors,focus=m.ball&&m.ball.carrier!==0?m.ball:f;
     const tx=p.x*.68+focus.x*.32,ty=(p.y-45)*.68+(focus.y-45)*.32;
