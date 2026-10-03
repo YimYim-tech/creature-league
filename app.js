@@ -106,8 +106,10 @@ function notify(text){$('notice').textContent=text;$('notice').hidden=false;clea
 function persist(){if(!saveProfile(storage,profile)&&!saveNoticeShown){notify('השמירה במכשיר אינה זמינה. אפשר להמשיך לשחק עד שסוגרים את הדף.');saveNoticeShown=true;}updateHeader();}
 function updateHeader(){$('header-wins').textContent=profile.wins;$('cards-badge').hidden=!profile.newCards.length;$('cards-badge').textContent=profile.newCards.length;$('sound-toggle').innerHTML=icon(profile.sound?'sound':'muted');$('sound-toggle').setAttribute('aria-label',profile.sound?'השתקת צליל':'הפעלת צליל');$('sound-toggle').setAttribute('aria-pressed',String(!profile.sound));}
 function showView(name){
+  if(screen!==name)window.scrollTo(0,0);
   screen=name;for(const el of document.querySelectorAll('.view'))el.hidden=el.id!==name;
   document.body.classList.toggle('battle-active',name==='battle');if(name!=='battle')chosenTrio=null;
+  {const v=$(name);if(v&&name!=='battle'){v.classList.remove('view-enter');void v.offsetWidth;v.classList.add('view-enter');}}
   // On a touch screen a battle goes full screen and asks for landscape.
   if(name==='battle'&&matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});
   if(name==='battle')window.scrollTo(0,0);
@@ -315,7 +317,8 @@ function updateTutorial(dt){
   else if(tutorial.age-tutorial.doneAt>2.2)endTutorial();
   if(tutorial&&tutorial.age>40)endTutorial();
 }
-function renderHUD(){if(!match)return;const [a,b]=match.actors;if(!$('goal-card').hidden&&clock>goalUntil)$('goal-card').hidden=true;
+function renderHUD(){if(!match)return;const [a,b]=match.actors;
+  {const fade=renderer.wide&&match.actors.some(x=>!(x.out>0)&&renderer.offsetY+(x.y-x.spec.height*(renderer.size||1))*renderer.scale<70);document.querySelector('.battle-top').classList.toggle('hud-fade',fade);$('mode-banner').classList.toggle('hud-fade',fade);}if(!$('goal-card').hidden&&clock>goalUntil)$('goal-card').hidden=true;
   $('fire-button').setAttribute('aria-pressed',String(input.toggleFire));$('fire-button').classList.toggle('latched',input.toggleFire);
   $('player-health').style.width=100*a.hp/a.spec.hp+'%';$('rival-health').style.width=100*b.hp/b.spec.hp+'%';$('player-hp').textContent=Math.ceil(a.hp)+' / '+a.spec.hp;$('rival-hp').textContent=Math.ceil(b.hp)+' / '+b.spec.hp;
   const seconds=Math.max(0,Math.ceil(match.duration-match.time));$('timer').textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');document.querySelector('.match-clock').classList.toggle('urgent',seconds<=15);
@@ -402,10 +405,9 @@ function bindControls(){
   for(const type of ['gesturestart','gesturechange','dblclick'])document.addEventListener(type,e=>{if(screen==='battle')e.preventDefault();},{passive:false});
   document.addEventListener('touchmove',e=>{if(screen==='battle'&&(e.touches.length>1||!e.target.closest('dialog')))e.preventDefault();},{passive:false});
   $('reveal-dialog').addEventListener('close',()=>{if(screen==='story'&&storyEvent)renderStory();});
-  const readCam=()=>{try{return localStorage.getItem('creature-league.close-camera')==='1';}catch{return false;}};renderer.closeCam=readCam();
+  const readCam=()=>{try{const v=localStorage.getItem('creature-league.close-camera');return v==null?true:v==='1';}catch{return true;}};renderer.closeCam=readCam();
   const camLabel=()=>{$('camera-toggle').textContent=renderer.closeCam?'מצלמה: קרובה · לחצו לכל הזירה':'מצלמה: כל הזירה · לחצו למצלמה קרובה';};camLabel();
   $('camera-toggle').onclick=()=>{sound.click();renderer.closeCam=!renderer.closeCam;renderer.cam=null;try{localStorage.setItem('creature-league.close-camera',renderer.closeCam?'1':'0');}catch{}camLabel();};
-  $('rotate-skip').onclick=()=>{document.body.classList.add('portrait-ok');renderer.cam=null;};
   $('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{notify('אפשר לשחק גם בתצוגה הזאת.');}};
   $('help-open').onclick=openHelp;$('help-inline').onclick=openHelp;document.querySelectorAll('[data-close]').forEach(el=>el.onclick=()=>$(el.dataset.close).close());
   $('pause-button').onclick=pauseBattle;$('resume-button').onclick=resumeBattle;$('leave-button').onclick=leaveBattle;
@@ -433,6 +435,7 @@ function bindControls(){
   joystick.addEventListener('pointerdown',e=>{if(stickPointer!==null)return;e.preventDefault();stickPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);setStick(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)setStick(e);});
   for(const event of ['pointerup','pointercancel','lostpointercapture'])joystick.addEventListener(event,e=>{if(e.pointerId===stickPointer){stickPointer=null;input.stickX=0;input.stickY=0;$('joystick-knob').style.transform='';}});
   for(const type of ['pointerdown','touchend','click','keydown'])document.addEventListener(type,()=>{if(sound.ctx?.state!=='running')sound.unlock();},{passive:true});
+  document.addEventListener('click',()=>{if(matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});},{once:true});
 }
 // Read-only diagnostics. Browser journeys still operate the real controls.
 // Verification only: advance a battle by simulated time and draw one frame, even in a hidden tab.

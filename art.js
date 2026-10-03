@@ -68,7 +68,7 @@ export class Renderer {
   constructor(canvas,art) {this.canvas=canvas;this.ctx=canvas.getContext('2d');this.art=art;this.puppets=[];this.skins=[null,null];this.clock=0;this.scale=1;this.offsetX=0;this.offsetY=0;this.shake=0;this.phone=false;this.cam=null;}
   swap(side,id,skin=null) {this.puppets[side]=createPuppet(id);this.skins[side]=skin;}
   setMatch(m,skins=[null,null]) {this.cam=null;this.puppets=m.actors.map(a=>createPuppet(a.id));this.skins=skins;}
-  resize() {this.wide=PHONE_WIDE.matches||PHONE_TALL.matches;this.phone=false;this.size=this.wide?1.22:1;const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
+  resize() {this.wide=PHONE_WIDE.matches||PHONE_TALL.matches;this.phone=false;this.size=this.wide?1.3:1;const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
     if(this.canvas.width!==Math.round(rect.width*dpr)||this.canvas.height!==Math.round(rect.height*dpr)){this.canvas.width=Math.round(rect.width*dpr);this.canvas.height=Math.round(rect.height*dpr);}
     this.scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height);this.offsetX=(rect.width-WORLD.width*this.scale)/2;this.offsetY=(rect.height-WORLD.height*this.scale)/2;
   }
@@ -79,7 +79,7 @@ export class Renderer {
     else{k=Math.min(this.w/WORLD.width,this.h/WORLD.height);cx=WORLD.width/2;cy=WORLD.height/2;}
     // Close camera (chosen in the pause menu, phones only): a little closer, and it moves only when the player nears the edge.
     if(this.wide&&this.closeCam){
-      k*=1.45;const p=m.actors[0],hw=this.w/2/k,hh=this.h/2/k,px=p.x,py=p.y-40;
+      k*=1.3;const p=m.actors[0],hw=this.w/2/k,hh=this.h/2/k,px=p.x,py=p.y-40;
       if(!this.cam)this.cam={x:px,y:py};
       const dzx=hw*.3,dzy=hh*.25;let tx=this.cam.x,ty=this.cam.y;
       if(px>tx+dzx)tx=px-dzx;else if(px<tx-dzx)tx=px+dzx;if(py>ty+dzy)ty=py-dzy;else if(py<ty-dzy)ty=py+dzy;
@@ -165,8 +165,10 @@ export class Renderer {
     if(a.power>0){c.save();c.globalAlpha=.35+.08*Math.sin(this.clock*6);ellipse(c,a.x,a.y,a.radius*(1.7+a.power*.12),a.radius*.62,'#ff8a2a55','#ffb43a',3);c.restore();}
     drawPuppet(c,puppet,a.x,a.y,a.spec.height*(1+.07*(a.power||0)),{flip,clip:a.stun>0&&a.hp>0?'hit':clip,dt:status==='paused'||a.stun>0?0:dt,hit:a.hit>.05,alpha:a.invincible>0?.65:1,skin:this.skins[a.side],time:this.clock});
     if(a.stun>0&&a.hp>0)this.drawDizzy(a);
+    if(a.regen){c.save();for(let i=0;i<5;i++){const k=(this.clock*.9+i/5)%1,px=a.x+Math.sin(i*2.4+this.clock*2)*a.radius*.9,py=a.y-10-k*a.spec.height*.9;c.globalAlpha=(1-k)*.9;c.fillStyle='#5dff9e';c.fillRect(px-2,py-7,4,14);c.fillRect(px-7,py-2,14,4);}c.restore();}
     if(a.guard>0){c.save();c.globalAlpha=.35;ellipse(c,a.x,a.y-a.spec.height*.45,a.radius*1.6,a.spec.height*.65,'#92e9ff33','#cffbff',3);c.restore();}
-    const barW=70,barY=a.y-a.spec.height-17;c.fillStyle='#092432bb';c.beginPath();c.roundRect(a.x-barW/2,barY,barW,7,4);c.fill();c.fillStyle=a.side===0?'#39dccc':'#fc7a7f';c.beginPath();c.roundRect(a.x-barW/2+1,barY+1,Math.max(0,(barW-2)*a.hp/a.spec.hp),5,3);c.fill();
+    // Near the top edge the bar stops at the screen edge, so health never leaves the screen.
+    const barW=70,topWorld=-this.offsetY/this.scale+6,barY=Math.max(a.y-a.spec.height-17,a.y+(topWorld-a.y)/f);c.fillStyle='#092432bb';c.beginPath();c.roundRect(a.x-barW/2,barY,barW,7,4);c.fill();c.fillStyle=a.side===0?'#39dccc':'#fc7a7f';c.beginPath();c.roundRect(a.x-barW/2+1,barY+1,Math.max(0,(barW-2)*a.hp/a.spec.hp),5,3);c.fill();
     if(f!==1)c.restore();
   }
   // Creatures still held by the shadow trail dark smoke until they are freed.

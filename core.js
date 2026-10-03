@@ -237,7 +237,7 @@ function damage(m,a,raw,source,{pushX=0,pushY=0,special=false,hitAngle=null}={})
   if(m.wind&&special&&a.feathers>0&&a.invincible<=0)dropFeathers(m,a,1);
   if(m.ball&&m.ball.carrier===a.side&&a.invincible<=0){m.ball.hits++;if(special||m.ball.hits>=BALL_TUNE.fumble)looseBall(m,a,320);else event(m,'ball-hit',{side:a.side,hits:m.ball.hits});}
   const reduction=exposed?0:front?.8:a.guard>0?.72:a.spec.armor,amount=raw*(exposed?1.5:1)*(1-reduction),actual=Math.min(a.hp,amount);
-  a.stats.blocked+=Math.max(0,raw-amount);a.hp=Math.max(0,a.hp-amount);a.hit=.17;
+  a.stats.blocked+=Math.max(0,raw-amount);a.hp=Math.max(0,a.hp-amount);a.hit=.17;a.calm=0;if(source)source.calm=0;
   if(front)effect(m,'guard-block',a.x,a.y,{color:'#ffe5a7'});
   if(exposed&&source){source.stats.weakHits++;effect(m,'weak-hit',a.x,a.y,{color:'#95ffe0'});}
   if(source){source.stats.damage+=actual;if(!special)source.stats.hits++;}
@@ -253,7 +253,7 @@ function move(m,a,x,y,dt,scale=1) {
   const n=length(x,y)>1?norm(x,y):{x,y};const speed=a.spec.speed*scale*(a.slow>0?.55:1)*(a.windup>0?.2:1)*(a.root>0?0:1)*(m.ball?.carrier===a.side?BALL_TUNE.carry:1);
   a.moveX=n.x;a.moveY=n.y;a.x+=n.x*speed*dt;a.y+=n.y*speed*dt*.8;confine(a);resolveCover(m,a);
 }
-export function shoot(m,a,angle,scale=1) {
+export function shoot(m,a,angle,scale=1) {a.calm=0;
   if(a.fireCd>0||a.windup>0||a.hp<=0)return false;
   const s=a.spec;a.fireCd=s.interval*scale;a.attack=.16;a.aim=angle;if(Math.abs(Math.cos(angle))>.12)a.facing=Math.cos(angle)>0?1:-1;
   const scatter=a.upgrades.includes('scatter'),fan=s.spread===3;
@@ -371,7 +371,11 @@ function aiInput(m,dt) {
   ai.dash=m.level==='champion'&&d<130&&!['slauz','tehomon','seaguard'].includes(a.id)&&a.dashCd<=0;
   if(m.ball?.carrier===0&&d<150&&a.dashCd<=0&&!(p.invincible>0))ai.dash=true;if(m.calm){ai.fire=false;ai.special=false;}return ai;
 }
+// Like Brawl Stars: after a few calm seconds without hitting or being hit, health refills.
+export const REGEN_DELAY=3,REGEN_RATE=.13;
+function regenerate(a,dt){a.calm=(a.calm||0)+dt;a.regen=0;if(a.hp>0&&!(a.out>0)&&a.hp<a.spec.hp&&a.calm>=REGEN_DELAY){a.hp=Math.min(a.spec.hp,a.hp+a.spec.hp*REGEN_RATE*dt);a.regen=1;}}
 function stepActor(m,a,input,dt,scale=1) {
+  regenerate(a,dt);
   for(const key of ['fireCd','specialCd','dashCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);
   if(a.out>0){a.moveX=0;a.moveY=0;return;}
   if(a.stun>0){a.moveX=0;a.moveY=0;return;}
