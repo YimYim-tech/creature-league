@@ -161,6 +161,7 @@ export class Renderer {
     if(f!==1){c.save();c.translate(a.x,a.y);c.scale(f,f);c.translate(-a.x,-a.y);}
     // Some drawings face left in the source art; flipping follows the drawing.
     const flip=facesLeft(a.id)?a.facing>0:a.facing<0;
+    if(a.side===0&&a.hp>0&&!(a.out>0)){const ch=a.superCharge||0,full=ch>=1,rx=a.radius*1.35,ry=a.radius*.55;c.save();c.lineWidth=5;c.strokeStyle='#00000055';c.beginPath();c.ellipse(a.x,a.y,rx,ry,0,0,Math.PI*2);c.stroke();c.strokeStyle=full?'#ffd23a':'#f2b134';if(full){c.shadowColor='#ffd23a';c.shadowBlur=14+6*Math.sin(this.clock*8);}c.beginPath();c.ellipse(a.x,a.y,rx,ry,0,-Math.PI/2,-Math.PI/2+Math.PI*2*ch);c.stroke();c.restore();}
     if(a.root>0)this.drawRoots(a);
     if(a.side===1&&this.shadowed&&a.hp>0)this.drawShadowAura(a);
     if(a.power>0){c.save();c.globalAlpha=.35+.08*Math.sin(this.clock*6);ellipse(c,a.x,a.y,a.radius*(1.7+a.power*.12),a.radius*.62,'#ff8a2a55','#ffb43a',3);c.restore();}

@@ -208,7 +208,7 @@ function modeGoal(m,a,p,d){
 function actor(id,side,ids=[]) {
   if(!CREATURES[id])throw new Error('Unknown creature');
   const upgrades=cleanUpgrades(ids),spec=buildSpec(CREATURES[id],upgrades);
-  return {id,side,spec,upgrades,x:side===0?285:995,y:420,hp:spec.hp,radius:spec.radius,fireCd:0,specialCd:0,dashCd:0,invincible:0,guard:0,stun:0,slow:0,root:0,windup:0,hit:0,attack:0,moveX:0,moveY:0,facing:side===0?1:-1,aim:side===0?0:Math.PI,
+  return {id,side,spec,upgrades,x:side===0?285:995,y:420,hp:spec.hp,radius:spec.radius,fireCd:0,specialCd:0,superCharge:0,dashCd:0,invincible:0,guard:0,stun:0,slow:0,root:0,windup:0,hit:0,attack:0,moveX:0,moveY:0,facing:side===0?1:-1,aim:side===0?0:Math.PI,
     stats:{shots:0,hits:0,damage:0,blocked:0,specials:0,dodges:0,healed:0,weakHits:0},trail:[]};
 }
 export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null}={}) {
@@ -238,6 +238,7 @@ function damage(m,a,raw,source,{pushX=0,pushY=0,special=false,hitAngle=null}={})
   if(m.ball&&m.ball.carrier===a.side&&a.invincible<=0){m.ball.hits++;if(special||m.ball.hits>=BALL_TUNE.fumble)looseBall(m,a,320);else event(m,'ball-hit',{side:a.side,hits:m.ball.hits});}
   const reduction=exposed?0:front?.8:a.guard>0?.72:a.spec.armor,amount=raw*(exposed?1.5:1)*(1-reduction),actual=Math.min(a.hp,amount);
   a.stats.blocked+=Math.max(0,raw-amount);a.hp=Math.max(0,a.hp-amount);a.hit=.17;a.calm=0;if(source)source.calm=0;
+  if(source&&source.side!=null&&!special&&amount>0)chargeSuper(m,source,amount/((CREATURES[a.id]?.hp||a.spec.hp)*SUPER_SHARE));
   if(front)effect(m,'guard-block',a.x,a.y,{color:'#ffe5a7'});
   if(exposed&&source){source.stats.weakHits++;effect(m,'weak-hit',a.x,a.y,{color:'#95ffe0'});}
   if(source){source.stats.damage+=actual;if(!special)source.stats.hits++;}
@@ -263,8 +264,8 @@ export function shoot(m,a,angle,scale=1) {a.calm=0;
   }event(m,'shoot',{kind:a.id,side:a.side});return true;
 }
 export function useSpecial(m,a,input={}) {
-  if(a.specialCd>0||a.windup>0||a.hp<=0)return false;
-  a.specialCd=a.spec.specialCooldown;a.stats.specials++;a.attack=.4;const surge=a.upgrades.includes('surge');
+  if(a.windup>0||a.hp<=0)return false;
+  a.stats.specials++;a.attack=.4;const surge=a.upgrades.includes('surge');
   if(a.id==='maimi') {
     m.waves.push({kind:'wave',owner:a.side,x:a.x,y:a.y,angle:a.aim,age:0,speed:470,r:surge?105:74,damage:surge?46:34,push:surge?110:65,life:1.15,hit:[]});
   } else if(a.id==='havzuk') {
@@ -366,16 +367,18 @@ function aiInput(m,dt) {
   const lead=m.level==='rookie'?0:d/a.spec.shotSpeed*.55;
   const angle=Math.atan2(dy+p.moveY*p.spec.speed*lead*.8,dx+p.moveX*p.spec.speed*lead)+(m.random()-.5)*level.aimError*2;
   ai.aimX=a.x+Math.cos(angle)*500;ai.aimY=a.y+Math.sin(angle)*500;ai.fire=d<760&&!(p.out>0);
-  if(m.ball?.carrier===1){const G=GOALS[0],gd=length(G.x-a.x,G.y-a.y);ai.aimX=G.x;ai.aimY=G.y+(m.random()-.5)*G.half;ai.fire=gd<BALL_TUNE.aiKick*(m.level==='rookie'?.8:1);ai.special=gd<BALL_TUNE.aiKick*1.5&&gd>BALL_TUNE.aiKick&&a.specialCd<=0;}
+  if(m.ball?.carrier===1){const G=GOALS[0],gd=length(G.x-a.x,G.y-a.y);ai.aimX=G.x;ai.aimY=G.y+(m.random()-.5)*G.half;ai.fire=gd<BALL_TUNE.aiKick*(m.level==='rookie'?.8:1);ai.special=gd<BALL_TUNE.aiKick*1.5&&gd>BALL_TUNE.aiKick&&a.superCharge>=1;}
   ai.special=m.time>level.specialDelay&&d<(a.spec.specialRange||300)&&d>(a.spec.specialMin||0)&&p.stun<=0;
   ai.dash=m.level==='champion'&&d<130&&!['slauz','tehomon','seaguard'].includes(a.id)&&a.dashCd<=0;
   if(m.ball?.carrier===0&&d<150&&a.dashCd<=0&&!(p.invincible>0))ai.dash=true;if(m.calm){ai.fire=false;ai.special=false;}return ai;
 }
 // Like Brawl Stars: after a few calm seconds without hitting or being hit, health refills.
 export const REGEN_DELAY=3,REGEN_RATE=.13;
+export const SUPER_SHARE=+(globalThis.process?.env?.SUPER_SHARE||.33),SUPER_PASSIVE=+(globalThis.process?.env?.SUPER_PASSIVE||30);
+function chargeSuper(m,a,amount){if(!a||a.hp<=0)return;amount*=(CREATURES[a.id]?.specialCooldown||1)/(a.spec.specialCooldown||1);const before=a.superCharge||0;a.superCharge=Math.min(1,before+amount);if(before<1&&a.superCharge>=1)event(m,'super-ready',{side:a.side});}
 function regenerate(a,dt){a.calm=(a.calm||0)+dt;a.regen=0;if(a.hp>0&&!(a.out>0)&&a.hp<a.spec.hp&&a.calm>=REGEN_DELAY){a.hp=Math.min(a.spec.hp,a.hp+a.spec.hp*REGEN_RATE*dt);a.regen=1;}}
 function stepActor(m,a,input,dt,scale=1) {
-  regenerate(a,dt);
+  regenerate(a,dt);if(!(a.out>0)&&m.status==='playing')chargeSuper(m,a,dt/SUPER_PASSIVE);
   for(const key of ['fireCd','specialCd','dashCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);
   if(a.out>0){a.moveX=0;a.moveY=0;return;}
   if(a.stun>0){a.moveX=0;a.moveY=0;return;}
@@ -389,9 +392,9 @@ function stepActor(m,a,input,dt,scale=1) {
   if(input.dash)dodge(m,a,input);
   if(m.ball&&m.ball.carrier===a.side){
     if(input.aimX==null){const G=GOALS[1-a.side];a.aim=Math.atan2(G.y-a.y,G.x-a.x);a.facing=Math.cos(a.aim)>0?1:-1;}
-    if(input.special&&a.specialCd<=0&&m.ball.carryTime>=.22){a.specialCd=a.spec.specialCooldown;kickBall(m,a,true);}else if(input.fire)kickBall(m,a,false);
+    if(input.special&&a.superCharge>=1&&m.ball.carryTime>=.22){a.superCharge=0;kickBall(m,a,true);}else if(input.fire)kickBall(m,a,false);
     return;}
-  if(input.special)useSpecial(m,a,input);
+  if(input.special&&a.superCharge>=1&&useSpecial(m,a,input)){a.superCharge=0;event(m,'super',{side:a.side});}
   if(input.fire)shoot(m,a,a.aim,a.side?LEVELS[m.level].fireScale:1);
 }
 function updateProjectiles(m,dt) {
@@ -403,7 +406,7 @@ function updateProjectiles(m,dt) {
     if(m.ball&&m.ball.carrier<0){const bt=segmentCircle(s.x,s.y,x,y,m.ball.x,m.ball.y,s.r+16);if(bt!=null&&bt<t){s.life=0;m.ball.vx+=s.vx*.4;m.ball.vy+=s.vy*.4;effect(m,'stone',m.ball.x,m.ball.y,{color:'#d6f1ff'});continue;}}
     for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){hit=c;t=ct;}}
     if(hit){s.x+=(x-s.x)*t;s.y+=(y-s.y)*t;s.life=0;if(s.explode)burst(m,s);
-      if(hit.side!=null){damage(m,hit,s.damage,m.actors[s.owner],{hitAngle:Math.atan2(-s.vy,-s.vx),pushX:s.kind==='maimi'?s.vx*.018:0,pushY:s.kind==='maimi'?s.vy*.018:0});}
+      if(hit.side!=null){damage(m,hit,s.damage,m.actors[s.owner],{special:s.kind!==m.actors[s.owner]?.id&&s.kind!=='blast',hitAngle:Math.atan2(-s.vy,-s.vx),pushX:s.kind==='maimi'?s.vx*.018:0,pushY:s.kind==='maimi'?s.vy*.018:0});}
       else{hit.hp=Math.max(0,hit.hp-s.damage);effect(m,'stone',s.x,s.y,{color:'#ead2a9'});event(m,'cover',{broken:hit.hp===0});}
     }else{s.x=x;s.y=y;}
   }
