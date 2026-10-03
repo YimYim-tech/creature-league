@@ -7,14 +7,14 @@ export const CREATURES = Object.freeze({
   havzuk: { id:'havzuk', magic:75, name:'הבזוק', element:'חשמל', role:'מהיר ומפתיע', color:'#ffe06b', dark:'#a7650d', hp:150, speed:298, damage:8, interval:.25, shotSpeed:700, armor:0, radius:20, height:108, specialCooldown:6, special:'הבזק חשמלי', specialIcon:'bolt', description:'זינוק לכיוון התנועה ופרץ חשמל במקום הנחיתה.', tip:'זוזו בזמן הירי. כוונו את ההבזק ליד היריב כדי לחשמל אותו.', number:'10', rarity:'רגיל', starter:true, aiRange:225, specialRange:310 },
   slauz: { id:'slauz', magic:80, name:'סלעוז', element:'עוצמה', role:'חזק ועמיד', color:'#ffb786', dark:'#a15324', hp:230, speed:182, damage:24, interval:.72, shotSpeed:440, armor:.16, radius:30, height:85, specialCooldown:8, special:'רעידת אדמה', specialIcon:'mountain', description:'רעידה חזקה סביבך ושריון מוגבר לשתי שניות.', tip:'התקרבו דרך מחסה. הרעידה פוגעת גם מעבר לאבן.', number:'04', rarity:'נדיר', starter:true, facesLeft:true, shotRadius:10, aiRange:175, specialRange:180 },
   lohatan: { id:'lohatan', magic:85, name:'לוהטן', element:'אש', role:'כבד ולוהט', color:'#ff7a3d', dark:'#9c2b0c', hp:215, speed:205, damage:22, interval:.62, shotSpeed:470, armor:.08, radius:26, height:122, specialCooldown:7, special:'כדור אש', specialIcon:'flame', description:'כדור אש ענק שמתפוצץ ומשאיר אדמה בוערת.', tip:'כוונו את כדור האש לאן שהיריב בורח. האש על הרצפה סוגרת לו את הדרך.', number:'21', rarity:'נדיר', facesLeft:true, shotRadius:11, aiRange:240, specialRange:520 },
-  tehomon: { id:'tehomon', magic:90, name:'תהומון', element:'מים', role:'ענק הים העמוק', color:'#4f86ff', dark:'#14327e', hp:265, speed:165, damage:14, interval:.46, shotSpeed:520, armor:.1, radius:30, height:112, specialCooldown:8, special:'מערבולת', specialIcon:'swirl', description:'מערבולת ענקית שמושכת את היריב פנימה ומאטה אותו.', tip:'הניחו את המערבולת על היריב ותקפו כשהוא תקוע בתוכה.', number:'33', rarity:'אגדי', facesLeft:true, aiRange:270, specialRange:420 },
+  tehomon: { id:'tehomon', magic:90, name:'תהומון', element:'מים', role:'ענק הים העמוק', color:'#4f86ff', dark:'#14327e', hp:265, speed:165, damage:14, interval:.46, shotSpeed:520, armor:.1, radius:30, height:112, specialCooldown:8, special:'מערבולת', specialIcon:'swirl', description:'מערבולת ענקית שמושכת את היריב פנימה, מאטה אותו ובולעת את הקליעים שלו.', tip:'הניחו את המערבולת על היריב ותקפו כשהוא תקוע בתוכה.', number:'33', rarity:'אגדי', facesLeft:true, aiRange:270, specialRange:420 },
   zikuk: { id:'zikuk', magic:80, name:'זיקוק', element:'אור', role:'צלף מדויק', color:'#ffc93d', dark:'#6b3fa8', hp:140, speed:285, damage:15, interval:.42, shotSpeed:900, armor:0, radius:21, height:100, specialCooldown:6.5, special:'קרן אור', specialIcon:'sun', description:'קרן אור ישרה שחוצה את כל הזירה ופוגעת מיד.', tip:'שמרו מרחק. הקרן פוגעת רחוק, אבל רק בקו ישר.', number:'12', rarity:'נדיר', facesLeft:true, aiRange:380, specialRange:760 },
   retetoz: { id:'retetoz', magic:70, name:'רטטוז', element:'רעד', role:'מפתיע מתחת לאדמה', color:'#e0a96d', dark:'#7a4a22', hp:195, speed:230, damage:12, interval:.36, shotSpeed:600, armor:.05, radius:24, height:88, specialCooldown:7, special:'מחילה', specialIcon:'burrow', description:'נעלם מתחת לאדמה, צץ ממש ליד היריב ומרעיד הכל.', tip:'השתמשו במחילה כשהיריב רחוק: אתם צצים ממש לידו.', number:'08', rarity:'רגיל', aiRange:200, specialRange:900, specialMin:170 },
   tzlilon: { id:'tzlilon', magic:95, name:'צלילון', element:'היפנוט', role:'קטן ואמיץ', color:'#b88cff', dark:'#5b2ea6', hp:130, speed:300, damage:9, interval:.27, shotSpeed:640, armor:0, radius:19, height:92, specialCooldown:9, special:'היפנוט', specialIcon:'spiral', description:'גל מחשבה שמהפנט את היריב: הוא קופא במקום ולא יכול לתקוף.', tip:'התקרבו, הפנטו ותקפו בכל הכוח כשהיריב מסוחרר.', number:'01', rarity:'אגדי', aiRange:230, specialRange:230 },
   shorshu: { id:'shorshu', magic:75, name:'שורשו', element:'טבע', role:'שומר היער', color:'#86d957', dark:'#2f6a1c', hp:220, speed:195, damage:7, interval:.5, shotSpeed:520, armor:.12, radius:26, height:96, specialCooldown:7.5, special:'שורשים', specialIcon:'leaf', description:'שורשים צומחים מתחת ליריב ותופסים אותו במקום.', tip:'מקרוב זה הכי חזק: שלושה זרעים יחד פוגעים בבת אחת.', number:'15', rarity:'רגיל', facesLeft:true, spread:3, shotLife:.85, aiRange:170, specialRange:460 },
-  windguard: { id:'windguard', magic:90, name:'שומר הרוחות', element:'רוח', role:'ציפור הסערה', color:'#3cc7c9', dark:'#16626a', hp:205, speed:270, damage:13, interval:.34, shotSpeed:760, armor:.06, radius:26, height:124, specialCooldown:7, special:'משב סערה', specialIcon:'swirl', description:'משב רוח ענק שעף קדימה, פוגע ודוחף את היריב רחוק.', tip:'השתמשו במשב כשהיריב ליד הקיר: הוא נדחף ולא יכול לברוח.', number:'41', rarity:'אגדי', facesLeft:true, aiRange:300, specialRange:560, guardian:true },
-  seaguard: { id:'seaguard', magic:85, name:'שומר הים', element:'מים', role:'הצב העתיק', color:'#2f8fd6', dark:'#10467a', hp:290, speed:150, damage:17, interval:.5, shotSpeed:470, armor:.2, radius:32, height:112, specialCooldown:8, special:'טבעת הגאות', specialIcon:'wave', description:'טבעת גאות סביב הצב: פוגעת, מאטה, והשריון מתחזק לשתי שניות.', tip:'הצב איטי אבל חזק. תנו לו להתקרב ואז הפעילו את טבעת הגאות.', number:'42', rarity:'אגדי', facesLeft:true, shotRadius:11, aiRange:190, specialRange:200 },
-  fireguard: { id:'fireguard', magic:90, name:'שומר האש', element:'אש', role:'אריה הלבה', color:'#ff8a2a', dark:'#8a2c0a', hp:235, speed:230, damage:19, interval:.48, shotSpeed:560, armor:.1, radius:28, height:118, specialCooldown:7.5, special:'שאגת להבה', specialIcon:'flame', description:'שאגה ששולחת שלושה כדורי אש במניפה ומשאירה אדמה בוערת.', tip:'השאגה רחבה: גם יריב שמתחמק נתפס באחד מכדורי האש.', number:'43', rarity:'אגדי', facesLeft:true, shotRadius:10, aiRange:240, specialRange:480 },
+  windguard: { id:'windguard', magic:90, name:'שומר הרוחות', element:'רוח', role:'ציפור הסערה', color:'#3cc7c9', dark:'#16626a', hp:205, speed:270, damage:13, interval:.34, shotSpeed:760, armor:.06, radius:26, height:124, specialCooldown:7, special:'משב סערה', specialIcon:'swirl', description:'טורנדו שהולך קדימה, סוחב את היריב איתו ובסוף זורק אותו.', tip:'שלחו את הטורנדו כשהיריב בדרך שלו: הוא נסחב ולא יכול לירות.', number:'41', rarity:'אגדי', facesLeft:true, aiRange:300, specialRange:560, guardian:true },
+  seaguard: { id:'seaguard', magic:85, name:'שומר הים', element:'מים', role:'הצב העתיק', color:'#2f8fd6', dark:'#10467a', hp:290, speed:150, damage:17, interval:.5, shotSpeed:470, armor:.2, radius:32, height:112, specialCooldown:8, special:'טבעת הגאות', specialIcon:'wave', description:'טבעת מי גאות סביב הצב: עוצרת את הקליעים של היריב ודוחפת מי שנוגע בה.', tip:'הפעילו את הטבעת כשהיריב יורה עליכם: הקליעים שלו נעצרים במים.', number:'42', rarity:'אגדי', facesLeft:true, shotRadius:11, aiRange:190, specialRange:320 },
+  fireguard: { id:'fireguard', magic:90, name:'שומר האש', element:'אש', role:'אריה הלבה', color:'#ff8a2a', dark:'#8a2c0a', hp:235, speed:230, damage:19, interval:.48, shotSpeed:560, armor:.1, radius:28, height:118, specialCooldown:7.5, special:'שאגת להבה', specialIcon:'flame', description:'שאגת אש קדימה: שורפת מיד את מי שמולו ומשאירה רצפה בוערת.', tip:'השאגה קצרה: התקרבו ליריב לפני שאתם שואגים.', number:'43', rarity:'אגדי', facesLeft:true, shotRadius:10, aiRange:240, specialRange:260 },
   galgalor: { id:'galgalor', magic:65, name:'גלגל אור', element:'אנרגיה', role:'מבולגן בכוונה', color:'#7fe8ff', dark:'#1f7f9c', hp:165, speed:265, damage:11, interval:.3, shotSpeed:620, armor:0, radius:22, height:84, specialCooldown:7, special:'פיצוץ אנרגיה', specialIcon:'sparkle', description:'שחרור אנרגיה לכל הכיוונים: עשרה קליעים בבת אחת.', tip:'קפצו לאמצע הקרב ושחררו את הפיצוץ קרוב ליריב.', number:'05', rarity:'רגיל', wobble:.13, aiRange:220, specialRange:260 },
 });
 export const LEVELS = {
@@ -84,7 +84,7 @@ export function confine(actor) {
   if(d>1){actor.x=WORLD.cx+x/d*rx;actor.y=WORLD.cy+y/d*ry;}
 }
 // ------------------------------------------------------------------ island missions
-// Every mission keeps shooting, specials and dodges; only the goal changes.
+// Every mission keeps shooting and the superpower; only the goal changes.
 export const MODES={
   lava:{name:'טבעת הלבה',goal:'הלבה סוגרת את הזירה. שברו סלעים, אספו גחלי כוח ותגדלו.',duration:100},
   wind:{name:'תפוס את הרוח',goal:'אספו 6 נוצות רוח והחזיקו אותן 10 שניות.',duration:120},
@@ -208,7 +208,7 @@ function modeGoal(m,a,p,d){
 function actor(id,side,ids=[]) {
   if(!CREATURES[id])throw new Error('Unknown creature');
   const upgrades=cleanUpgrades(ids),spec=buildSpec(CREATURES[id],upgrades);
-  return {id,side,spec,upgrades,x:side===0?285:995,y:420,hp:spec.hp,radius:spec.radius,fireCd:0,specialCd:0,superCharge:0,dashCd:0,invincible:0,guard:0,stun:0,slow:0,root:0,windup:0,hit:0,attack:0,moveX:0,moveY:0,facing:side===0?1:-1,aim:side===0?0:Math.PI,
+  return {id,side,spec,upgrades,x:side===0?285:995,y:420,hp:spec.hp,radius:spec.radius,fireCd:0,specialCd:0,superCharge:0,invincible:0,guard:0,stun:0,slow:0,root:0,windup:0,hit:0,attack:0,moveX:0,moveY:0,facing:side===0?1:-1,aim:side===0?0:Math.PI,
     stats:{shots:0,hits:0,damage:0,blocked:0,specials:0,dodges:0,healed:0,weakHits:0},trail:[]};
 }
 export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null}={}) {
@@ -221,7 +221,7 @@ export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date
   if(giant){enemy.spec={...enemy.spec,hp:Math.round(enemy.spec.hp*1.6),height:enemy.spec.height*1.3,radius:Math.round(enemy.spec.radius*1.25),damage:Math.round(enemy.spec.damage*1.1)};enemy.hp=enemy.spec.hp;enemy.radius=enemy.spec.radius;enemy.giant=true;}
   if(boss&&rival==='slauz')enemy.boss={phase:'guard',timer:3.8,angle:Math.PI,hit:false};
   const match={id:seed+'-'+player+'-'+rival,random:seeded(seed),level,challenge:challenge===CHALLENGE.id?challenge:null,wild:WILD.includes(wild)&&wild===rival?wild:null,story:typeof story==='string'?story:null,arena:typeof arena==='string'?arena:null,mirror:!!mirror,actors:[actor(player,0,upgrades),enemy],time:0,duration:90,countdown:2.3,status:'countdown',winner:null,
-    shots:[],waves:[],zones:[],effects:[],events:[],nextId:0,pickup:null,pickupAt:12,ai:{timer:0,angle:0,strafe:1,strafeTime:0,moveX:0,moveY:0,aimX:0,aimY:0,fire:false,special:false,dash:false},
+    shots:[],waves:[],zones:[],effects:[],events:[],nextId:0,pickup:null,pickupAt:12,ai:{timer:0,angle:0,strafe:1,strafeTime:0,moveX:0,moveY:0,aimX:0,aimY:0,fire:false,special:false},
     covers:[{x:449,y:350,r:35,hp:80,maxHp:80},{x:831,y:440,r:35,hp:80,maxHp:80},{x:650,y:237,r:28,hp:65,maxHp:65},{x:630,y:555,r:28,hp:65,maxHp:65}].map((c,i)=>({...c,...(challenge===CHALLENGE.id?{collapseAt:5+i*4}:{})}))};
   match.teamIds=teamIds;
   if(MODES[mode])setupMode(match,mode);
@@ -302,12 +302,17 @@ function wildSpecial(m,a,surge) {
   } else if(a.id==='shorshu'){
     const p=landing(m,a,460);m.zones.push({owner:a.side,kind:'roots',x:p.x,y:p.y,r:surge?95:75,age:0,life:2.2,delay:.45,done:false,root:surge?2.2:1.6,damage:surge?34:26});
   } else if(a.id==='windguard'){
-    m.waves.push({kind:'wave',owner:a.side,x:a.x,y:a.y,angle:a.aim,age:0,speed:620,r:surge?120:90,damage:surge?48:36,push:surge?150:115,life:1.1,hit:[]});
+    // A walking tornado: it drags the rival along its path and throws it out at the end.
+    m.zones.push({owner:a.side,kind:'tornado',x:a.x+dir.x*(a.radius+40),y:a.y+dir.y*(a.radius+30),vx:dir.x*340,vy:dir.y*260,r:surge?95:75,age:0,life:1.6,pulse:0,damage:surge?7:5,finale:surge?30:22,caught:false,thrown:false});
   } else if(a.id==='seaguard'){
-    a.guard=Math.max(a.guard,2);m.waves.push({kind:'quake',owner:a.side,x:a.x,y:a.y,age:0,r:surge?240:190,damage:surge?50:38,slow:1.4,life:.7,hit:[]});event(m,'quake',{side:a.side});
+    // A ring of tide water around the turtle: it stops the rival's shots and pushes back whoever touches it.
+    m.zones.push({owner:a.side,kind:'tidering',x:a.x,y:a.y,r:a.radius+(surge?95:75),age:0,life:surge?3.6:3,pulse:0,damage:surge?10:7});
   } else if(a.id==='fireguard'){
-    for(const off of surge?[-.36,-.18,0,.18,.36]:[-.26,0,.26]){const ang=a.aim+off;
-      m.shots.push({id:++m.nextId,owner:a.side,x:a.x+Math.cos(ang)*(a.radius+12),y:a.y+Math.sin(ang)*(a.radius+12),vx:Math.cos(ang)*440,vy:Math.sin(ang)*440,r:15,damage:16,life:1.1,color:a.spec.color,kind:'fireball',explode:{r:surge?100:80,damage:surge?24:18}});}
+    // A roar of fire: a cone in front that burns at once and leaves burning ground behind.
+    const reach=surge?300:260,half=surge?.62:.5,dist=length(t.x-a.x,t.y-a.y),ang=Math.atan2(t.y-a.y,t.x-a.x),diff=Math.abs(Math.atan2(Math.sin(ang-a.aim),Math.cos(ang-a.aim)));
+    if(!(t.out>0)&&dist<reach+t.radius&&diff<half+.15)damage(m,t,surge?52:40,a,{special:true,pushX:dir.x*90,pushY:dir.y*70});
+    for(const k of [.35,.65,.95])m.zones.push({owner:a.side,kind:'fire',x:a.x+dir.x*reach*k,y:a.y+dir.y*reach*k*.8,r:44+k*20,age:0,life:2.2,pulse:.3});
+    effect(m,'roar',a.x,a.y,{angle:a.aim,reach,half,color:a.spec.color});
   } else if(a.id==='galgalor'){
     const n=surge?14:10;for(let i=0;i<n;i++){const ang=a.aim+i*Math.PI*2/n;
       m.shots.push({id:++m.nextId,owner:a.side,x:a.x+Math.cos(ang)*(a.radius+8),y:a.y+Math.sin(ang)*(a.radius+8),vx:Math.cos(ang)*560,vy:Math.sin(ang)*560,r:8,damage:surge?13:12,life:1.1,color:a.spec.color,kind:'galgalor'});}
@@ -315,19 +320,6 @@ function wildSpecial(m,a,surge) {
 }
 const TRAIL={windguard:'electric',seaguard:'water',fireguard:'fire',maimi:'water',tehomon:'water',tzlilon:'water',havzuk:'electric',zikuk:'electric',galgalor:'electric',lohatan:'fire',slauz:'shield',retetoz:'shield',shorshu:'shield'};
 export const trailKind=id=>TRAIL[id]||'shield';
-export function dodge(m,a,input={}) {
-  if(a.dashCd>0||a.windup>0||a.hp<=0)return false;
-  let n=norm(input.moveX||0,input.moveY||0);if(!input.moveX&&!input.moveY)n={x:Math.cos(a.aim),y:Math.sin(a.aim)};
-  const start={x:a.x,y:a.y};for(let i=0;i<10;i++){a.x+=n.x*9;a.y+=n.y*7;confine(a);resolveCover(m,a);}
-  a.dashCd=a.spec.dashCooldown;a.invincible=.24;
-  if(m.ball&&m.ball.carrier===1-a.side){const c=m.actors[1-a.side];if(length(c.x-a.x,c.y-a.y)<a.radius+c.radius+40&&c.invincible<=0){m.ball.carrier=a.side;m.ball.carryTime=0;m.ball.hits=0;m.ball.noPick[1-a.side]=.6;event(m,'steal',{side:a.side});effect(m,'steal',c.x,c.y,{color:a.spec.color});}}
-  if(a.upgrades.includes('trail')){
-    const kind=trailKind(a.id);
-    if(kind==='shield')a.guard=Math.max(a.guard,1.6);
-    else m.zones.push({owner:a.side,kind,x:start.x,y:start.y,r:kind==='water'?78:66,age:0,life:kind==='water'?3.5:2.5,pulse:0});
-  }
-  effect(m,'dash',a.x,a.y,{from:start,color:a.spec.color});event(m,'dash',{side:a.side});return true;
-}
 function stepBoss(m,a,dt) {
   const b=a.boss,p=m.actors[0];b.timer-=dt;a.moveX=0;a.moveY=0;
   if(b.timer<=0){
@@ -369,17 +361,16 @@ function aiInput(m,dt) {
   ai.aimX=a.x+Math.cos(angle)*500;ai.aimY=a.y+Math.sin(angle)*500;ai.fire=d<760&&!(p.out>0);
   if(m.ball?.carrier===1){const G=GOALS[0],gd=length(G.x-a.x,G.y-a.y);ai.aimX=G.x;ai.aimY=G.y+(m.random()-.5)*G.half;ai.fire=gd<BALL_TUNE.aiKick*(m.level==='rookie'?.8:1);ai.special=gd<BALL_TUNE.aiKick*1.5&&gd>BALL_TUNE.aiKick&&a.superCharge>=1;}
   ai.special=m.time>level.specialDelay&&d<(a.spec.specialRange||300)&&d>(a.spec.specialMin||0)&&p.stun<=0;
-  ai.dash=m.level==='champion'&&d<130&&!['slauz','tehomon','seaguard'].includes(a.id)&&a.dashCd<=0;
-  if(m.ball?.carrier===0&&d<150&&a.dashCd<=0&&!(p.invincible>0))ai.dash=true;if(m.calm){ai.fire=false;ai.special=false;}return ai;
+  if(m.calm){ai.fire=false;ai.special=false;}return ai;
 }
 // Like Brawl Stars: after a few calm seconds without hitting or being hit, health refills.
 export const REGEN_DELAY=3,REGEN_RATE=.13;
 export const SUPER_SHARE=+(globalThis.process?.env?.SUPER_SHARE||.33),SUPER_PASSIVE=+(globalThis.process?.env?.SUPER_PASSIVE||30);
-function chargeSuper(m,a,amount){if(!a||a.hp<=0)return;amount*=(CREATURES[a.id]?.specialCooldown||1)/(a.spec.specialCooldown||1);const before=a.superCharge||0;a.superCharge=Math.min(1,before+amount);if(before<1&&a.superCharge>=1)event(m,'super-ready',{side:a.side});}
+function chargeSuper(m,a,amount){if(!a||a.hp<=0)return;if(a.upgrades?.includes('quick'))amount*=1.35;amount*=(CREATURES[a.id]?.specialCooldown||1)/(a.spec.specialCooldown||1);const before=a.superCharge||0;a.superCharge=Math.min(1,before+amount);if(before<1&&a.superCharge>=1)event(m,'super-ready',{side:a.side});}
 function regenerate(a,dt){a.calm=(a.calm||0)+dt;a.regen=0;if(a.hp>0&&!(a.out>0)&&a.hp<a.spec.hp&&a.calm>=REGEN_DELAY){a.hp=Math.min(a.spec.hp,a.hp+a.spec.hp*REGEN_RATE*dt);a.regen=1;}}
 function stepActor(m,a,input,dt,scale=1) {
   regenerate(a,dt);if(!(a.out>0)&&m.status==='playing')chargeSuper(m,a,dt/SUPER_PASSIVE);
-  for(const key of ['fireCd','specialCd','dashCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);
+  for(const key of ['fireCd','specialCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);
   if(a.out>0){a.moveX=0;a.moveY=0;return;}
   if(a.stun>0){a.moveX=0;a.moveY=0;return;}
   if(a.boss){stepBoss(m,a,dt);return;}
@@ -389,7 +380,6 @@ function stepActor(m,a,input,dt,scale=1) {
   if(input.aimX!=null)a.aim=Math.atan2(input.aimY-a.y,input.aimX-a.x);
   else {const target=m.actors[1-a.side],distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*.72,speed=target.spec.speed*(target.side?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
   if(Math.abs(Math.cos(a.aim))>.15)a.facing=Math.cos(a.aim)>0?1:-1;
-  if(input.dash)dodge(m,a,input);
   if(m.ball&&m.ball.carrier===a.side){
     if(input.aimX==null){const G=GOALS[1-a.side];a.aim=Math.atan2(G.y-a.y,G.x-a.x);a.facing=Math.cos(a.aim)>0?1:-1;}
     if(input.special&&a.superCharge>=1&&m.ball.carryTime>=.22){a.superCharge=0;kickBall(m,a,true);}else if(input.fire)kickBall(m,a,false);
@@ -399,6 +389,7 @@ function stepActor(m,a,input,dt,scale=1) {
 }
 function updateProjectiles(m,dt) {
   for(const s of m.shots){
+    if(m.zones.length){const sw=m.zones.find(z=>z.owner!==s.owner&&(z.kind==='vortex'||z.kind==='tidering')&&length(s.x-z.x,s.y-z.y)<z.r);if(sw){s.life=0;effect(m,'stone',s.x,s.y,{color:sw.kind==='vortex'?'#9fc4ff':'#d6f1ff'});continue;}}
     const x=s.x+s.vx*dt,y=s.y+s.vy*dt;s.life-=dt;
     let hit=null,t=2;
     const target=m.actors[1-s.owner],enemyT=target.out>0?null:segmentCircle(s.x,s.y,x,y,target.x,target.y,s.r+target.radius);
@@ -426,6 +417,11 @@ function updateProjectiles(m,dt) {
   for(const z of m.zones){z.age+=dt;z.pulse-=dt;const a=m.actors[z.owner],target=m.actors[1-z.owner];
     const inside=length(target.x-z.x,target.y-z.y)<z.r+target.radius;
     if(z.kind==='roots'){if(!z.done&&z.age>=z.delay){z.done=true;if(inside&&target.invincible<=0){target.root=Math.max(target.root,z.root);damage(m,target,z.damage,a,{special:true});effect(m,'rooted',target.x,target.y,{color:'#9be06a'});}}continue;}
+    if(z.kind==='tornado'){z.x+=z.vx*dt;z.y+=z.vy*dt;if(length((z.x-WORLD.cx)/WORLD.rx,(z.y-WORLD.cy)/WORLD.ry)>.93){z.vx*=-.6;z.vy*=-.6;}
+      if(inside&&target.invincible<=0&&!target.boss&&!(target.out>0)){z.caught=true;target.x+=(z.x-target.x)*Math.min(1,dt*7);target.y+=(z.y-target.y)*Math.min(1,dt*7);confine(target);if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});z.pulse=.3;}}
+      if(z.age+dt>=z.life&&z.caught&&!z.thrown){z.thrown=true;const n=norm(z.vx||1,z.vy);damage(m,target,z.finale,a,{special:true,pushX:n.x*140,pushY:n.y*110});target.stun=Math.max(target.stun,.35);}continue;}
+    if(z.kind==='tidering'){z.x=a.x;z.y=a.y;if(a.hp<=0||a.out>0)z.age=z.life;
+      if(inside&&target.invincible<=0&&!(target.out>0)){const n=norm(target.x-z.x||.01,target.y-z.y);target.x=z.x+n.x*(z.r+target.radius+2);target.y=z.y+n.y*(z.r+target.radius+2);confine(target);resolveCover(m,target);if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});z.pulse=.5;}}continue;}
     if(z.kind==='vortex'&&inside){target.slow=Math.max(target.slow,.25);const n=norm(z.x-target.x,z.y-target.y);if(target.invincible<=0&&!target.boss){target.x+=n.x*110*dt;target.y+=n.y*90*dt;confine(target);resolveCover(m,target);}if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});z.pulse=.5;}continue;}
     if(inside){if(z.kind==='water')target.slow=Math.max(target.slow,.2);else if(z.pulse<=0){damage(m,target,6,a,{special:true});z.pulse=.5;}}
   }m.zones=m.zones.filter(z=>z.age<z.life);

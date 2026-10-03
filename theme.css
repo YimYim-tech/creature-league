@@ -325,7 +325,7 @@ dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
 .tutorial[hidden]{display:none}
 .tutorial.touch[data-step="0"]{left:150px;bottom:150px;transform:none}
 .tutorial.touch[data-step="1"]{left:auto;right:120px;bottom:120px;transform:none}
-.tutorial.touch[data-step="2"]{left:auto;right:120px;bottom:180px;transform:none}
+.tutorial.touch[data-step="2"]{left:auto;right:150px;bottom:80px;transform:none}
 @keyframes tut-bob{50%{margin-bottom:6px}}
 .tut-glow{box-shadow:0 0 0 4px #ffe27c,0 0 26px 8px #ffcf5a!important;animation:tut-glow 1s ease-in-out infinite}
 @keyframes tut-glow{50%{box-shadow:0 0 0 6px #ffe27c,0 0 36px 14px #ffcf5a}}
@@ -337,7 +337,7 @@ dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
 }
 
 /* The super button fills up, and glows when the super is ready. */
-.action-button.special{background-image:linear-gradient(to top,#f2b13455 calc(var(--charge,0)*100%),transparent calc(var(--charge,0)*100%))}
-.action-button.special.super-ready{box-shadow:0 0 0 3px #ffd23a,0 0 22px 6px #ffcf5a;animation:super-glow 1s ease-in-out infinite}
-@keyframes super-glow{50%{box-shadow:0 0 0 5px #ffe27c,0 0 34px 12px #ffcf5a}}
+.action-button.special{background-image:linear-gradient(to top,color-mix(in srgb,var(--c,#f2b134) 45%,transparent) calc(var(--charge,0)*100%),transparent calc(var(--charge,0)*100%))}
+.action-button.special.super-ready{box-shadow:0 0 0 3px var(--c,#ffd23a),0 0 22px 6px var(--c,#ffcf5a);animation:super-glow 1s ease-in-out infinite}
+@keyframes super-glow{50%{box-shadow:0 0 0 5px #ffffff,0 0 34px 12px var(--c,#ffcf5a)}}
 @media(prefers-reduced-motion:reduce){.action-button.special.super-ready{animation:none}}
