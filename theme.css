@@ -251,3 +251,54 @@ dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
 .team-pick.picked{border-color:var(--c);box-shadow:0 0 0 3px var(--c);background:#fff}
 .team-order{position:absolute;top:6px;inset-inline-start:6px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:900 15px var(--display);color:#fff;background:var(--c)}
 .team-order:empty{display:none}
+
+/* Home stage: one creature, one destination, one big button. */
+.home-stage{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);align-items:center;gap:20px;max-width:1080px;margin:4px auto 26px;padding:18px 22px;border-radius:20px;background:radial-gradient(ellipse at 70% 40%,#f6d48a33,transparent 60%),linear-gradient(160deg,#2a1d11e6,#14212bee);box-shadow:var(--frame,0 0 0 2px #c9a24a)}
+.home-hero{display:grid;justify-items:center;gap:4px}
+.home-portrait{width:min(300px,100%);aspect-ratio:1/1;height:auto}
+.home-name{font:900 30px var(--display);color:#fff4d6}
+.home-change{color:#e8cf95;font-size:14px}
+.home-play{display:grid;justify-items:center;gap:8px;text-align:center}
+.home-play h1{font:900 clamp(26px,3.6vw,40px)/1.15 var(--display);color:#fff4d6;margin:0}
+.home-play .eyebrow{color:#e8cf95}
+.home-gems{justify-content:center}
+.play-big{font-size:clamp(26px,3vw,34px);min-height:72px;padding:14px 48px;border-radius:999px;margin-top:6px;animation:play-pulse 2.2s ease-in-out infinite}
+.play-big svg{width:30px;height:30px}
+@keyframes play-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.home-links{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.home-links .button{min-height:44px;padding:8px 16px;font-size:15px}
+/* The old welcome and story panel live inside the home stage now. */
+.lobby-view .lobby-heading,.lobby-view .story-panel{display:none}
+/* A new player sees one road: the cup and training appear after the first island. */
+.lobby-view.early .cup-path-title,.lobby-view.early .journey-panel,.lobby-view.early #training-options,.lobby-view.early #cup-teaser,.lobby-view.early .lobby-footer{display:none}
+@media(max-width:620px){.home-stage{grid-template-columns:1fr;padding:14px;gap:6px}.home-portrait{width:min(190px,60vw)}.home-name{font-size:24px}}
+/* Sideways phone: a slim top bar, and the whole home stage fits on the first screen. */
+@media(max-height:500px) and (orientation:landscape){
+  .header{height:auto;flex-wrap:nowrap;padding:5px 14px;gap:12px;min-height:0}
+  .header nav{order:0;width:auto;gap:16px}.header .nav-item{font-size:14px}.nav-item.active:after{bottom:-6px}
+  .brand small,.win-chip span{display:none}.brand{font-size:17px}.brand-mark{width:32px;height:32px}
+  .header-tools .icon-button{width:34px;height:34px}
+  .lobby-view{padding-top:8px}
+  .home-stage{margin:0 auto 18px;padding:10px 18px;gap:14px;min-height:calc(100dvh - 70px)}
+  .home-portrait{width:min(210px,calc(100dvh - 150px))}
+  .home-name{font-size:22px}
+  .home-play h1{font-size:26px}
+  .play-big{min-height:62px;font-size:26px;padding:10px 40px}
+}
+/* The goal of a mission, shown big at the start. */
+.goal-card{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:7;display:grid;justify-items:center;gap:6px;max-width:min(460px,86%);padding:18px 26px;border-radius:18px;background:#fbf3e1f2;color:#2a1d11;text-align:center;box-shadow:0 0 0 3px #c9a24a,0 18px 40px #000a;pointer-events:none;animation:goal-in .35s ease-out}
+.goal-card[hidden]{display:none}
+.goal-icon svg{width:44px;height:44px;color:#b5512a}
+.goal-card b{font:900 28px var(--display)}
+.goal-card p{margin:0;font-size:18px;line-height:1.45}
+@keyframes goal-in{from{transform:translate(-50%,-50%) scale(.8);opacity:0}}
+@media(max-height:500px){.goal-card{padding:10px 18px}.goal-card b{font-size:22px}.goal-card p{font-size:15px}.goal-icon svg{width:32px;height:32px}}
+/* The new card on a sideways phone: card on one side, words and buttons on the other. */
+@media(max-height:560px) and (orientation:landscape){
+  .reveal-dialog{width:min(640px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 16px);display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"card kicker" "card title" "card text" "card actions";align-items:center;column-gap:18px;text-align:center}
+  .reveal-dialog .flip{grid-area:card;width:calc((100dvh - 110px) * .714);margin:0}
+  .reveal-dialog .eyebrow{grid-area:kicker;align-self:end}
+  .reveal-dialog h2{grid-area:title}
+  .reveal-dialog p{grid-area:text;display:block;font-size:13px}
+  .reveal-dialog .result-actions{grid-area:actions;grid-template-columns:1fr;align-self:start}
+}

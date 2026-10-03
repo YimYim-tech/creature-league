@@ -15,7 +15,7 @@ button{touch-action:manipulation}
   .battle-active .fighter-lines b{font-size:13px}.battle-active .fighter-lines span,.battle-active .fighter-lines small{font-size:9px}
   .battle-active .health-track{height:7px}
   .battle-active .match-clock{padding:2px 4px;min-height:0}.battle-active .match-clock small,.battle-active .match-clock span{display:none}.battle-active .match-clock strong{font-size:19px;line-height:1.1}
-  .battle-active .mode-banner{top:42px;font-size:11px;padding:2px 10px}.battle-active .hold-count{top:66px;font-size:34px}
+  .battle-active .mode-banner{top:58px;font-size:11px;padding:2px 10px}.battle-active .hold-count{top:84px;font-size:34px}
   .battle-active .arena-tip,.battle-active .battle-build,.battle-active .boss-banner,.battle-active .challenge-banner{display:none}
   .battle-active .match-toast{top:70px;bottom:auto}
   .battle-active .battle-controls{position:absolute;inset:0;z-index:6;max-width:none;margin:0;padding:0;background:none;border:0;box-shadow:none;display:block;pointer-events:none}
