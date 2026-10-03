@@ -302,3 +302,5 @@ dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
   .reveal-dialog p{grid-area:text;display:block;font-size:13px}
   .reveal-dialog .result-actions{grid-area:actions;grid-template-columns:1fr;align-self:start}
 }
+
+.camera-toggle{margin-top:8px;font-size:15px}
