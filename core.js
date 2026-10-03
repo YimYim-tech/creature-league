@@ -348,7 +348,7 @@ function stepBoss(m,a,dt) {
 }
 function aiInput(m,dt) {
   const ai=m.ai,a=m.actors[1],p=m.actors[0],level=LEVELS[m.level];ai.timer-=dt;ai.strafeTime-=dt;
-  if(ai.timer>0)return ai;
+  if(ai.timer>0)return m.calm?{...ai,fire:false,special:false}:ai;
   ai.timer=level.reaction;
   if(ai.strafeTime<=0){ai.strafe= m.random()>.5?1:-1;ai.strafeTime=1.5+m.random()*2;}
   const dx=p.x-a.x,dy=p.y-a.y,d=length(dx,dy),n=norm(dx,dy),wanted=a.spec.aiRange||225;
@@ -369,7 +369,7 @@ function aiInput(m,dt) {
   if(m.ball?.carrier===1){const G=GOALS[0],gd=length(G.x-a.x,G.y-a.y);ai.aimX=G.x;ai.aimY=G.y+(m.random()-.5)*G.half;ai.fire=gd<BALL_TUNE.aiKick*(m.level==='rookie'?.8:1);ai.special=gd<BALL_TUNE.aiKick*1.5&&gd>BALL_TUNE.aiKick&&a.specialCd<=0;}
   ai.special=m.time>level.specialDelay&&d<(a.spec.specialRange||300)&&d>(a.spec.specialMin||0)&&p.stun<=0;
   ai.dash=m.level==='champion'&&d<130&&!['slauz','tehomon','seaguard'].includes(a.id)&&a.dashCd<=0;
-  if(m.ball?.carrier===0&&d<150&&a.dashCd<=0&&!(p.invincible>0))ai.dash=true;return ai;
+  if(m.ball?.carrier===0&&d<150&&a.dashCd<=0&&!(p.invincible>0))ai.dash=true;if(m.calm){ai.fire=false;ai.special=false;}return ai;
 }
 function stepActor(m,a,input,dt,scale=1) {
   for(const key of ['fireCd','specialCd','dashCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);

@@ -311,3 +311,27 @@ dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
   .reveal-dialog .tcard.big .tcard-bars i{height:6px}
   .reveal-dialog .tcard.big .tcard-special{font-size:11px}
 }
+
+/* Results: stars, not numbers. */
+.result-stars{display:flex;justify-content:center;gap:10px;margin:6px 0 4px}
+.result-stars span svg{width:46px;height:46px;color:#d8ccb0}
+.result-stars span.on svg{color:#f2b134;filter:drop-shadow(0 2px 4px #b8790055);animation:star-pop .5s var(--d,0s) both cubic-bezier(.3,1.6,.5,1)}
+@keyframes star-pop{from{transform:scale(0) rotate(-40deg)}}
+@media(max-height:560px){.result-stars span svg{width:34px;height:34px}}
+/* Pre-battle: long descriptions only where they matter. */
+.wild-view:not(.is-mission) #wild-power-description,#wild-level{display:none}
+/* The control tutorial: a glowing control and one short line next to it. */
+.tutorial{position:absolute;left:50%;bottom:22%;transform:translateX(-50%);z-index:8;padding:10px 18px;border-radius:14px;background:#fbf3e1f2;color:#2a1d11;font:900 20px var(--display);box-shadow:0 0 0 3px #e0b13a,0 12px 30px #000a;pointer-events:none;white-space:nowrap;animation:tut-bob 1.4s ease-in-out infinite}
+.tutorial[hidden]{display:none}
+.tutorial.touch[data-step="0"]{left:150px;bottom:150px;transform:none}
+.tutorial.touch[data-step="1"]{left:auto;right:120px;bottom:120px;transform:none}
+.tutorial.touch[data-step="2"]{left:auto;right:120px;bottom:180px;transform:none}
+@keyframes tut-bob{50%{margin-bottom:6px}}
+.tut-glow{box-shadow:0 0 0 4px #ffe27c,0 0 26px 8px #ffcf5a!important;animation:tut-glow 1s ease-in-out infinite}
+@keyframes tut-glow{50%{box-shadow:0 0 0 6px #ffe27c,0 0 36px 14px #ffcf5a}}
+.joystick.tut-glow{border-radius:50%}
+@media(prefers-reduced-motion:reduce){.tutorial,.tut-glow,.result-stars span.on svg{animation:none}}
+/* On a phone the battle button stays in view while the child scrolls the briefing. */
+@media(max-height:500px) and (orientation:landscape),(max-width:620px){
+  .wild-view #wild-start{position:sticky;bottom:10px;z-index:5;box-shadow:0 10px 26px #000b}
+}
