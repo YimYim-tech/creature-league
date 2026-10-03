@@ -304,3 +304,10 @@ dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
 }
 
 .camera-toggle{margin-top:8px;font-size:15px}
+/* The new-card window on a sideways phone shows a smaller card, so its words shrink with it. */
+@media(max-height:560px) and (orientation:landscape){
+  .reveal-dialog .tcard.big .tcard-title h3{font-size:18px;white-space:nowrap}
+  .reveal-dialog .tcard.big .tcard-bars li{font-size:10px;grid-template-columns:40px 1fr 30px}
+  .reveal-dialog .tcard.big .tcard-bars i{height:6px}
+  .reveal-dialog .tcard.big .tcard-special{font-size:11px}
+}

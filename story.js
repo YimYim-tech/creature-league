@@ -94,9 +94,9 @@ export const islandOf = id => ISLANDS.find(i => i.id === id) ?? (id === 'castle'
 // Which island a still-shadowed creature waits on.
 export const homeIsland = creature => STEPS.find(s => s.rival === creature)?.island ?? null;
 
-// Two losses in the same mission bring the opponent down one level: no child stays stuck.
+// Two losses on the same step bring the opponent down one level: no child stays stuck, on missions or guardians.
 const LEVEL_ORDER = ['rookie', 'challenger', 'veteran', 'champion'];
-export const missionEased = (profile, step) => step?.kind === 'mission' && (profile.missionLosses[step.id] || 0) >= 2;
+export const missionEased = (profile, step) => !!step?.level && (profile.missionLosses[step.id] || 0) >= 2;
 export function missionLevel(profile, step) {
   if (!missionEased(profile, step)) return step.level;
   return LEVEL_ORDER[Math.max(0, LEVEL_ORDER.indexOf(step.level) - 1)];
@@ -123,13 +123,13 @@ export function makeStoryMatch(profile, options = {}) {
   if (step.kind === 'mission') return makeMatch({...options, player, rival:step.opponent, level:missionLevel(profile, step), story:step.id, arena:step.island, mode:step.mode,
     team:step.mode === 'trio' ? trioTeam(profile, options.team) : null, rivalTeam:step.rivals || null});
   const rival = step.kind === 'mirror' ? player : step.rival;
-  return makeMatch({...options, player, rival, level:step.level, story:step.id, arena:step.island, giant:step.kind === 'guardian', mirror:step.kind === 'mirror'});
+  return makeMatch({...options, player, rival, level:missionLevel(profile, step), story:step.id, arena:step.island, giant:step.kind === 'guardian', mirror:step.kind === 'mirror'});
 }
 // Called after a finished story match. Returns what changed, for the screens to celebrate.
 export function recordStory(profile, m) {
   const step = currentStep(profile);
   if (!step || m.status !== 'finished' || m.story !== step.id) return null;
-  if (m.winner !== 0) {if (step.kind === 'mission') profile.missionLosses[step.id] = (profile.missionLosses[step.id] || 0) + 1; return null;}
+  if (m.winner !== 0) {profile.missionLosses[step.id] = (profile.missionLosses[step.id] || 0) + 1; return null;}
   profile.story.done++;
   const stars = step.kind === 'mission' ? missionStars(step, m) : 0;
   if (stars) profile.missionStars[step.id] = Math.max(profile.missionStars[step.id] || 0, stars);
