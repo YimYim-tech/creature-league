@@ -363,7 +363,7 @@ function onFinish(){
   const shown=match;setTimeout(()=>{if(match===shown&&!$('result-dialog').open)$('result-dialog').showModal();},1500);
 }
 // The loop must survive any drawing error: a frozen game is worse than one missed frame.
-let frameErrors=0;
+let frameErrors=0,hitStop=0;
 function frame(timestamp){
   try{frameBody(timestamp);}catch(error){if(frameErrors++<5)console.error('frame',error);window.__LEAGUE_LAST_ERROR__=String(error?.stack||error);}
   requestAnimationFrame(frame);
@@ -374,10 +374,10 @@ function frameBody(timestamp){
     const locked=!isUnlocked(profile,entry.id);drawPortrait(el,entry.puppet,entry.id,clock,dt,{active:entry.opts.roster?entry.id===profile.selected:true,locked:entry.opts.roster&&locked,skin:entry.opts.roster?(locked?null:skinOf(profile,entry.id)):entry.opts.skin});}
   if(screen==='battle'&&match){
     if(match.status!=='paused'&&match.status!=='finished'){
-      accumulator+=dt;
+      if(hitStop>0){hitStop-=dt;}else accumulator+=dt;
       while(accumulator>=1/60){
         step(match,currentInput(),1/60);input.special=false;input.dash=false;accumulator-=1/60;
-        for(const e of match.events){sound.effect(e);if(e.type==='hit'&&e.side===0)renderer.shake=3;if(e.type==='quake')renderer.shake=5;if(e.type==='collapse')toast('מחסה התפורר · מחפשים מקום חדש',1.5);if(e.type==='pickup-ready')toast('גביש חיים הופיע במרכז');if(e.type==='heal'&&e.side===0)toast('+'+Math.round(e.amount)+' חיים!');if(e.type==='go')toast('קדימה!',1);
+        for(const e of match.events){sound.effect(e);if(e.type==='hit'){hitStop=Math.max(hitStop,e.side===0?.07:.045);renderer.shake=Math.max(renderer.shake,e.side===0?4:1.8);}if(e.type==='quake')renderer.shake=5;if(e.type==='collapse')toast('מחסה התפורר · מחפשים מקום חדש',1.5);if(e.type==='pickup-ready')toast('גביש חיים הופיע במרכז');if(e.type==='heal'&&e.side===0)toast('+'+Math.round(e.amount)+' חיים!');if(e.type==='go')toast('קדימה!',1);
           if(e.type==='lava-warning')toast('הלבה מתעוררת! הישארו בתוך הטבעת',2);if(e.type==='ember'&&e.side===0)toast('גחלת כוח! גדלת! ('+e.power+'/'+MAX_POWER+')',1.4);
           if(e.type==='hold-start')toast(e.side===0?'החזיקו מעמד! עוד '+WIND_HOLD+' שניות!':'היריב מחזיק את הרוח! תפילו אותו!',2);
           if(e.type==='ko')toast(match.wind?(e.side===1?'הפלתם אותו! הנוצות שלו עפו!':'נפלתם! הנוצות עפו... חוזרים בעוד רגע'):(e.side===1?'הפלתם אותו! הוא חוזר בעוד רגע':'נפלתם! חוזרים בעוד רגע'),2);
