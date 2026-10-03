@@ -1,8 +1,13 @@
 export class Sound {
   constructor(){this.enabled=true;this.sources=[];this.buffers={};this.scene='lobby';this.next=0;this.loading=null;}
   async unlock(){
-    if(!this.ctx){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;this.ctx=new Audio();this.master=this.ctx.createGain();this.master.gain.value=.55;this.master.connect(this.ctx.destination);this.musicBus=this.ctx.createGain();this.musicBus.gain.value=Sound.MUSIC_LEVEL[this.scene]||.2;this.musicBus.connect(this.master);this.loading=this.load();this.timer=setInterval(()=>this.schedule(),300);}
+    if(!this.ctx){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;this.ctx=new Audio();this.master=this.ctx.createGain();this.master.gain.value=.55;this.master.connect(this.ctx.destination);this.musicBus=this.ctx.createGain();this.musicBus.gain.value=Sound.MUSIC_LEVEL[this.scene]||.2;this.musicBus.connect(this.master);this.initMusic();this.loading=this.load();this.timer=setInterval(()=>this.schedule(),300);}
+    // On iPhone the silent switch mutes web sound unless the page asks for playback sound.
+    try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch{}
     if(this.enabled)await this.ctx.resume().catch(()=>{});
+    // Phones start a music track only from a tap, so every track gets its first play here.
+    for(const [id,t] of Object.entries(this.music||{}))if(!t.primed){t.primed=true;t.el.play().then(()=>{if(id!==this.scene||!this.enabled||this.paused)t.el.pause();}).catch(()=>{t.primed=false;});}
+    this.schedule();
   }
   // Short generated clips: card flip, fanfare and the Hebrew announcer.
   // Music sits under speech and effects: battle music is quieter so the action stays clear.
@@ -12,16 +17,16 @@ export class Sound {
   play(name,{delay=0,volume=.9}={}){if(!this.ctx||!this.enabled||!this.clips?.[name])return;const source=this.ctx.createBufferSource(),gain=this.ctx.createGain();source.buffer=this.clips[name];gain.gain.value=volume;source.connect(gain);gain.connect(this.master);const at=this.ctx.currentTime+delay;source.start(at);if(name.startsWith('voice-'))this.duck(at,source.buffer.duration);}
   // While someone speaks the music drops, then comes back.
   duck(at,duration){if(!this.musicBus)return;const g=this.musicBus.gain,level=Sound.MUSIC_LEVEL[this.scene]||.2,end=at+duration;g.cancelScheduledValues(at);g.setTargetAtTime(level*Sound.DUCK,at,.08);g.setTargetAtTime(level,end+.1,.35);this.duckUntil=Math.max(this.duckUntil||0,end);}
-  async load(){this.clips={};await Promise.all(Sound.CLIPS.map(async name=>{try{const r=await fetch('./art/gen/'+name+'.mp3');this.clips[name]=await this.ctx.decodeAudioData(await r.arrayBuffer());}catch{/* A missing clip is silent. */}}));
-    for(const id of ['lobby','battle'])try{const r=await fetch('./art/gen/'+({lobby:'music-map',battle:'music-battle'})[id]+'.mp3');this.buffers[id]=await this.ctx.decodeAudioData(await r.arrayBuffer());}catch{/* Sound never blocks a playable game. */}this.schedule();}
+  static MUSIC={lobby:'music-map',battle:'music-battle'};
+  initMusic(){this.music={};for(const [id,file] of Object.entries(Sound.MUSIC)){const el=new Audio('./art/gen/'+file+'.mp3');el.loop=true;el.preload='auto';el.setAttribute('playsinline','');const g=this.ctx.createGain();g.gain.value=0;try{this.ctx.createMediaElementSource(el).connect(g);}catch{}g.connect(this.musicBus);this.music[id]={el,g,primed:false};}}
+  async load(){this.clips={};await Promise.all(Sound.CLIPS.map(async name=>{try{const r=await fetch('./art/gen/'+name+'.mp3');this.clips[name]=await this.ctx.decodeAudioData(await r.arrayBuffer());}catch{/* A missing clip is silent. */}}));this.schedule();}
   setEnabled(value){this.enabled=value;if(this.ctx){this.master.gain.setTargetAtTime(value?.55:0,this.ctx.currentTime,.05);if(value)this.ctx.resume().catch(()=>{});}this.schedule();}
-  setScene(scene){if(scene===this.scene)return;this.scene=scene;this.stopMusic();if(this.musicBus&&!(this.duckUntil>this.ctx.currentTime))this.musicBus.gain.setTargetAtTime(Sound.MUSIC_LEVEL[scene]||.2,this.ctx.currentTime,.2);this.schedule();}
-  stopMusic(){if(!this.ctx)return;for(const s of this.sources){try{s.gain.gain.cancelScheduledValues(this.ctx.currentTime);s.gain.gain.setTargetAtTime(0,this.ctx.currentTime,.15);s.source.stop(this.ctx.currentTime+.6);}catch{}}this.sources=[];this.next=0;}
+  setScene(scene){if(scene===this.scene)return;this.scene=scene;if(this.musicBus&&!(this.duckUntil>this.ctx.currentTime))this.musicBus.gain.setTargetAtTime(Sound.MUSIC_LEVEL[scene]||.2,this.ctx.currentTime,.2);this.schedule();}
+  stopMusic(){if(!this.music)return;for(const t of Object.values(this.music)){t.g.gain.setTargetAtTime(0,this.ctx.currentTime,.12);}}
   pause(){this.stopMusic();this.paused=true;}
   resume(){this.paused=false;this.schedule();}
-  schedule(){if(!this.ctx||!this.enabled||this.paused)return;const buffer=this.buffers[this.scene];if(!buffer)return;const now=this.ctx.currentTime;if(this.next>now+1)return;
-    const source=this.ctx.createBufferSource(),gain=this.ctx.createGain();source.buffer=buffer;source.connect(gain);gain.connect(this.musicBus);const start=Math.max(now,this.next),duration=buffer.duration;
-    gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(1,start+1);gain.gain.setValueAtTime(1,start+duration-1);gain.gain.linearRampToValueAtTime(0,start+duration);source.start(start);source.stop(start+duration);this.sources.push({source,gain});source.onended=()=>this.sources=this.sources.filter(s=>s.source!==source);this.next=start+duration-1;
+  schedule(){if(!this.ctx||!this.music)return;const now=this.ctx.currentTime,want=this.enabled&&!this.paused?this.scene:null;
+    for(const [id,t] of Object.entries(this.music)){if(id===want){if(t.el.paused&&t.primed)t.el.play().catch(()=>{});t.g.gain.setTargetAtTime(1,now,.5);}else{t.g.gain.setTargetAtTime(0,now,.2);if(!t.el.paused&&t.g.gain.value<.02)t.el.pause();}}
   }
   tone(freq,duration=.12,type='sine',volume=.12,slide=0,delay=0){if(!this.ctx||!this.enabled||this.paused)return;const now=this.ctx.currentTime+delay,osc=this.ctx.createOscillator(),gain=this.ctx.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,now);if(slide)osc.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),now+duration);gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(volume,now+.008);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);osc.connect(gain);gain.connect(this.master);osc.start(now);osc.stop(now+duration);}
   effect(event){if(event.type==='shoot'){const t=this.ctx?.currentTime||0;if(event.side===1?Math.random()>.2:t-(this.lastShot||0)<.22)return;if(event.side===0)this.lastShot=t;const voice={havzuk:[560,'sine'],maimi:[340,'sine'],slauz:[95,'triangle'],lohatan:[150,'sawtooth'],tehomon:[220,'sine'],zikuk:[880,'square'],retetoz:[260,'triangle'],tzlilon:[720,'sine'],shorshu:[300,'triangle'],galgalor:[640,'triangle']}[event.kind]||[340,'sine'];this.tone(voice[0],.1,voice[1],voice[1]==='square'||voice[1]==='sawtooth'?.022:.04,-90);}
