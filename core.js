@@ -366,7 +366,7 @@ function aiInput(m,dt) {
   if(m.calm){ai.fire=false;ai.special=false;}return ai;
 }
 // Like Brawl Stars: after a few calm seconds without hitting or being hit, health refills.
-export const REGEN_DELAY=3,REGEN_RATE=.13;
+export const REGEN_DELAY=3,REGEN_RATE=.13,AIM_HELP=1.35;
 export const SUPER_SHARE=+(globalThis.process?.env?.SUPER_SHARE||.33),SUPER_PASSIVE=+(globalThis.process?.env?.SUPER_PASSIVE||30);
 function chargeSuper(m,a,amount){if(!a||a.hp<=0)return;if(a.upgrades?.includes('quick'))amount*=1.35;amount*=(CREATURES[a.id]?.specialCooldown||1)/(a.spec.specialCooldown||1);const before=a.superCharge||0;a.superCharge=Math.min(1,before+amount);if(before<1&&a.superCharge>=1)event(m,'super-ready',{side:a.side});}
 function regenerate(a,dt){a.calm=(a.calm||0)+dt;a.regen=0;if(a.hp>0&&!(a.out>0)&&a.hp<a.spec.hp&&a.calm>=REGEN_DELAY){a.hp=Math.min(a.spec.hp,a.hp+a.spec.hp*REGEN_RATE*dt);a.regen=1;}}
@@ -380,7 +380,7 @@ function stepActor(m,a,input,dt,scale=1) {
   if(a.stun>0)return;
   move(m,a,input.moveX||0,input.moveY||0,dt,scale);
   if(input.aimX!=null)a.aim=Math.atan2(input.aimY-a.y,input.aimX-a.x);
-  else {const target=m.actors[1-a.side],distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*.72,speed=target.spec.speed*(target.side?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
+  else {const target=m.actors[1-a.side],distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*(a.side===0?.45:.72),speed=target.spec.speed*(target.side?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
   if(Math.abs(Math.cos(a.aim))>.15)a.facing=Math.cos(a.aim)>0?1:-1;
   if(m.ball&&m.ball.carrier===a.side){
     if(input.aimX==null){const G=GOALS[1-a.side];a.aim=Math.atan2(G.y-a.y,G.x-a.x);a.facing=Math.cos(a.aim)>0?1:-1;}
@@ -395,10 +395,10 @@ function updateProjectiles(m,dt) {
     if(m.zones.length){const sw=m.zones.find(z=>z.owner!==s.owner&&(z.kind==='vortex'||z.kind==='tidering')&&length(s.x-z.x,s.y-z.y)<z.r);if(sw){s.life=0;effect(m,'stone',s.x,s.y,{color:sw.kind==='vortex'?'#9fc4ff':'#d6f1ff'});continue;}}
     const x=s.x+s.vx*dt,y=s.y+s.vy*dt;s.life-=dt;
     let hit=null,t=2;
-    const target=m.actors[1-s.owner],enemyT=target.out>0?null:segmentCircle(s.x,s.y,x,y,target.x,target.y,s.r+target.radius);
+    const target=m.actors[1-s.owner],enemyT=target.out>0?null:segmentCircle(s.x,s.y,x,y,target.x,target.y,(s.r+target.radius)*(s.owner===0?AIM_HELP:1));
     if(enemyT!=null){hit=target;t=enemyT;}
     if(m.ball&&m.ball.carrier<0){const bt=segmentCircle(s.x,s.y,x,y,m.ball.x,m.ball.y,s.r+16);if(bt!=null&&bt<t){s.life=0;m.ball.vx+=s.vx*.4;m.ball.vy+=s.vy*.4;effect(m,'stone',m.ball.x,m.ball.y,{color:'#d6f1ff'});continue;}}
-    for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){hit=c;t=ct;}}
+    for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){if(s.owner===0){s.chipped??=[];if(!s.chipped.includes(c)){s.chipped.push(c);c.hp=Math.max(0,c.hp-s.damage*.5);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});event(m,'cover',{broken:c.hp===0});}continue;}hit=c;t=ct;}}
     if(hit){s.x+=(x-s.x)*t;s.y+=(y-s.y)*t;s.life=0;if(s.explode)burst(m,s);
       if(hit.side!=null){damage(m,hit,s.damage,m.actors[s.owner],{special:s.kind!==m.actors[s.owner]?.id&&s.kind!=='blast',hitAngle:Math.atan2(-s.vy,-s.vx),pushX:s.kind==='maimi'?s.vx*.018:0,pushY:s.kind==='maimi'?s.vy*.018:0});}
       else{hit.hp=Math.max(0,hit.hp-s.damage);effect(m,'stone',s.x,s.y,{color:'#ead2a9'});event(m,'cover',{broken:hit.hp===0});}
