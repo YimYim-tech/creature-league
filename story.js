@@ -1,6 +1,6 @@
 // The necklace journey from Michael's story: four islands, four lights, then the golden castle.
 // Everything here is data plus small pure functions, so the browser and the tests share it.
-import {CREATURES,WILD,LEVELS,MODES,isUnlocked,makeMatch,clamp,trioLeft} from './core.js';
+import {CREATURES,WILD,STAR_GUARDS,LEVELS,MODES,isUnlocked,makeMatch,clamp,trioLeft} from './core.js';
 
 export const ISLANDS = [
   {id:'wind', name:'אי הרוחות', gem:'#4f9d58', gemName:'הירוק'},
@@ -92,7 +92,7 @@ export const starLit = profile => litIslands(profile).length === ISLANDS.length;
 const CASTLE = {id:'castle', name:'הטירה הזהובה', gem:'#e8b931', gemName:'הזהוב'};
 export const islandOf = id => ISLANDS.find(i => i.id === id) ?? (id === 'castle' ? CASTLE : undefined);
 // Which island a still-shadowed creature waits on.
-export const homeIsland = creature => STEPS.find(s => s.rival === creature)?.island ?? null;
+export const homeIsland = creature => CREATURES[creature]?.star ? 'castle' : STEPS.find(s => s.rival === creature)?.island ?? null;
 
 // Two losses on the same step bring the opponent down one level: no child stays stuck, on missions or guardians.
 const LEVEL_ORDER = ['rookie', 'challenger', 'veteran', 'champion'];
@@ -143,6 +143,8 @@ export function completeCastle(profile) {
   if (step?.kind !== 'castle') return false;
   profile.story.done++;
   for (const id of STORY_CARD_IDS) if (!profile.storyCards.includes(id)) {profile.storyCards.push(id); profile.newCards.push(id);}
+  // The star guardians wake up and join.
+  for (const id of STAR_GUARDS) if (!profile.unlocked.includes(id)) {profile.unlocked.push(id); profile.newCards.push(id);}
   return true;
 }
 export const storyCardOwned = (profile, id) => profile.storyCards.includes(id);

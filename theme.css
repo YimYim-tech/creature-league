@@ -341,3 +341,11 @@ dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
 .action-button.special.super-ready{box-shadow:0 0 0 3px var(--c,#ffd23a),0 0 22px 6px var(--c,#ffcf5a);animation:super-glow 1s ease-in-out infinite}
 @keyframes super-glow{50%{box-shadow:0 0 0 5px #ffffff,0 0 34px 12px var(--c,#ffcf5a)}}
 @media(prefers-reduced-motion:reduce){.action-button.special.super-ready{animation:none}}
+
+/* Star guardians wait in the castle as glowing silhouettes. */
+.creature-card.star-wait{background:var(--grain),linear-gradient(180deg,#fff3c9,#e9c96f);filter:none;box-shadow:0 0 18px 2px #ffd86a88}
+.creature-card.star-wait .portrait{filter:drop-shadow(0 0 10px #ffe27a) drop-shadow(0 0 22px #fff3b0)}
+.creature-card.star-wait .wild-call{background:linear-gradient(180deg,#ffd75e,#c8901c);color:#3a2604}
+
+/* A closed card window is hidden, even where the layout gives it a grid. */
+.reveal-dialog:not([open]){display:none}

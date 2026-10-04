@@ -17,7 +17,7 @@ export async function loadArt(onProgress=()=>{}) {
   return {arena,arenas,entries,props};
 }
 const PROP_KEYS=['coast','wind','sea','fire','mirror','castle'];
-export const SHOT_ART={maimi:'water',havzuk:'lightning',slauz:'stone',lohatan:'fire',tehomon:'whirl',zikuk:'beam',retetoz:'wave',tzlilon:'hypno',shorshu:'leaf',windguard:'wind',seaguard:'spear',fireguard:'fireball',fireball:'fireball',galgalor:'spark'};
+export const SHOT_ART={zoharon:'beam',kokhavit:'spark',maimi:'water',havzuk:'lightning',slauz:'stone',lohatan:'fire',tehomon:'whirl',zikuk:'beam',retetoz:'wave',tzlilon:'hypno',shorshu:'leaf',windguard:'wind',seaguard:'spear',fireguard:'fireball',fireball:'fireball',galgalor:'spark'};
 export const PROP_NAMES=[...PROP_KEYS.flatMap(k=>['rock-'+k,'rubble-'+k]),'pearl','feather','ember','crystal','gate-blue','gate-gold',...Object.values(SHOT_ART).filter((v,i,a)=>a.indexOf(v)===i).map(v=>'shot-'+v),'burst-star','burst-splash'];
 export function createPuppet(id) {const data=loaded.get(id);const skeleton=new Skeleton(data.rig);return {...data,skeleton,animator:new Animator(skeleton,data.clips)};}
 function ellipse(ctx,x,y,rx,ry,fill,stroke,width=1) {ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}}
@@ -58,7 +58,7 @@ export function drawPortrait(canvas,p,id,t,dt,{active=false,locked=false,skin=nu
   ellipse(ctx,w/2,cy,w*.22,7,'#00000066');
   ctx.save();ctx.translate(w/2,h*.47);ctx.rotate(t*.08);ctx.setLineDash([2,9]);ellipse(ctx,0,0,Math.min(w*.37,h*.36),Math.min(w*.37,h*.36),null,c.color+'24');ctx.restore();
   const art=p.rig.artworkSize,aspect=art.width/art.height,height=Math.min(h*.8,w*.86/aspect);
-  drawPuppet(ctx,p,w/2,cy-7,height,{dt,clip:'idle',flip:facesLeft(id),skin,silhouette:locked?'#06131c':null,time:t});
+  drawPuppet(ctx,p,w/2,cy-7,height,{dt,clip:'idle',flip:facesLeft(id),skin,silhouette:locked?(c.star?'#fff4cf':'#06131c'):null,time:t});
   if(locked){ctx.save();ctx.font='900 '+Math.round(h*.22)+'px Heebo, Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=c.color;ctx.shadowColor=c.color;ctx.shadowBlur=18;ctx.fillText('?',w/2,h*.5);ctx.restore();}
   for(let i=0;i<7;i++){const px=w*(.15+(i*.137)% .72),py=(h*.9-(t*14+i*32)%(h*.8));ellipse(ctx,px,py,1.5,1.5,c.color+(active?'aa':'44'));}
 }
@@ -164,6 +164,7 @@ export class Renderer {
     // Some drawings face left in the source art; flipping follows the drawing.
     const flip=facesLeft(a.id)?a.facing>0:a.facing<0;
     if(a.root>0)this.drawRoots(a);
+    if(a.lightShield>0&&a.hp>0)this.drawLightShield(a);
     if(a.side===1&&this.shadowed&&a.hp>0)this.drawShadowAura(a);
     if(a.power>0){c.save();c.globalAlpha=.35+.08*Math.sin(this.clock*6);ellipse(c,a.x,a.y,a.radius*(1.7+a.power*.12),a.radius*.62,'#ff8a2a55','#ffb43a',3);c.restore();}
     drawPuppet(c,puppet,a.x,a.y,a.spec.height*(1+.07*(a.power||0)),{flip,clip:a.stun>0&&a.hp>0?'hit':clip,dt:status==='paused'||a.stun>0?0:dt,hit:a.hit>.05,alpha:a.invincible>0?.65:1,skin:this.skins[a.side],time:this.clock});
@@ -229,6 +230,8 @@ export class Renderer {
     c.restore();}
   drawDizzy(a){const c=this.ctx,y=a.y-a.spec.height-30,t=this.clock;c.save();c.globalAlpha=.9;ellipse(c,a.x,y,34,11,null,'#c9a7ff',3);
     for(let i=0;i<3;i++){const ang=t*5+i*2.09;star(c,a.x+Math.cos(ang)*34,y+Math.sin(ang)*11,7,i?'#ffe57a':'#ffffff');}this.label('מהופנט!',a.x,y-24,17,'#5b2ea6');c.restore();}
+  drawLightShield(a){const c=this.ctx,t=this.clock,r=a.radius*1.9,cy=a.y-a.spec.height*.45;c.save();c.globalCompositeOperation='lighter';glow(c,a.x,cy,r*1.3,'#fff3b066');c.restore();
+    ellipse(c,a.x,cy,r,r*1.05,'#fff6d036','#ffe27a',5);ellipse(c,a.x,cy,r*.9,r*.95,null,'#ffffffaa',2);for(let i=0;i<a.lightShield;i++){const ang=t*2.4+i*Math.PI*2/a.lightShield;c.fillStyle='#fff8d8';star(c,a.x+Math.cos(ang)*r,cy+Math.sin(ang)*r*.4,14,'#fff8d8');}}
   drawRoots(a){const c=this.ctx;c.save();for(let i=0;i<7;i++){const ang=i*.9+.3,len=a.radius*1.6;line(c,[[a.x+Math.cos(ang)*a.radius*1.4,a.y+Math.sin(ang)*a.radius*.6+6],[a.x+Math.cos(ang)*a.radius*.4,a.y-len*.5],[a.x+Math.cos(ang+1)*a.radius*.25,a.y-len]],i%2?'#5c8c2c':'#8fcf55',6);}c.restore();}
   drawShot(s,t) {const c=this.ctx,x=s.x,y=s.y-38;ellipse(c,s.x,s.y+1,s.r,s.r*.3,'#12393233');
     const a=Math.atan2(s.vy,s.vx);c.save();c.translate(x,y);c.rotate(a);
@@ -264,6 +267,7 @@ export class Renderer {
     if(z.kind==='tornado'){const c=this.ctx;c.save();for(let i=0;i<7;i++){const k=i/7,w=z.r*(.35+k*.75),y=z.y-k*z.r*1.6;c.globalAlpha=.55-k*.05;c.strokeStyle=i%2?'#d9fbfb':'#3cc7c9';c.lineWidth=5;c.beginPath();c.ellipse(z.x+Math.sin(t*9+i)*6,y,w,w*.32,0,t*6+i,t*6+i+Math.PI*1.6);c.stroke();}c.restore();ellipse(c,z.x,z.y,z.r*.8,z.r*.28,'#16626a33');return;}
     if(z.kind==='tidering'){const c=this.ctx,fade=Math.min(1,(z.life-z.age)*2);c.save();c.globalAlpha=.85*fade;ellipse(c,z.x,z.y-10,z.r,z.r*.62,'#2f8fd633','#d6f1ff',5);c.globalAlpha=.6*fade;for(let i=0;i<10;i++){const ang=t*1.8+i*.63;ellipse(c,z.x+Math.cos(ang)*z.r,z.y-10+Math.sin(ang)*z.r*.62,6,4,'#ffffff');}c.restore();return;}
     const c=this.ctx,color={water:'#36c9ed',fire:'#ff7a2c',vortex:'#4f86ff',roots:'#86d957'}[z.kind]||'#ffe56d';c.save();c.globalAlpha=Math.min(1,(z.life-z.age)*2);
+    if(z.kind==='star'){if(!z.done){const pct=Math.min(1,z.age/z.delay),h=(1-pct)*320;ellipse(c,z.x,z.y,z.r,z.r*.8,'#ffe27a22','#ffe27a',2);ellipse(c,z.x,z.y,z.r*pct,z.r*.8*pct,'#ffe27a44');c.globalCompositeOperation='lighter';glow(c,z.x,z.y-h,26,'#fff3b0cc');c.globalCompositeOperation='source-over';c.fillStyle='#fff8d8';star(c,z.x,z.y-h,14,'#fff8d8');}c.restore();return;}
     if(z.kind==='roots'){if(!z.done){const pct=Math.min(1,z.age/z.delay);ellipse(c,z.x,z.y,z.r,z.r*.8,'#86d95722','#c8ff9a',2);ellipse(c,z.x,z.y,z.r*pct,z.r*.8*pct,'#86d95744');}
       else{for(let i=0;i<9;i++){const ang=i*.7,rr=z.r*(.3+(i%3)*.25),grow=Math.min(1,(z.age-z.delay)/.2);line(c,[[z.x+Math.cos(ang)*rr,z.y+Math.sin(ang)*rr*.7],[z.x+Math.cos(ang)*rr*.8,z.y+Math.sin(ang)*rr*.6-28*grow],[z.x+Math.cos(ang+.5)*rr*.6,z.y+Math.sin(ang)*rr*.5-52*grow]],i%2?'#4f8a25':'#8fcf55',7);}}
       c.restore();return;}
@@ -296,6 +300,8 @@ export class Renderer {
       for(let i=0;i<8;i++){const a=i*2.4,r=8+p*85;ellipse(c,e.x+Math.cos(a)*r,e.y-34+Math.sin(a)*r*.6,4*(1-p),4*(1-p),e.color);}if(e.amount)this.label('−'+e.amount,e.x,e.y-105-p*44,23,'#793f32');}
     if(e.type==='heal')this.label('+'+Math.round(e.amount),e.x,e.y-110-p*40,25,'#0b8761');
     if(e.type==='evade')this.label('חמיקה!',e.x,e.y-110-p*35,18,'#176b92');
+    if(e.type==='starfall'){const q=Math.min(1,p*2.2),b=this.art.props?.['burst-star'];c.save();c.globalAlpha=1-q;c.globalCompositeOperation='lighter';glow(c,e.x,e.y-10,(e.r||54)*1.6,'#fff3b0cc');if(b){const sz=(e.r||54)*(1.4+q*1.2);c.drawImage(b,e.x-sz/2,e.y-10-sz/2,sz,sz);}c.restore();}
+    if(e.type==='light-block')this.label('מגן אור!',e.x,e.y-120-p*30,18,'#9a7a1c');
     if(e.type==='guard-block')this.label('מגן',e.x+22,e.y-83-p*30,16,'#8e5b14');
     if(e.type==='weak-hit')ellipse(c,e.x,e.y-45,25+p*35,25+p*35,null,'#7effd9',3);
     if(e.type==='ember'){for(let i=0;i<10;i++){const ang=i*.63,r=10+p*70;ellipse(c,e.x+Math.cos(ang)*r,e.y-50+Math.sin(ang)*r*.6,4*(1-p),4*(1-p),'#ffb43a');}this.label('+כוח',e.x,e.y-130-p*30,22,'#8a2c0a');}
