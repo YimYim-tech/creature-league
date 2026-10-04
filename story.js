@@ -30,7 +30,7 @@ export const STEPS = [
   {id:'sea-free2', island:'sea', kind:'free', rival:'tehomon', level:'challenger',
     intro:'תהומון הענק נבהל מהצל ושוקע למעמקים. אל תיבהל מהגודל שלו. הוא צריך מישהו שיהיה אמיץ בשבילו.',
     after:'תהומון עלה מהמעמקים. איזה ענק טוב!'},
-  {id:'sea-mission', island:'sea', kind:'mission', mode:'ball', opponent:'galgalor', level:'veteran',
+  {id:'sea-mission', island:'sea', kind:'mission', mode:'ball', opponent:'galgalor', level:'rookie',
     intro:'הצל גנב את פנינת הגאות! תכניס אותה לשער שלו. כשהפנינה אצלך אי אפשר לירות, אז ירי בועט אותה. ושים לב: שלוש פגיעות והיא נופלת.',
     easier:'הפעם הים קצת יותר רגוע. אתה יכול!',
     after:'איזה גולים! הגאות חוזרת לזרום, ושומר הים מחכה לך.'},

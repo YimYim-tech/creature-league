@@ -81,3 +81,12 @@ button{touch-action:manipulation}
   .battle-active .match-clock strong{color:#fff4d6;font-size:15px}
   .battle-active .battle-top .pause-button{grid-column:4}
 }
+
+/* Messages never cover the arena: a small pill under the clock. */
+.battle-active .match-toast{left:50%;right:auto;transform:translateX(-50%);width:auto;max-width:60%;white-space:nowrap;padding:3px 14px;border-radius:999px;font-size:15px}
+@media (max-height:600px) and (orientation:landscape){.battle-active .match-toast{top:36px;font-size:13px;padding:2px 12px;background:#0b1a22c4;color:#fff4d6;box-shadow:none}}
+/* The goal card sits at the top, small. */
+.goal-card{top:12%;transform:translate(-50%,0);padding:8px 16px;gap:2px;max-width:min(380px,70%)}
+.goal-card b{font-size:20px}.goal-card p{font-size:14px}.goal-icon svg{width:26px;height:26px}
+@keyframes goal-in{from{transform:translate(-50%,-10px);opacity:0}}
+@media (max-height:600px) and (orientation:landscape){.goal-card{top:40px;padding:6px 14px}.goal-card b{font-size:16px}.goal-card p{font-size:12px}}

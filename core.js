@@ -94,7 +94,7 @@ export const MODES={
 export const WIND_TARGET=6,WIND_HOLD=10,MAX_POWER=5,BALL_GOALS=5;
 // The goals sit at the two ends of the oval; the player defends the left one.
 export const GOALS=[{x:WORLD.cx-WORLD.rx+34,y:WORLD.cy,half:60},{x:WORLD.cx+WORLD.rx-34,y:WORLD.cy,half:60}];
-export const BALL_TUNE={aiKick:260,drag:3,carry:.75,fumble:3,rockX:150,rockY:100};
+export const BALL_TUNE={kickRange:430,aiKick:260,drag:3,carry:.75,fumble:3,rockX:150,rockY:100};
 const SPAWN=[{x:285,y:420},{x:995,y:420}];
 function setupMode(m,mode){
   m.mode=mode;m.duration=MODES[mode].duration;
@@ -382,7 +382,8 @@ function stepActor(m,a,input,dt,scale=1) {
   if(Math.abs(Math.cos(a.aim))>.15)a.facing=Math.cos(a.aim)>0?1:-1;
   if(m.ball&&m.ball.carrier===a.side){
     if(input.aimX==null){const G=GOALS[1-a.side];a.aim=Math.atan2(G.y-a.y,G.x-a.x);a.facing=Math.cos(a.aim)>0?1:-1;}
-    if(input.special&&a.superCharge>=1&&m.ball.carryTime>=.22){a.superCharge=0;kickBall(m,a,true);}else if(input.fire)kickBall(m,a,false);
+    if(input.special&&a.superCharge>=1&&m.ball.carryTime>=.22){a.superCharge=0;kickBall(m,a,true);}
+    else if(input.fire){const G=GOALS[1-a.side];if(length(G.x-a.x,G.y-a.y)<BALL_TUNE.kickRange)kickBall(m,a,false);else if(!a.farHint){a.farHint=true;event(m,'kick-far',{side:a.side});}}
     return;}
   if(input.special&&a.superCharge>=1&&useSpecial(m,a,input)){a.superCharge=0;event(m,'super',{side:a.side});}
   if(input.fire)shoot(m,a,a.aim,a.side?LEVELS[m.level].fireScale:1);

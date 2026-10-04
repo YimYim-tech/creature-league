@@ -289,7 +289,7 @@ function startBattle(nextMode=mode){
   if(match.mode)$('arena-tip').textContent=MODES[match.mode].goal;
   startTutorial();
   {const r=match.actors[1];if(r.boss||storyStep&&['guardian','mirror'].includes(storyStep.kind))renderer.cinematic(r.x,r.y-80,1.55,2.6);}
-  $('goal-card').hidden=!match.mode;if(match.mode){$('goal-icon').innerHTML=icon(MISSION_ICON[match.mode]);$('goal-name').textContent=MODES[match.mode].name;$('goal-text').textContent=MODES[match.mode].goal;goalUntil=clock+5;}
+  $('goal-card').hidden=!match.mode;if(match.mode){$('goal-icon').innerHTML=icon(MISSION_ICON[match.mode]);$('goal-name').textContent=MODES[match.mode].name;$('goal-text').textContent=MODES[match.mode].goal;goalUntil=clock+3;}
   $('leave-button').textContent=mode==='story'?'הפסקה · חזרה למפה':mode==='quick'||mode==='wild'?'חזרה לבחירת יצור':'הפסקה · חזרה למסע';
   renderHUD();$('arena').focus({preventScroll:true});
 }
@@ -318,7 +318,7 @@ function updateTutorial(dt){
   if(tutorial&&tutorial.age>40)endTutorial();
 }
 function renderHUD(){if(!match)return;const [a,b]=match.actors;
-  {const fade=renderer.wide&&match.actors.some(x=>!(x.out>0)&&renderer.offsetY+(x.y-x.spec.height*(renderer.size||1))*renderer.scale<70);document.querySelector('.battle-top').classList.toggle('hud-fade',fade);$('mode-banner').classList.toggle('hud-fade',fade);}if(!$('goal-card').hidden&&clock>goalUntil)$('goal-card').hidden=true;
+  {const fade=renderer.wide&&match.actors.some(x=>!(x.out>0)&&renderer.offsetY+(x.y-x.spec.height*(renderer.size||1))*renderer.scale<70);document.querySelector('.battle-top').classList.toggle('hud-fade',fade);$('mode-banner').classList.toggle('hud-fade',fade);}if(!$('goal-card').hidden&&(clock>goalUntil||match.status==='playing'&&match.time>.6&&Math.hypot(a.moveX||0,a.moveY||0)>.3))$('goal-card').hidden=true;
   $('fire-button').setAttribute('aria-pressed',String(input.toggleFire));$('fire-button').classList.toggle('latched',input.toggleFire);
   $('player-health').style.width=100*a.hp/a.spec.hp+'%';$('rival-health').style.width=100*b.hp/b.spec.hp+'%';$('player-hp').textContent=Math.ceil(a.hp)+' / '+a.spec.hp;$('rival-hp').textContent=Math.ceil(b.hp)+' / '+b.spec.hp;
   const seconds=Math.max(0,Math.ceil(match.duration-match.time));$('timer').textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');document.querySelector('.match-clock').classList.toggle('urgent',seconds<=15);
@@ -378,16 +378,15 @@ function frameBody(timestamp){
       if(hitStop>0){hitStop-=dt;}else accumulator+=dt;
       while(accumulator>=1/60){
         step(match,currentInput(),1/60);input.special=false;accumulator-=1/60;
-        for(const e of match.events){sound.effect(e);if(e.type==='hit'){hitStop=Math.max(hitStop,e.side===0?.07:.045);renderer.shake=Math.max(renderer.shake,e.side===0?4:1.8);}if(e.type==='quake')renderer.shake=5;if(e.type==='collapse')toast('מחסה התפורר · מחפשים מקום חדש',1.5);if(e.type==='pickup-ready')toast('גביש חיים הופיע במרכז');if(e.type==='heal'&&e.side===0)toast('+'+Math.round(e.amount)+' חיים!');if(e.type==='go')toast('קדימה!',1);
-          if(e.type==='lava-warning')toast('הלבה מתעוררת! הישארו בתוך הטבעת',2);if(e.type==='ember'&&e.side===0)toast('גחלת כוח! גדלת! ('+e.power+'/'+MAX_POWER+')',1.4);
-          if(e.type==='hold-start')toast(e.side===0?'החזיקו מעמד! עוד '+WIND_HOLD+' שניות!':'היריב מחזיק את הרוח! תפילו אותו!',2);
-          if(e.type==='ko')toast(match.wind?(e.side===1?'הפלתם אותו! הנוצות שלו עפו!':'נפלתם! הנוצות עפו... חוזרים בעוד רגע'):(e.side===1?'הפלתם אותו! הוא חוזר בעוד רגע':'נפלתם! חוזרים בעוד רגע'),2);
-          if(e.type==='super-ready'&&e.side===0)toast('כוח־העל מלא! '+match.actors[0].spec.special,1.4);
+        for(const e of match.events){sound.effect(e);if(e.type==='hit'){hitStop=Math.max(hitStop,e.side===0?.07:.045);renderer.shake=Math.max(renderer.shake,e.side===0?4:1.8);}if(e.type==='quake')renderer.shake=5;if(e.type==='go')toast('קדימה!',.8);
+          if(e.type==='lava-warning')toast('הלבה מתעוררת!',1.4);
+          if(e.type==='hold-start')toast(e.side===0?'החזיקו מעמד!':'תפילו אותו!',1.4);
+          if(e.type==='ko')toast(e.side===1?'הפלתם אותו!':'חוזרים בעוד רגע',1.4);
           if(e.type==='goal'){const G=GOALS[1-e.side];renderer.cinematic(G.x,G.y-50,1.45,1.5);}
-          if(e.type==='goal')toast(e.side===0?'גול!!! '+e.score[0]+' : '+e.score[1]:'היריב הבקיע. '+e.score[0]+' : '+e.score[1]+' · הפנינה אצלכם',2.2);
-          if(e.type==='steal')toast(e.side===0?'חטפתם את הפנינה!':'היריב חטף את הפנינה!',1.4);if(e.type==='ball-loose'&&match.status==='playing')toast(e.side===1?'הפנינה נפלה לו! תפסו אותה!':'הפנינה נפלה! תפסו אותה מהר',1.4);
-          if(e.type==='overtime')toast('תיקו! הגול הבא מנצח!',2.5);
-          if(e.type==='swap'){const c=CREATURES[e.id];renderer.swap(e.side,e.id,e.side===0?skinOf(profile,e.id):null);if(e.side===0){$('player-name').textContent=c.name;$('player-symbol').innerHTML=icon(c.specialIcon);$('special-action-icon').innerHTML=icon(c.specialIcon);$('special-action-name').textContent=c.special;$('special-button').style.setProperty('--c',c.color);}else{$('rival-name').textContent=c.name;$('rival-symbol').innerHTML=icon(c.specialIcon);}toast(e.side===0?c.name+' נכנס לזירה!':'היריב שולח את '+c.name+'!',1.8);}}
+          if(e.type==='goal')toast(e.side===0?'גול!!!':'היריב הבקיע',1.6);
+          if(e.type==='ball-loose'&&match.status==='playing'&&e.side===0)toast('הפנינה נפלה!',1.1);if(e.type==='kick-far'&&e.side===0)toast('התקרבו לשער ואז בעטו',1.6);
+          if(e.type==='overtime')toast('גול זהב!',1.6);
+          if(e.type==='swap'){const c=CREATURES[e.id];renderer.swap(e.side,e.id,e.side===0?skinOf(profile,e.id):null);if(e.side===0){$('player-name').textContent=c.name;$('player-symbol').innerHTML=icon(c.specialIcon);$('special-action-icon').innerHTML=icon(c.specialIcon);$('special-action-name').textContent=c.special;$('special-button').style.setProperty('--c',c.color);}else{$('rival-name').textContent=c.name;$('rival-symbol').innerHTML=icon(c.specialIcon);}toast(c.name+' נכנס!',1.4);}}
         if(match.status==='finished'){const w=match.actors[match.winner>=0?match.winner:0];renderer.cinematic(w.x,w.y-70,1.5,1.9);onFinish();break;}
       }
     }
