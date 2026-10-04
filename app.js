@@ -296,7 +296,7 @@ function startBattle(nextMode=mode){
 let goalUntil=0;
 const TUT_KEY='creature-league.tutorial';
 let tutorial=null;
-const TUT_TEXT={touch:['גררו את העיגול כדי לזוז','לחצו כדי לירות על היריב','כוח־העל שלך מלא! לחצו עליו','מעולה! עכשיו נצחו אותו!'],keys:['זוזו עם החצים או W A S D','רווח כדי לירות על היריב','כוח־העל מלא! לחצו E','מעולה! עכשיו נצחו אותו!']};
+const TUT_TEXT={touch:['שימו אגודל בצד שמאל וגררו כדי לזוז','לחצו כדי לירות על היריב','כוח־העל שלך מלא! לחצו עליו','מעולה! עכשיו נצחו אותו!'],keys:['זוזו עם החצים או W A S D','רווח כדי לירות על היריב','כוח־העל מלא! לחצו E','מעולה! עכשיו נצחו אותו!']};
 const TUT_TARGET=['joystick','fire-button','special-button',null];
 function startTutorial(){
   let seen=false;try{seen=storage.getItem(TUT_KEY)==='1';}catch{}
@@ -378,7 +378,7 @@ function frameBody(timestamp){
       if(hitStop>0){hitStop-=dt;}else accumulator+=dt;
       while(accumulator>=1/60){
         step(match,currentInput(),1/60);input.special=false;accumulator-=1/60;
-        for(const e of match.events){sound.effect(e);if(e.type==='hit'){hitStop=Math.max(hitStop,e.side===0?.07:.045);renderer.shake=Math.max(renderer.shake,e.side===0?4:1.8);}if(e.type==='quake')renderer.shake=5;if(e.type==='go')toast('קדימה!',.8);
+        for(const e of match.events){sound.effect(e);if(e.type==='hit')renderer.shake=Math.max(renderer.shake,e.side===0?2.2:.8);if(e.type==='ko')hitStop=Math.max(hitStop,.12);if(e.type==='quake')renderer.shake=5;if(e.type==='go')toast('קדימה!',.8);
           if(e.type==='lava-warning')toast('הלבה מתעוררת!',1.4);
           if(e.type==='hold-start')toast(e.side===0?'החזיקו מעמד!':'תפילו אותו!',1.4);
           if(e.type==='ko')toast(e.side===1?'הפלתם אותו!':'חוזרים בעוד רגע',1.4);
@@ -405,6 +405,9 @@ function bindControls(){
   // A pinch or double tap during a battle would zoom the page and move what the child sees.
   for(const type of ['gesturestart','gesturechange','dblclick'])document.addEventListener(type,e=>{if(screen==='battle')e.preventDefault();},{passive:false});
   document.addEventListener('touchmove',e=>{if(screen==='battle'&&(e.touches.length>1||!e.target.closest('dialog')))e.preventDefault();},{passive:false});
+  // A phone with rotation locked can still play upright.
+  $('rotate-anyway').onclick=()=>{document.body.classList.add('portrait-ok');try{localStorage.setItem('creature-league.portrait-ok','1');}catch{}};
+  try{if(localStorage.getItem('creature-league.portrait-ok')==='1')document.body.classList.add('portrait-ok');}catch{}
   $('reveal-dialog').addEventListener('close',()=>{if(screen==='story'&&storyEvent)renderStory();});
   const readCam=()=>{try{const v=localStorage.getItem('creature-league.close-camera');return v==null?true:v==='1';}catch{return true;}};renderer.closeCam=readCam();
   const camLabel=()=>{$('camera-toggle').textContent=renderer.closeCam?'מצלמה: קרובה · לחצו לכל הזירה':'מצלמה: כל הזירה · לחצו למצלמה קרובה';};camLabel();
@@ -432,7 +435,14 @@ function bindControls(){
     el.addEventListener('keydown',e=>{if(e.code==='Enter'&&(match?.status==='playing'||kind==='fire'&&match?.status==='countdown')){e.preventDefault();if(!e.repeat){if(kind==='fire')input.toggleFire=!input.toggleFire;else input[kind]=true;}}});el.addEventListener('blur',()=>{if(kind==='fire')input.buttonFire=false;});
   }
   const joystick=$('joystick');let stickPointer=null;
-  function setStick(e){const rect=document.querySelector('.joystick-ring').getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2,r=rect.width*.42;let x=(e.clientX-cx)/r,y=(e.clientY-cy)/r;const d=Math.hypot(x,y);if(d>1){x/=d;y/=d;}input.stickX=x;input.stickY=y;$('joystick-knob').style.transform=`translate(${x*r}px,${y*r}px)`;}
+  function setStick(e){const rect=document.querySelector('.joystick-ring').getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2,r=rect.width*.42;let x=(e.clientX-cx)/r,y=(e.clientY-cy)/r;const d=Math.hypot(x,y);if(d>1){x/=d;y/=d;}
+    const power=d<.12?0:Math.min(1,d/.4);input.stickX=d?x/Math.min(1,d)*power:0;input.stickY=d?y/Math.min(1,d)*power:0;$('joystick-knob').style.transform=`translate(${x*r}px,${y*r}px)`;}
+  // The joystick appears wherever the thumb lands on the left side of the screen.
+  const zone=$('stick-zone');
+  const releaseStick=()=>{stickPointer=null;input.stickX=0;input.stickY=0;$('joystick-knob').style.transform='';joystick.style.left='';joystick.style.top='';joystick.style.bottom='';joystick.classList.remove('floating');};
+  zone.addEventListener('pointerdown',e=>{if(stickPointer!==null||match?.status==='finished')return;e.preventDefault();stickPointer=e.pointerId;try{zone.setPointerCapture(e.pointerId);}catch{}const box=joystick.offsetParent?.getBoundingClientRect()||{left:0,top:0};joystick.classList.add('floating');joystick.style.left=(e.clientX-box.left-joystick.offsetWidth/2)+'px';joystick.style.top=(e.clientY-box.top-joystick.offsetHeight/2)+'px';joystick.style.bottom='auto';setStick(e);});
+  zone.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)setStick(e);});
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])zone.addEventListener(event,e=>{if(e.pointerId===stickPointer)releaseStick();});
   joystick.addEventListener('pointerdown',e=>{if(stickPointer!==null)return;e.preventDefault();stickPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);setStick(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)setStick(e);});
   for(const event of ['pointerup','pointercancel','lostpointercapture'])joystick.addEventListener(event,e=>{if(e.pointerId===stickPointer){stickPointer=null;input.stickX=0;input.stickY=0;$('joystick-knob').style.transform='';}});
   for(const type of ['pointerdown','touchend','click','keydown'])document.addEventListener(type,()=>{if(sound.ctx?.state!=='running')sound.unlock();},{passive:true});
@@ -441,7 +451,7 @@ function bindControls(){
 // Read-only diagnostics. Browser journeys still operate the real controls.
 // Verification only: advance a battle by simulated time and draw one frame, even in a hidden tab.
 const advance=(seconds,input={})=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match.status!=='finished';i++){step(match,{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish')onFinish();}updateTutorial(seconds);renderer.render(match,1/60,clock+=seconds);renderHUD();return match.status;};
-window.__LEAGUE__=Object.freeze({advance,audio:()=>({ctx:sound.ctx?.state||'none',scene:sound.scene,music:Object.fromEntries(Object.entries(sound.music||{}).map(([k,t])=>[k,{paused:t.el.paused,time:+t.el.currentTime.toFixed(1),ready:t.el.readyState,gain:+t.g.gain.value.toFixed(2)}]))}),skip:()=>{if(!match||match.status==='finished')return false;finish(match,0,'test');onFinish();return true;},camera:()=>({scale:+renderer.scale.toFixed(3),offsetX:Math.round(renderer.offsetX),offsetY:Math.round(renderer.offsetY),close:!!renderer.cam,cinematic:!!renderer.punch,size:renderer.size}),snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,mode:match.mode||null,ball:match.ball?{x:match.ball.x,y:match.ball.y,carrier:match.ball.carrier,score:[...match.ball.score]}:null,wind:match.wind?{holder:match.wind.holder,feathers:match.wind.feathers.map(f=>({x:f.x,y:f.y}))}:null,lava:match.lava?{scale:match.lava.scale,embers:match.lava.embers.map(e=>({x:e.x,y:e.y}))}:null,trio:match.trio?[trioLeft(match,0),trioLeft(match,1)]:null,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,out:a.out||0,feathers:a.feathers||0,power:a.power||0,maxHp:a.spec.hp,specialCd:a.specialCd,superCharge:a.superCharge,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
+window.__LEAGUE__=Object.freeze({advance,stick:()=>({x:+input.stickX.toFixed(2),y:+input.stickY.toFixed(2)}),audio:()=>({ctx:sound.ctx?.state||'none',scene:sound.scene,music:Object.fromEntries(Object.entries(sound.music||{}).map(([k,t])=>[k,{paused:t.el.paused,time:+t.el.currentTime.toFixed(1),ready:t.el.readyState,gain:+t.g.gain.value.toFixed(2)}]))}),skip:()=>{if(!match||match.status==='finished')return false;finish(match,0,'test');onFinish();return true;},camera:()=>({scale:+renderer.scale.toFixed(3),offsetX:Math.round(renderer.offsetX),offsetY:Math.round(renderer.offsetY),close:!!renderer.cam,cinematic:!!renderer.punch,size:renderer.size}),snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,mode:match.mode||null,ball:match.ball?{x:match.ball.x,y:match.ball.y,carrier:match.ball.carrier,score:[...match.ball.score]}:null,wind:match.wind?{holder:match.wind.holder,feathers:match.wind.feathers.map(f=>({x:f.x,y:f.y}))}:null,lava:match.lava?{scale:match.lava.scale,embers:match.lava.embers.map(e=>({x:e.x,y:e.y}))}:null,trio:match.trio?[trioLeft(match,0),trioLeft(match,1)]:null,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,out:a.out||0,feathers:a.feathers||0,power:a.power||0,maxHp:a.spec.hp,specialCd:a.specialCd,superCharge:a.superCharge,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
 async function boot(){
   $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);buildRoster();renderStoryPanel();bindControls();updateHeader();showView(journeyView(profile));$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);
     if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});

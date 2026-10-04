@@ -90,3 +90,15 @@ button{touch-action:manipulation}
 .goal-card b{font-size:20px}.goal-card p{font-size:14px}.goal-icon svg{width:26px;height:26px}
 @keyframes goal-in{from{transform:translate(-50%,-10px);opacity:0}}
 @media (max-height:600px) and (orientation:landscape){.goal-card{top:40px;padding:6px 14px}.goal-card b{font-size:16px}.goal-card p{font-size:12px}}
+
+/* The left side of the screen is the joystick area on touch screens. */
+.stick-zone{display:none}
+@media (pointer:coarse){
+  .battle-active .stick-zone{display:block;position:absolute;left:0;top:44px;bottom:0;width:46%;z-index:5;pointer-events:auto;touch-action:none}
+  .battle-active .joystick{z-index:6;transition:opacity .15s}
+  .battle-active .joystick.floating{opacity:.95;pointer-events:none}
+}
+
+/* Upright play stays possible for a phone whose rotation is locked. */
+.rotate-lock{font-size:13px;opacity:.75;max-width:280px}
+body.portrait-ok .rotate-hint{display:none!important}
