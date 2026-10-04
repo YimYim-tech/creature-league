@@ -131,6 +131,8 @@ export class Renderer {
     for(const s of m.shots)this.drawShot(s,clock);
     for(const e of m.effects)this.drawEffect(e);
     if(m.wind)for(const a of m.actors)if(!(a.out>0))this.drawCarry(a,m);
+    // In the lava, an arrow above the player points back to safety.
+    if(m.lava){const a=m.actors[0],o=Math.hypot((a.x-WORLD.cx)/WORLD.rx,(a.y-WORLD.cy)/WORLD.ry);if(a.hp>0&&o>m.lava.scale){const ang=Math.atan2(WORLD.cy-a.y,WORLD.cx-a.x),y=a.y-a.spec.height*(this.size||1)-46+Math.sin(this.clock*8)*4;c.save();c.translate(a.x,y);c.rotate(ang);c.fillStyle='#fff1a8';c.strokeStyle='#7a2a00';c.lineWidth=4;c.beginPath();c.moveTo(30,0);c.lineTo(4,-18);c.lineTo(4,-8);c.lineTo(-22,-8);c.lineTo(-22,8);c.lineTo(4,8);c.lineTo(4,18);c.closePath();c.stroke();c.fill();c.restore();}}
     if(m.ball&&m.ball.carrier>=0)this.drawBall(m,clock);
     if(this.cam){c.setTransform(this.dpr,0,0,this.dpr,0,0);this.drawOffscreen(m);}
     if(m.status==='countdown'){

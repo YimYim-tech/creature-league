@@ -145,7 +145,7 @@ function stepTrio(m,dt){const T=m.trio;
 export const trioLeft=(m,side)=>m.trio?2-m.trio.idx[side]+(m.actors[side].hp>0?1:0):0;
 // How much of the arena is still safe: 1 is the full oval, it closes to .45.
 export const LAVA_STAMINA=5.5;
-export const lavaScale=t=>1-.6*clamp((t-3)/40,0,1);
+export const lavaScale=t=>1-.45*clamp((t-3)/40,0,1);
 const ovalDistance=(x,y)=>length((x-WORLD.cx)/WORLD.rx,(y-WORLD.cy)/WORLD.ry);
 function stepMode(m,dt){
   if(m.ball){stepBall(m,dt);return;}
@@ -153,7 +153,7 @@ function stepMode(m,dt){
   if(m.lava){const L=m.lava;L.scale=lavaScale(m.time);
     if(m.time>1&&m.time<4&&!L.warned){L.warned=true;event(m,'lava-warning');}
     for(const a of m.actors){if(a.hp<=0)continue;
-      if(ovalDistance(a.x,a.y)>L.scale){a.burn=(a.burn||0)-dt;a.slow=Math.max(a.slow,.2);if(a.burn<=0){a.burn=.33;damage(m,a,3,null,{special:true});effect(m,'burn',a.x,a.y,{color:'#ff7a2c'});}}}
+      if(ovalDistance(a.x,a.y)>L.scale){a.burn=(a.burn||0)-dt;if(a.burn<=0){a.burn=.33;damage(m,a,3,null,{special:true});effect(m,'burn',a.x,a.y,{color:'#ff7a2c'});}}}
     for(const c of m.covers)if(c.hp<=0&&!c.dropped){c.dropped=true;L.embers.push({x:c.x,y:c.y,age:0});event(m,'ember-drop');}
     if(m.time>=L.nextEmber){L.nextEmber=m.time+20;const ang=m.random()*Math.PI*2,r=m.random()*L.scale*.6;L.embers.push({x:WORLD.cx+Math.cos(ang)*WORLD.rx*r,y:WORLD.cy+Math.sin(ang)*WORLD.ry*r,age:0});event(m,'ember-drop');}
     for(const e of L.embers){e.age+=dt;if(ovalDistance(e.x,e.y)>L.scale){const k=L.scale*.9/ovalDistance(e.x,e.y);e.x=WORLD.cx+(e.x-WORLD.cx)*k;e.y=WORLD.cy+(e.y-WORLD.cy)*k;}
@@ -242,6 +242,8 @@ function damage(m,a,raw,source,{pushX=0,pushY=0,special=false,hitAngle=null}={})
   if(front)effect(m,'guard-block',a.x,a.y,{color:'#ffe5a7'});
   if(exposed&&source){source.stats.weakHits++;effect(m,'weak-hit',a.x,a.y,{color:'#95ffe0'});}
   if(source){source.stats.damage+=actual;if(!special)source.stats.hits++;}
+  // In the lava ring a hit never pushes a creature toward the lava.
+  if(m.lava&&ovalDistance(a.x+pushX,a.y+pushY)>ovalDistance(a.x,a.y)){pushX=0;pushY=0;}
   a.x+=pushX;a.y+=pushY;confine(a);resolveCover(m,a);
   effect(m,'hit',a.x,a.y,{color:a.spec.color,amount:Math.round(actual)});event(m,'hit',{side:a.side,amount:actual});
 }

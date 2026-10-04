@@ -43,7 +43,7 @@ export const STEPS = [
   {id:'fire-free2', island:'fire', kind:'free', rival:'lohatan', level:'challenger',
     intro:'לוהטן כועס, והכעס שלו מאכיל את הצל. אל תכעס בחזרה. תזוז, תחכה, ותפגע ברגע הנכון.',
     after:'לוהטן נרגע. הלהבה שלו חמה עכשיו, לא שורפת.'},
-  {id:'fire-mission', island:'fire', kind:'mission', mode:'lava', opponent:'lohatan', level:'veteran',
+  {id:'fire-mission', island:'fire', kind:'mission', mode:'lava', opponent:'lohatan', level:'challenger',
     intro:'הלבה סוגרת את הזירה! שבור את הסלעים, אסוף גחלי כוח ותגדל. ואל תעמוד בעיגולים שמהבהבים: שם הלבה מתפרצת!',
     easier:'הפעם הלבה קצת יותר רגועה. אתה יכול!',
     after:'שרדת את טבעת הלבה! עכשיו אתה מוכן לשומר האש.'},
