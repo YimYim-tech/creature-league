@@ -79,7 +79,8 @@ export class Renderer {
     if(this.wide){const V=PLAY_VIEW;k=Math.min(this.w/V.w,this.h/V.h);cx=V.x+V.w/2;cy=V.y+V.h/2;}
     else{k=Math.min(this.w/WORLD.width,this.h/WORLD.height);cx=WORLD.width/2;cy=WORLD.height/2;}
     // Close camera (chosen in the pause menu, phones only): a little closer, and it moves only when the player nears the edge.
-    if(this.wide&&this.closeCam){
+    // A friend battle always shows the whole arena: a camera that follows one player is unfair to the other.
+    if(this.wide&&this.closeCam&&!m.versus){
       k*=1.3;const p=m.actors[0],hw=this.w/2/k,hh=this.h/2/k,px=p.x,py=p.y-40;
       if(!this.cam)this.cam={x:px,y:py};
       const dzx=hw*.3,dzy=hh*.25;let tx=this.cam.x,ty=this.cam.y;
@@ -104,7 +105,7 @@ export class Renderer {
   }
   point(clientX,clientY) {const r=this.canvas.getBoundingClientRect();return {x:(clientX-r.left-this.offsetX)/this.scale,y:(clientY-r.top-this.offsetY)/this.scale+38};}
   render(m,dt,clock) {
-    this.resize();this.follow(m,dt);this.clock=clock;this.propKey=PROP_KEYS.includes(m.arena)?m.arena:'coast';this.shadowed=!!m.story&&!m.mirror;const c=this.ctx;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.fillStyle='#0b2026';c.fillRect(0,0,this.w,this.h);
+    this.resize();this.follow(m,dt);this.clock=clock;this.propKey=PROP_KEYS.includes(m.arena)?m.arena:'coast';this.shadowed=!!m.story&&!m.mirror;this.versus=!!m.versus;const c=this.ctx;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.fillStyle='#0b2026';c.fillRect(0,0,this.w,this.h);
     this.shake=Math.max(0,this.shake-dt*22);c.translate(this.offsetX,this.offsetY);c.scale(this.scale,this.scale);
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;if(!reduced&&this.shake>0)c.translate(Math.sin(clock*93)*this.shake,Math.cos(clock*117)*this.shake*.6);
     c.drawImage(this.art.arenas?.[m.arena]||this.art.arena,0,0,1280,720);
@@ -127,19 +128,20 @@ export class Renderer {
     }
     const things=[...m.covers.filter(c=>c.hp>0).map(c=>({y:c.y,cover:c})),...m.actors.filter(a=>!(a.out>0)).map(a=>({y:a.y,actor:a}))].sort((a,b)=>a.y-b.y);
     for(const obj of things){if(obj.cover)this.drawCover(obj.cover,m.time);else this.drawActor(obj.actor,dt,m.status);}
-    const enemy=m.actors[1];if(m.status==='playing'&&enemy.fireCd<.23&&enemy.windup<=0&&(!enemy.boss||enemy.boss.phase==='guard')){c.save();c.globalAlpha=.65;c.setLineDash([5,5]);line(c,[[enemy.x,enemy.y-38],[enemy.x+Math.cos(enemy.aim)*78,enemy.y-38+Math.sin(enemy.aim)*78]],'#d53c5b',3);c.restore();}
+    const enemy=m.actors[1];if(!m.versus&&m.status==='playing'&&enemy.fireCd<.23&&enemy.windup<=0&&(!enemy.boss||enemy.boss.phase==='guard')){c.save();c.globalAlpha=.65;c.setLineDash([5,5]);line(c,[[enemy.x,enemy.y-38],[enemy.x+Math.cos(enemy.aim)*78,enemy.y-38+Math.sin(enemy.aim)*78]],'#d53c5b',3);c.restore();}
     for(const s of m.shots)this.drawShot(s,clock);
     for(const e of m.effects)this.drawEffect(e);
     if(m.wind)for(const a of m.actors)if(!(a.out>0))this.drawCarry(a,m);
     // In the lava, an arrow above the player points back to safety.
-    if(m.lava){const a=m.actors[0],o=Math.hypot((a.x-WORLD.cx)/WORLD.rx,(a.y-WORLD.cy)/WORLD.ry);if(a.hp>0&&o>m.lava.scale){const ang=Math.atan2(WORLD.cy-a.y,WORLD.cx-a.x),y=a.y-a.spec.height*(this.size||1)-46+Math.sin(this.clock*8)*4;c.save();c.translate(a.x,y);c.rotate(ang);c.fillStyle='#fff1a8';c.strokeStyle='#7a2a00';c.lineWidth=4;c.beginPath();c.moveTo(30,0);c.lineTo(4,-18);c.lineTo(4,-8);c.lineTo(-22,-8);c.lineTo(-22,8);c.lineTo(4,8);c.lineTo(4,18);c.closePath();c.stroke();c.fill();c.restore();}}
+    if(m.lava)for(const a of m.versus?m.actors:[m.actors[0]]){const o=Math.hypot((a.x-WORLD.cx)/WORLD.rx,(a.y-WORLD.cy)/WORLD.ry);if(a.hp>0&&o>m.lava.scale){const ang=Math.atan2(WORLD.cy-a.y,WORLD.cx-a.x),y=a.y-a.spec.height*(this.size||1)-46+Math.sin(this.clock*8)*4;c.save();c.translate(a.x,y);c.rotate(ang);c.fillStyle='#fff1a8';c.strokeStyle='#7a2a00';c.lineWidth=4;c.beginPath();c.moveTo(30,0);c.lineTo(4,-18);c.lineTo(4,-8);c.lineTo(-22,-8);c.lineTo(-22,8);c.lineTo(4,8);c.lineTo(4,18);c.closePath();c.stroke();c.fill();c.restore();}}
     if(m.ball&&m.ball.carrier>=0)this.drawBall(m,clock);
     if(this.cam){c.setTransform(this.dpr,0,0,this.dpr,0,0);this.drawOffscreen(m);}
     if(m.status==='countdown'){
       if(this.zoomed){const k=this.h/720*.8;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.translate(this.w/2-640*k,this.h/2-390*k);c.scale(k,k);}
-      const label=m.countdown>.3?String(Math.ceil(m.countdown-.3)):'קדימה!';c.save();if(!this.zoomed){c.fillStyle='#072c3b40';c.fillRect(0,0,1280,720);}this.label(label,640,372,84,'#fff','center');this.label('קרב על הזירה',640,428,22,'#ffffff','center');c.restore();
+      const label=m.countdown>.3?String(Math.ceil(m.countdown-.3)):'קדימה!';c.save();if(!this.zoomed){c.fillStyle='#072c3b40';c.fillRect(0,0,1280,720);}this.label(label,640,372,84,'#fff','center');this.label(m.roundLabel||'קרב על הזירה',640,428,22,'#ffffff','center');c.restore();
     }
-    if(m.status==='playing'&&m.time<5){this.label('אתם',m.actors[0].x,m.actors[0].y+42,18,'#08424b','center');}
+    if(m.versus&&(m.status==='countdown'||m.time<5))m.actors.forEach((a,i)=>this.label('שחקן '+(i+1),a.x,a.y+42,18,i?'#8a1d2e':'#08424b','center'));
+    else if(m.status==='playing'&&m.time<5){this.label('אתם',m.actors[0].x,m.actors[0].y+42,18,'#08424b','center');}
   }
   label(text,x,y,size,color='#fff',align='center') {const c=this.ctx;c.font=`900 ${size}px 'Frank Ruhl Libre', Heebo, Arial`;c.textAlign=align;c.textBaseline='middle';c.fillStyle=color;c.fillText(text,x,y);}
   drawCover(o,time) {const c=this.ctx,x=o.x,y=o.y,r=o.r;
@@ -174,7 +176,7 @@ export class Renderer {
     if(a.guard>0){c.save();c.globalAlpha=.35;ellipse(c,a.x,a.y-a.spec.height*.45,a.radius*1.6,a.spec.height*.65,'#92e9ff33','#cffbff',3);c.restore();}
     // Near the top edge the bar stops at the screen edge, so health never leaves the screen.
     const barW=70,topWorld=-this.offsetY/this.scale+6,barY=Math.max(a.y-a.spec.height-17,a.y+(topWorld-a.y)/f);c.fillStyle='#092432bb';c.beginPath();c.roundRect(a.x-barW/2,barY,barW,7,4);c.fill();c.fillStyle=a.side===0?'#39dccc':'#fc7a7f';c.beginPath();c.roundRect(a.x-barW/2+1,barY+1,Math.max(0,(barW-2)*a.hp/a.spec.hp),5,3);c.fill();
-    if(a.side===0&&a.hp>0&&!(a.out>0))this.drawLightGem(a.x-barW/2-13,barY+3,a.superCharge||0,a.spec.color);
+    if((a.side===0||this.versus)&&a.hp>0&&!(a.out>0))this.drawLightGem(a.x-barW/2-13,barY+3,a.superCharge||0,a.spec.color);
     if(f!==1)c.restore();
   }
   // Creatures still held by the shadow trail dark smoke until they are freed.
@@ -199,7 +201,7 @@ export class Renderer {
     for(let g=0;g<2;g++){const G=GOALS[g],dir=g===0?-1:1,col=g===0?'#59c9ff':'#ffcf5a',top=G.y-G.half,bot=G.y+G.half,H=78;
       c.save();c.globalAlpha=.22+.06*Math.sin(t*3);ellipse(c,G.x,G.y,110,G.half+34,col);c.restore();
       const gate=this.art.props?.[g===0?'gate-blue':'gate-gold'];
-      if(gate){const h=G.half*2+H+30,w=h*gate.width/gate.height;c.save();c.translate(G.x,0);if(g===1)c.scale(-1,1);c.drawImage(gate,-w/2,bot+14-h,w,h);c.restore();if(m.time<8||m.status==='countdown')this.label(g===0?'השער שלכם':'שער היריב',G.x-dir*70,top-H-26,22,g===0?'#0d4f78':'#7a4a00','center');continue;}
+      if(gate){const h=G.half*2+H+30,w=h*gate.width/gate.height;c.save();c.translate(G.x,0);if(g===1)c.scale(-1,1);c.drawImage(gate,-w/2,bot+14-h,w,h);c.restore();if(m.time<8||m.status==='countdown')this.label(m.versus?'השער של שחקן '+(g+1):g===0?'השער שלכם':'שער היריב',G.x-dir*70,top-H-26,22,g===0?'#0d4f78':'#7a4a00','center');continue;}
       // Water curtain and net between the posts.
       c.save();c.beginPath();c.moveTo(G.x,top-H);c.lineTo(G.x,bot-H);c.lineTo(G.x,bot);c.lineTo(G.x,top);c.closePath();
       c.beginPath();c.moveTo(G.x,top);c.lineTo(G.x+dir*34,top-12);c.lineTo(G.x+dir*34,bot-12);c.lineTo(G.x,bot);c.closePath();c.fillStyle=col+'55';c.fill();

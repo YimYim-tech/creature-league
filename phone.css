@@ -102,3 +102,80 @@ button{touch-action:manipulation}
 /* Upright play stays possible for a phone whose rotation is locked. */
 .rotate-lock{font-size:13px;opacity:.75;max-width:280px}
 body.portrait-ok .rotate-hint{display:none!important}
+
+/* ------------------------------------------------------------------ friend battle: setup */
+.versus-view{padding:18px 22px 26px;max-width:1180px;margin-inline:auto}
+.versus-heading{text-align:center;margin:4px 0 14px}
+.versus-heading h1{font-family:var(--display);font-weight:900;font-size:40px;margin:2px 0 0;color:var(--parchment);text-shadow:0 2px 0 #0009}
+.versus-heading h1 em{font-style:normal;color:var(--gold-hi)}
+.versus-sides{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:14px;align-items:start}
+.versus-side{--p:#11bcca;background:var(--grain),var(--parchment);color:var(--ink);border-radius:16px;padding:12px 12px 14px;box-shadow:var(--frame),0 10px 22px #0007;border-top:6px solid var(--p)}
+.versus-side.p2{--p:#d24f63}
+.versus-who{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.versus-who b{font-family:var(--display);font-weight:900;font-size:24px;color:var(--p)}
+.versus-keys{font-size:12px;color:var(--ink-soft,#5a4a36);font-weight:700}
+/* Picture on one side; the name and hearts beside it; the creatures to choose from underneath. */
+.versus-side{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"who who" "art name" "art hearts" "chips chips";column-gap:12px;align-items:center}
+.versus-who{grid-area:who}.versus-pick{display:contents}.versus-pick canvas{grid-area:art}.versus-pick strong{grid-area:name;align-self:end}.versus-hearts{grid-area:hearts;align-self:start}.versus-fighters{grid-area:chips}
+.versus-pick canvas{width:120px;height:120px;flex:none}
+.versus-pick strong{font-family:var(--display);font-weight:900;font-size:28px;text-shadow:0 1px 0 #fff8}
+.versus-hearts{display:flex;align-items:center;gap:6px;margin:2px 0 8px}
+.vs-heart{width:38px;height:38px;border-radius:50%;border:2px solid #c9a35d;background:#fff6e0;color:#d9cdb2;font-size:22px;line-height:1;display:grid;place-items:center;padding:0;cursor:pointer}
+.vs-heart.on{color:#e0344f;border-color:#e0344f;background:#ffe3e3}
+.versus-hearts small{font-size:12px;font-weight:700;color:var(--ink-soft,#5a4a36)}
+.versus-fighters{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.versus-fighters .fighter-chip{width:70px;padding:3px 2px 5px}
+.versus-fighters .fighter-chip canvas{width:56px;height:56px}
+.versus-fighters .fighter-chip b{font-size:11px}
+.versus-vs{align-self:center;font-family:var(--display);font-weight:900;font-size:44px;color:var(--gold-hi);text-shadow:0 3px 0 #3a1d0f,0 0 18px #ffcf5a88}
+.versus-modes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0 14px}
+.vs-mode{display:grid;justify-items:center;gap:2px;padding:10px 6px;border:0;border-radius:14px;background:var(--grain),var(--parchment);color:var(--ink);box-shadow:var(--frame),0 6px 12px #0006;cursor:pointer}
+.vs-mode svg{width:30px;height:30px;color:var(--brick)}
+.vs-mode b{font-size:16px}.vs-mode small{font-size:12px;opacity:.8}
+.vs-mode.chosen{box-shadow:0 0 0 1px #7d5a2e,0 0 0 3px var(--brick),0 0 0 5px var(--gold-hi),0 8px 16px #0007;transform:translateY(-2px)}
+#versus-start{display:flex;margin:0 auto;position:sticky;bottom:10px;z-index:5;box-shadow:0 10px 26px #000b}
+
+@media (max-width:760px){.versus-sides{grid-template-columns:1fr}.versus-vs{justify-self:center;font-size:32px}.versus-modes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-height:600px) and (orientation:landscape){
+  .versus-view{padding:8px 12px 14px}.versus-heading{margin:0 0 6px}.versus-heading h1{font-size:26px}
+  .versus-sides{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}.versus-vs{font-size:28px}
+  .versus-side{padding:8px 8px 10px}.versus-who b{font-size:18px}.versus-pick canvas{width:76px;height:76px}.versus-pick strong{font-size:20px}
+  .vs-heart{width:30px;height:30px;font-size:17px}.versus-heading .eyebrow{display:none}
+  .versus-fighters{flex-wrap:nowrap;overflow-x:auto;padding:4px 2px;margin-top:2px;scrollbar-width:thin}.versus-fighters .fighter-chip{flex:none}
+  .versus-fighters .fighter-chip{width:56px}.versus-fighters .fighter-chip canvas{width:42px;height:42px}
+  .versus-bottom{display:flex;gap:10px;align-items:center;margin-top:8px;position:static}.versus-modes{flex:1;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0}
+  #versus-start{position:static;margin:0;flex:none;min-height:54px;padding:8px 18px;font-size:20px}#versus-start svg{width:22px;height:22px}.vs-mode{padding:6px 4px}.vs-mode svg{width:22px;height:22px}.vs-mode b{font-size:13px}.vs-mode small{font-size:10px}
+}
+.result-score.versus-score div span{display:block;font-size:13px;opacity:.85}
+
+/* ------------------------------------------------------------------ friend battle: controls */
+.stick-zone.p2,.joystick.p2,.action-button.p2,.versus-controls{display:none}
+body.versus-play .desktop-controls,body.versus-play .action-buttons{display:none}
+body.versus-play .versus-controls{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;width:100%;font-size:14px;color:#dccfb0}
+body.versus-play .versus-controls b{color:var(--gold-hi)}
+@media (pointer:coarse){
+  body.versus-play .versus-controls{display:none}
+  body.versus-play .battle-controls{position:absolute;inset:0;z-index:6;max-width:none;margin:0;padding:0;background:none;border:0;box-shadow:none;display:block;pointer-events:none}
+  body.versus-play .stick-zone{display:block;position:absolute;left:0;top:44px;bottom:0;width:50%;z-index:5;pointer-events:auto;touch-action:none}
+  body.versus-play .stick-zone.p2{left:auto;right:0}
+  body.versus-play .joystick{display:block;position:absolute;left:max(6px,env(safe-area-inset-left));bottom:max(6px,env(safe-area-inset-bottom));width:108px;height:108px;opacity:.72;pointer-events:auto;touch-action:none;z-index:6}
+  body.versus-play .joystick.p2{left:auto;right:max(6px,env(safe-area-inset-right))}
+  body.versus-play .joystick.floating{opacity:.95;pointer-events:none}
+  body.versus-play .joystick-ring{inset:4px;left:4px;top:4px;width:auto;height:auto}
+  body.versus-play .joystick-knob{width:42px;height:42px;left:33px;top:33px}
+  body.versus-play .joystick small{display:none}
+  body.versus-play .action-buttons{display:block;position:absolute;inset:0;width:auto;height:auto;pointer-events:none}
+  body.versus-play .action-button.fire{display:none}
+  body.versus-play .action-button.special{display:grid;position:absolute;width:62px;height:62px;min-width:0;min-height:0;padding:0;left:max(10px,env(safe-area-inset-left));right:auto;bottom:126px;border-radius:50%;place-content:center;pointer-events:auto;z-index:7;opacity:.88}
+  body.versus-play .action-button.special.p2{left:auto;right:max(10px,env(safe-area-inset-right))}
+  body.versus-play .action-button.special>*{display:none}
+  body.versus-play #special-action-icon,body.versus-play #special-action-icon-2{display:block}
+  body.versus-play .action-button svg{width:26px;height:26px}
+}
+/* The two players' colours, the same as the rings under their creatures. */
+body.versus-play .player-info .fighter-lines span{color:#5fe3ee}
+body.versus-play #rival-level{color:#ff9aa8}
+/* A short laptop window: the HUD needs the top edge, so the key reminder stays on the setup screen. */
+@media (max-height:600px) and (orientation:landscape){body.versus-play .versus-controls{display:none}}
+/* A tablet keeps the page layout; the friend controls cover the battle view. A phone's battle view is already fixed to the screen. */
+@media (pointer:coarse) and (min-height:601px){body.versus-play .battle-view{position:relative}}

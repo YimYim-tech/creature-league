@@ -215,8 +215,11 @@ function actor(id,side,ids=[]) {
   return {id,side,spec,upgrades,x:side===0?285:995,y:420,hp:spec.hp,radius:spec.radius,fireCd:0,specialCd:0,superCharge:0,invincible:0,guard:0,stun:0,slow:0,root:0,windup:0,hit:0,attack:0,moveX:0,moveY:0,facing:side===0?1:-1,aim:side===0?0:Math.PI,
     stats:{shots:0,hits:0,damage:0,blocked:0,specials:0,dodges:0,healed:0,weakHits:0},trail:[]};
 }
-export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null}={}) {
+// A friend battle: two people share one screen, so both sides play by the same rules and nothing is saved.
+export const HEART_BONUS=.25;
+export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0]}={}) {
   if(!LEVELS[level])throw new Error('Unknown difficulty');
+  if(versus){boss=false;challenge=null;wild=null;story=null;giant=false;mirror=false;upgrades=[];if(mode==='trio')mode=null;}
   // A trio match starts with the first creature of each team.
   const teamIds=mode==='trio'?[(team||[player,'havzuk','slauz']).filter(id=>CREATURES[id]).slice(0,3),(rivalTeam||[rival,'lohatan','zikuk']).filter(id=>CREATURES[id]).slice(0,3)]:null;
   if(teamIds){if(teamIds[0].length<3||teamIds[1].length<3)throw new Error('A trio needs three creatures');player=teamIds[0][0];rival=teamIds[1][0];upgrades=[];}
@@ -228,6 +231,9 @@ export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date
     shots:[],waves:[],zones:[],effects:[],events:[],nextId:0,pickup:null,pickupAt:12,ai:{timer:0,angle:0,strafe:1,strafeTime:0,moveX:0,moveY:0,aimX:0,aimY:0,fire:false,special:false},
     covers:[{x:449,y:350,r:35,hp:80,maxHp:80},{x:831,y:440,r:35,hp:80,maxHp:80},{x:650,y:237,r:28,hp:65,maxHp:65},{x:630,y:555,r:28,hp:65,maxHp:65}].map((c,i)=>({...c,...(challenge===CHALLENGE.id?{collapseAt:5+i*4}:{})}))};
   match.teamIds=teamIds;
+  if(versus){match.versus=true;
+    // Each extra heart is a quarter more life: the way a younger friend gets a fair chance.
+    match.actors.forEach((a,i)=>{const extra=clamp(Math.floor(hearts?.[i]||0),0,2);if(extra){a.spec={...a.spec,hp:Math.round(a.spec.hp*(1+HEART_BONUS*extra))};a.hp=a.spec.hp;}});}
   if(MODES[mode])setupMode(match,mode);
   return match;
 }
@@ -394,7 +400,7 @@ function stepActor(m,a,input,dt,scale=1) {
   if(a.stun>0)return;
   move(m,a,input.moveX||0,input.moveY||0,dt,scale);
   if(input.aimX!=null)a.aim=Math.atan2(input.aimY-a.y,input.aimX-a.x);
-  else {const target=m.actors[1-a.side],distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*(a.side===0?.45:.72),speed=target.spec.speed*(target.side?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
+  else {const target=m.actors[1-a.side],distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*(human(m,a)?.45:.72),speed=target.spec.speed*(target.side&&!m.versus?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
   if(Math.abs(Math.cos(a.aim))>.15)a.facing=Math.cos(a.aim)>0?1:-1;
   if(m.ball&&m.ball.carrier===a.side){
     if(input.aimX==null){const G=GOALS[1-a.side];a.aim=Math.atan2(G.y-a.y,G.x-a.x);a.facing=Math.cos(a.aim)>0?1:-1;}
@@ -402,17 +408,19 @@ function stepActor(m,a,input,dt,scale=1) {
     else if(input.fire){const G=GOALS[1-a.side];if(length(G.x-a.x,G.y-a.y)<BALL_TUNE.kickRange)kickBall(m,a,false);else if(!a.farHint){a.farHint=true;event(m,'kick-far',{side:a.side});}}
     return;}
   if(input.special&&a.superCharge>=1&&useSpecial(m,a,input)){a.superCharge=0;event(m,'super',{side:a.side});}
-  if(input.fire)shoot(m,a,a.aim,a.side?LEVELS[m.level].fireScale:1);
+  if(input.fire)shoot(m,a,a.aim,human(m,a)?1:LEVELS[m.level].fireScale);
 }
+// The child always plays side 0; in a friend battle side 1 is a person too and gets the same help.
+const human=(m,a)=>a.side===0||!!m.versus;
 function updateProjectiles(m,dt) {
   for(const s of m.shots){
     if(m.zones.length){const sw=m.zones.find(z=>z.owner!==s.owner&&(z.kind==='vortex'||z.kind==='tidering')&&length(s.x-z.x,s.y-z.y)<z.r);if(sw){s.life=0;effect(m,'stone',s.x,s.y,{color:sw.kind==='vortex'?'#9fc4ff':'#d6f1ff'});continue;}}
     const x=s.x+s.vx*dt,y=s.y+s.vy*dt;s.life-=dt;
     let hit=null,t=2;
-    const target=m.actors[1-s.owner],enemyT=target.out>0?null:segmentCircle(s.x,s.y,x,y,target.x,target.y,(s.r+target.radius)*(s.owner===0?AIM_HELP:1));
+    const target=m.actors[1-s.owner],helped=s.owner===0||!!m.versus,enemyT=target.out>0?null:segmentCircle(s.x,s.y,x,y,target.x,target.y,(s.r+target.radius)*(helped?AIM_HELP:1));
     if(enemyT!=null){hit=target;t=enemyT;}
     if(m.ball&&m.ball.carrier<0){const bt=segmentCircle(s.x,s.y,x,y,m.ball.x,m.ball.y,s.r+16);if(bt!=null&&bt<t){s.life=0;m.ball.vx+=s.vx*.4;m.ball.vy+=s.vy*.4;effect(m,'stone',m.ball.x,m.ball.y,{color:'#d6f1ff'});continue;}}
-    for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){if(s.owner===0){s.chipped??=[];if(!s.chipped.includes(c)){s.chipped.push(c);c.hp=Math.max(0,c.hp-s.damage*.5);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});event(m,'cover',{broken:c.hp===0});}continue;}hit=c;t=ct;}}
+    for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){if(helped){s.chipped??=[];if(!s.chipped.includes(c)){s.chipped.push(c);c.hp=Math.max(0,c.hp-s.damage*.5);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});event(m,'cover',{broken:c.hp===0});}continue;}hit=c;t=ct;}}
     if(hit){s.x+=(x-s.x)*t;s.y+=(y-s.y)*t;s.life=0;if(s.explode)burst(m,s);
       if(hit.side!=null){damage(m,hit,s.damage,m.actors[s.owner],{special:s.kind!==m.actors[s.owner]?.id&&s.kind!=='blast',hitAngle:Math.atan2(-s.vy,-s.vx),pushX:s.kind==='maimi'?s.vx*.018:0,pushY:s.kind==='maimi'?s.vy*.018:0});}
       else{hit.hp=Math.max(0,hit.hp-s.damage);effect(m,'stone',s.x,s.y,{color:'#ead2a9'});event(m,'cover',{broken:hit.hp===0});}
@@ -451,7 +459,7 @@ export function finish(m,winner,reason='knockout') {
   if(m.status==='finished')return;
   m.winner=winner;m.reason=reason;m.status='finished';event(m,'finish',{winner});
 }
-export function step(m,input={},dt=1/60) {
+export function step(m,input={},dt=1/60,rivalInput=null) {
   dt=clamp(dt,0,1/30);m.events=[];
   for(const e of m.effects)e.age+=dt;m.effects=m.effects.filter(e=>e.age<1);
   if(m.status==='finished'||m.status==='paused')return;
@@ -460,7 +468,7 @@ export function step(m,input={},dt=1/60) {
   for(const c of m.covers)if(c.hp>0&&c.collapseAt!=null&&m.time>=c.collapseAt){
     c.hp=0;effect(m,'stone',c.x,c.y,{color:'#ffd586'});event(m,'collapse');
   }
-  const ai=aiInput(m,dt);stepActor(m,m.actors[0],input,dt);stepActor(m,m.actors[1],ai,dt,LEVELS[m.level].speedScale);
+  const ai=m.versus?rivalInput||{}:aiInput(m,dt);stepActor(m,m.actors[0],input,dt);stepActor(m,m.actors[1],ai,dt,m.versus?1:LEVELS[m.level].speedScale);
   // Fighters cannot occupy the same physical space.
   const [a,b]=m.actors,d=length(a.x-b.x,a.y-b.y),r=a.radius+b.radius;
   if(d<r){const n=norm(a.x-b.x||.01,a.y-b.y),shift=(r-d)/2;a.x+=n.x*shift;a.y+=n.y*shift;b.x-=n.x*shift;b.y-=n.y*shift;resolveCover(m,a);resolveCover(m,b);}

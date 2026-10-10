@@ -12,7 +12,7 @@ const storage={getItem:key=>localStorage.getItem(storagePrefix+key),setItem:(key
 let profile=readProfile(storage),art,renderer,screen='lobby',match=null,mode='quick',cupFinal=false,previousStatus='playing';
 let frameTime=0,clock=0,accumulator=0,lastHUD=0,toastUntil=0,noticeTimer,saveNoticeShown=false;
 const sound=new Sound();sound.enabled=profile.sound;
-const keys=new Set(),input={pointerFire:false,buttonFire:false,toggleFire:false,aim:null,stickX:0,stickY:0,special:false};
+const keys=new Set(),input={pointerFire:false,buttonFire:false,toggleFire:false,aim:null,stickX:0,stickY:0,special:false},input2={stickX:0,stickY:0,special:false};
 // Every animated creature picture on screen, keyed by its canvas id.
 const portraits=new Map();
 function livePortrait(canvasId,id,opts={}){const old=portraits.get(canvasId);portraits.set(canvasId,{id,puppet:old?.id===id?old.puppet:createPuppet(id),opts});}
@@ -113,10 +113,10 @@ function showView(name){
   // On a touch screen a battle goes full screen and asks for landscape.
   if(name==='battle'&&matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});
   if(name==='battle')window.scrollTo(0,0);
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle'].includes(name)));
-  if(name!=='battle'){clearInput();sound.setScene('lobby');sound.resume();}
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle','versus'].includes(name)));
+  if(name!=='battle'){clearInput();sound.setScene('lobby');sound.resume();document.body.classList.remove('versus-play');}
   if(name!=='wild')storyIntro=storyIntro&&name==='battle';
-  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();
+  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();if(name==='versus')renderVersus();
   window.scrollTo({top:0,behavior:'instant'});requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'instant'}));
 }
 function buildRoster(){
@@ -251,7 +251,7 @@ function renderRecords(){
   $('creature-records').innerHTML=Object.values(CREATURES).map(c=>{const record=profile.creatures[c.id]||{wins:0,played:0,damage:0};return `<tr><td style="color:${c.color};font-weight:bold">${c.name}</td><td>${record.played}</td><td>${record.wins}</td><td>${Math.round(record.damage).toLocaleString('he-IL')}</td></tr>`;}).join('');
   $('history').innerHTML=profile.history.length?profile.history.map(h=>`<div class="history-row"><div><strong>${CREATURES[h.player].name} מול ${CREATURES[h.rival].name}</strong><small>${h.mode==='cup'?'גביע החופים':h.mode==='challenge'?CHALLENGE.title:h.mode==='wild'?'קרב פרא':'אימון'} · ${Math.round(h.damage)} נזק · ${Math.round(h.accuracy)}% דיוק</small></div><span class="history-outcome ${h.won?'won':''}">${h.draw?'תיקו':h.won?'ניצחון':'הפסד'}</span></div>`).join(''):'<p class="empty-history">הקרב הראשון שלכם עוד לפניכם. כל היצורים כבר מחכים בזירה.</p>';
 }
-function clearInput(){keys.clear();input.pointerFire=false;input.buttonFire=false;input.toggleFire=false;input.aim=null;input.stickX=0;input.stickY=0;input.special=false;document.querySelectorAll('.held').forEach(el=>el.classList.remove('held'));$('joystick-knob').style.transform='';}
+function clearInput(){keys.clear();input.pointerFire=false;input.buttonFire=false;input.toggleFire=false;input.aim=null;input.stickX=0;input.stickY=0;input.special=false;input2.stickX=0;input2.stickY=0;input2.special=false;$('joystick-knob-2').style.transform='';document.querySelectorAll('.held').forEach(el=>el.classList.remove('held'));$('joystick-knob').style.transform='';}
 function currentInput(){
   const moveX=input.stickX+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),moveY=input.stickY+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);
   return {moveX,moveY,fire:input.pointerFire||input.buttonFire||input.toggleFire||keys.has('Space')||keys.has('KeyJ'),special:input.special,...(input.pointerFire&&input.aim?{aimX:input.aim.x,aimY:input.aim.y}:{})};
@@ -280,7 +280,7 @@ function startBattle(nextMode=mode){
   const seed=Date.now()+Math.floor(Math.random()*1e5);
   match=mode==='challenge'?makeChallengeMatch(profile,{seed}):mode==='story'?makeStoryMatch(profile,{seed,team:chosenTrio}):mode==='wild'?makeWildMatch(profile,wildTarget,{seed}):makeMatch({player,rival,level,upgrades,boss:rival==='slauz'&&!(mode==='quick'&&$('training-mode').value),seed,mode:mode==='quick'?$('training-mode').value||null:null,arena:mode==='quick'?({lava:'fire',wind:'wind',ball:'sea',trio:'castle'})[$('training-mode').value]||null:null,
     ...(mode==='quick'&&$('training-mode').value==='trio'?{team:trioTeam(profile,chosenTrio),rivalTeam:Object.keys(CREATURES).filter(id=>CREATURES[id].rarity!=='אגדי').sort(()=>Math.random()-.5).slice(0,3)}:{})});
-  player=match.actors[0].id;rival=match.actors[1].id;level=match.level;upgrades=match.actors[0].upgrades;renderer.setMatch(match,[skinOf(profile,match.actors[0].id),match.mirror?'night':null]);clearInput();accumulator=0;
+  player=match.actors[0].id;rival=match.actors[1].id;level=match.level;upgrades=match.actors[0].upgrades;sound.versus=false;document.querySelector('.player-info .fighter-lines span').textContent='אתם';renderer.setMatch(match,[skinOf(profile,match.actors[0].id),match.mirror?'night':null]);clearInput();accumulator=0;
   document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');sound.unlock();sound.setScene('battle');sound.resume();if(mode==='wild')sound.play('voice-wild-battle',{delay:.2});
   const p=match.actors[0].spec,r=match.actors[1].spec;
   const storyStep=match.story?STEPS.find(s=>s.id===match.story):null;
@@ -332,19 +332,23 @@ function renderHUD(){if(!match)return;const [a,b]=match.actors;
   }
   if(match.time>8)$('arena-tip').style.opacity='0';
   if(b.boss){const phase=b.boss.phase;$('boss-banner').dataset.phase=phase;$('boss-banner').textContent={guard:'מגן קדמי · נסו מהצד',windup:'הסתערות בדרך · זוזו הצדה!',charge:'הסתערות!',recover:'עכשיו! פגיעות חזקות ב־50%'}[phase];}
+  if(match.versus){const ch=b.superCharge||0,full=ch>=1;$('special-button-2').classList.toggle('cooling',!full);$('special-button-2').classList.toggle('super-ready',full);$('special-button-2').style.setProperty('--charge',ch);
+    if(!match.mode)$('mode-banner').innerHTML=`<span class="mb-you">${VS_NAMES[0]} <b class="mb-score">${versus.wins[0]}</b></span><span class="mb-goal">${match.roundLabel}</span><span class="mb-foe"><b class="mb-score">${versus.wins[1]}</b> ${VS_NAMES[1]}</span>`;}
+  const [youLabel,foeLabel]=match.versus?VS_NAMES:['אתם','היריב'];
   if(match.mode){const [me,foe]=match.actors;
-    if(match.wind){$('mode-banner').innerHTML=`<span class="mb-you">${icon('swirl')} אתם ${me.feathers}</span><span class="mb-goal">מתוך ${WIND_TARGET}</span><span class="mb-foe">היריב ${foe.feathers}</span>`;const h=match.wind.holder;$('hold-count').hidden=h<0;if(h>=0){$('hold-count').textContent=Math.ceil(match.wind.hold);$('hold-count').classList.toggle('foe',h===1);}}
-    else if(match.ball){const [s0,s1]=match.ball.score;$('mode-banner').innerHTML=`<span class="mb-you">אתם <b class="mb-score">${s0}</b></span><span class="mb-goal">${match.ball.overtime?'גול זהב!':'ראשון ל־'+BALL_GOALS}</span><span class="mb-foe"><b class="mb-score">${s1}</b> היריב</span>`;}
+    if(match.wind){$('mode-banner').innerHTML=`<span class="mb-you">${icon('swirl')} ${youLabel} ${me.feathers}</span><span class="mb-goal">מתוך ${WIND_TARGET}</span><span class="mb-foe">${foeLabel} ${foe.feathers}</span>`;const h=match.wind.holder;$('hold-count').hidden=h<0;if(h>=0){$('hold-count').textContent=Math.ceil(match.wind.hold);$('hold-count').classList.toggle('foe',h===1);}}
+    else if(match.ball){const [s0,s1]=match.ball.score;$('mode-banner').innerHTML=`<span class="mb-you">${youLabel} <b class="mb-score">${s0}</b></span><span class="mb-goal">${match.ball.overtime?'גול זהב!':'ראשון ל־'+BALL_GOALS}</span><span class="mb-foe"><b class="mb-score">${s1}</b> ${foeLabel}</span>`;}
     else if(match.trio){const dots=(n,cls)=>`<span class="trio-dots ${cls}">${[0,1,2].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</span>`;$('mode-banner').innerHTML=`<span class="mb-you">אתם ${dots(trioLeft(match,0),'you')}</span><span class="mb-goal">שלושה מול שלושה</span><span class="mb-foe">${dots(trioLeft(match,1),'foe')} היריב</span>`;}
-    else{$('mode-banner').innerHTML=`<span class="mb-you">${icon('flame')} גחלי כוח ${me.power}/${MAX_POWER}</span><span class="mb-goal">${match.lava.scale<.99?'הלבה סוגרת!':'הלבה מתעוררת...'}</span><span class="mb-foe">היריב ${foe.power}/${MAX_POWER}</span>`;}}
+    else{$('mode-banner').innerHTML=`<span class="mb-you">${icon('flame')} ${match.versus?youLabel:'גחלי כוח'} ${me.power}/${MAX_POWER}</span><span class="mb-goal">${match.lava.scale<.99?'הלבה סוגרת!':'הלבה מתעוררת...'}</span><span class="mb-foe">${foeLabel} ${foe.power}/${MAX_POWER}</span>`;}}
   if(match.challenge){const next=match.covers.filter(c=>c.hp>0).sort((a,b)=>a.collapseAt-b.collapseAt)[0];$('challenge-banner').textContent=next?`מחסה מתפורר בעוד ${Math.max(0,Math.ceil(next.collapseAt-match.time))} שנ׳ · המשיכו לזוז`:'הזירה פתוחה · אין יותר מחסות!';}
   if(clock>toastUntil)$('match-toast').classList.remove('visible');
 }
 function toast(text,seconds=2){$('match-toast').textContent=text;$('match-toast').classList.add('visible');toastUntil=clock+seconds;}
 function pauseBattle(){if(!match||screen!=='battle'||match.status==='finished'||match.status==='paused')return;previousStatus=match.status;match.status='paused';clearInput();sound.pause();if(!$('pause-dialog').open)$('pause-dialog').showModal();}
 function resumeBattle(){if(!match||match.status!=='paused')return;$('pause-dialog').close();match.status=previousStatus;clearInput();accumulator=0;sound.resume();$('arena').focus({preventScroll:true});}
-function leaveBattle(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());match=null;showView(mode==='story'?'story':mode==='quick'?'lobby':mode==='wild'?(wildTarget&&!isUnlocked(profile,wildTarget)?'wild':'lobby'):journeyView(profile));}
+function leaveBattle(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());match=null;showView(mode==='versus'?'versus':mode==='story'?'story':mode==='quick'?'lobby':mode==='wild'?(wildTarget&&!isUnlocked(profile,wildTarget)?'wild':'lobby'):journeyView(profile));}
 function onFinish(){
+  if(match.versus){finishVersusRound();return;}
   const finalWin=mode==='cup'&&cupFinal&&match.winner===0;
   const storyResult=mode==='story'?recordStory(profile,match):null;if(storyResult)storyEvent=storyResult;
   const hero=match.actors[0].id,winsBefore=profile.creatures[hero]?.wins||0,wildId=storyResult?.released||match.wild,wasLocked=!!storyResult?.released||(wildId&&!isUnlocked(profile,wildId));
@@ -367,6 +371,69 @@ function onFinish(){
   $('result-secondary').textContent=mode==='story'?'הפסקה · חזרה למפה':mode==='quick'||mode==='wild'?'חזרה לבחירת יצור':'הפסקה · ההתקדמות נשמרת';$('result-secondary').onclick=leaveBattle;
   const shown=match;setTimeout(()=>{if(match===shown&&!$('result-dialog').open)$('result-dialog').showModal();},1500);
 }
+// ------------------------------------------------------------------ friend battle: two players, one screen
+// Best of three. Whoever loses a round gets an extra heart in the next one, so nobody falls far behind.
+const VS_MODES=[{id:'',name:'קרב',icon:'bolt',text:'מי שמפיל את השני'},{id:'ball',name:'כדור הגאות',icon:'spiral',text:'ראשון ל־'+BALL_GOALS+' גולים'},{id:'wind',name:'תפוס את הרוח',icon:'swirl',text:WIND_TARGET+' נוצות, '+WIND_HOLD+' שניות'},{id:'lava',name:'טבעת הלבה',icon:'flame',text:'שורדים בלבה'}];
+const VS_ARENAS=['wind','sea','fire','mirror','castle'],VS_WINS=2,VS_NAMES=['שחקן 1','שחקן 2'];
+let versus={ids:['maimi','havzuk'],hearts:[0,0],mode:'',wins:[0,0],round:1,catchup:[0,0]},touchVersus=false;
+function renderVersus(){
+  const ids=Object.keys(CREATURES).filter(id=>isUnlocked(profile,id)),touch=matchMedia('(pointer:coarse)').matches;
+  versus.ids=versus.ids.map((id,i)=>ids.includes(id)?id:ids[i%ids.length]);
+  for(const n of [0,1]){const k=n+1,id=versus.ids[n],c=CREATURES[id],h=versus.hearts[n];
+    $('versus-keys-'+k).textContent=touch?(n?'אגודל בצד ימין של המסך':'אגודל בצד שמאל של המסך'):(n?'חצים · Enter · Shift ימני':'W A S D · רווח · E');
+    $('versus-name-'+k).textContent=c.name;$('versus-name-'+k).style.color=c.dark;livePortrait('versus-portrait-'+k,id,{skin:skinOf(profile,id)});
+    $('versus-hearts-'+k).innerHTML=[0,1,2].map(i=>`<button class="vs-heart${i<=h?' on':''}" data-vs-heart="${n}:${i}" aria-label="${i+1} לבבות" aria-pressed="${i===h}">♥</button>`).join('')+`<small>${h?'עוד '+h*25+'% חיים':'חיים רגילים'}</small>`;
+    $('versus-fighters-'+k).innerHTML=ids.map(f=>`<button class="fighter-chip${f===id?' chosen':''}" data-vs-fighter="${n}:${f}" aria-pressed="${f===id}" style="--c:${CREATURES[f].color}"><canvas id="vs-chip-${k}-${f}" aria-hidden="true"></canvas><b>${CREATURES[f].name}</b></button>`).join('');
+    for(const f of ids)livePortrait(`vs-chip-${k}-${f}`,f,{skin:skinOf(profile,f)});}
+  $('versus-modes').innerHTML=VS_MODES.map(m=>`<button class="vs-mode${m.id===versus.mode?' chosen':''}" data-vs-mode="${m.id}" aria-pressed="${m.id===versus.mode}">${icon(m.icon)}<b>${m.name}</b><small>${m.text}</small></button>`).join('');
+  document.querySelectorAll('[data-vs-fighter]').forEach(el=>el.onclick=()=>{const [n,f]=el.dataset.vsFighter.split(':');versus.ids[+n]=f;sound.click();renderVersus();});
+  document.querySelectorAll('[data-vs-heart]').forEach(el=>el.onclick=()=>{const [n,i]=el.dataset.vsHeart.split(':').map(Number);versus.hearts[n]=i;sound.click();renderVersus();});
+  document.querySelectorAll('[data-vs-mode]').forEach(el=>el.onclick=()=>{versus.mode=el.dataset.vsMode;sound.click();renderVersus();});
+}
+const versusRoundLabel=()=>versus.wins.every(n=>n===VS_WINS-1)?'סיבוב ההכרעה':'סיבוב '+versus.round;
+function startVersus(fresh=false){
+  if(!art)return;if(fresh)Object.assign(versus,{wins:[0,0],round:1,catchup:[0,0]});
+  mode='versus';cupFinal=false;touchVersus=matchMedia('(pointer:coarse)').matches;
+  const arena=({lava:'fire',wind:'wind',ball:'sea'})[versus.mode]||VS_ARENAS[Math.floor(Math.random()*VS_ARENAS.length)];
+  match=makeMatch({player:versus.ids[0],rival:versus.ids[1],level:'champion',seed:Date.now()+Math.floor(Math.random()*1e5),mode:versus.mode||null,arena,versus:true,hearts:versus.hearts.map((h,i)=>Math.min(2,h+versus.catchup[i]))});
+  match.roundLabel=versusRoundLabel();
+  const [a,b]=match.actors,skinA=skinOf(profile,a.id);let skinB=skinOf(profile,b.id);
+  // The same creature on both sides: player two wears night colours so the two are easy to tell apart.
+  if(a.id===b.id&&skinA===skinB)skinB=skinA==='night'?'ice':'night';
+  renderer.setMatch(match,[skinA,skinB]);clearInput();accumulator=0;sound.versus=true;
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');document.body.classList.add('versus-play');sound.unlock();sound.setScene('battle');sound.resume();
+  $('player-name').textContent=a.spec.name;document.querySelector('.player-info .fighter-lines span').textContent=VS_NAMES[0];$('rival-name').textContent=b.spec.name;$('rival-level').textContent=VS_NAMES[1];
+  $('player-symbol').innerHTML=icon(a.spec.specialIcon);$('rival-symbol').innerHTML=icon(b.spec.specialIcon);
+  $('match-label').textContent='חבר נגד חבר';$('round-label').textContent=match.roundLabel+' · '+versus.wins.join(' : ');
+  $('special-action-icon').innerHTML=icon(a.spec.specialIcon);$('special-action-name').textContent=a.spec.special;$('special-button').style.setProperty('--c',a.spec.color);
+  $('special-action-icon-2').innerHTML=icon(b.spec.specialIcon);$('special-button-2').style.setProperty('--c',b.spec.color);
+  $('arena-tip').textContent=touchVersus?'כל אחד מזיז את האגודל בצד שלו. הירי אוטומטי!':'שחקן 1: W A S D ורווח · שחקן 2: חצים ו־Enter';$('arena-tip').style.opacity='1';$('match-toast').classList.remove('visible');toastUntil=0;
+  $('battle-build').hidden=true;$('boss-banner').hidden=true;$('challenge-banner').hidden=true;$('mode-banner').hidden=false;$('hold-count').hidden=true;
+  tutorial=null;$('tutorial').hidden=true;document.querySelectorAll('.tut-glow').forEach(e=>e.classList.remove('tut-glow'));
+  $('goal-card').hidden=!match.mode;if(match.mode){$('goal-icon').innerHTML=icon(MISSION_ICON[match.mode]);$('goal-name').textContent=MODES[match.mode].name;$('goal-text').textContent=MODES[match.mode].goal;goalUntil=clock+3;}
+  $('leave-button').textContent='הפסקה · חזרה לבחירה';
+  renderHUD();$('arena').focus({preventScroll:true});
+}
+// Player one: W A S D, Space, E. Player two: arrows, Enter, right Shift. On a touch screen each player has half the screen and fires on their own.
+function versusInputs(){
+  const k=code=>keys.has(code)?1:0;
+  return [{moveX:input.stickX+k('KeyD')-k('KeyA'),moveY:input.stickY+k('KeyS')-k('KeyW'),fire:touchVersus||!!(k('Space')||k('KeyF')),special:input.special},
+    {moveX:input2.stickX+k('ArrowRight')-k('ArrowLeft'),moveY:input2.stickY+k('ArrowDown')-k('ArrowUp'),fire:touchVersus||!!(k('Enter')||k('NumpadEnter')||k('Numpad0')||k('Slash')),special:input2.special}];
+}
+function finishVersusRound(){
+  const w=match.winner;clearInput();sound.setScene('lobby');
+  if(w>=0){versus.wins[w]++;versus.catchup[1-w]=Math.min(2,versus.catchup[1-w]+1);versus.catchup[w]=0;}
+  versus.round++;const done=versus.wins.some(n=>n>=VS_WINS),[a,b]=match.actors;
+  const title=w<0?'תיקו!':done?VS_NAMES[w]+' ניצח בקרב!':VS_NAMES[w]+' לקח את הסיבוב!';
+  const sub=done?'איזה קרב! עוד אחד?':w<0?'אף אחד לא לקח את הסיבוב. עוד סיבוב!':VS_NAMES[1-w]+' מקבל עוד לב ♥ בסיבוב הבא.';
+  if(done)sound.play('voice-victory',{delay:.7});
+  $('result-content').innerHTML=`${done?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${done?'gold':''}">${icon(done?'trophy':w<0?'shield':'star')}</div><span class="result-kicker">חבר נגד חבר</span><h2 class="result-title"></h2><div class="result-score versus-score"><div><strong>${versus.wins[0]}</strong><span></span></div><span>:</span><div><strong>${versus.wins[1]}</strong><span></span></div></div><p></p>`;
+  document.querySelector('#result-content .result-title').textContent=title;document.querySelector('#result-content > p').textContent=sub;
+  document.querySelectorAll('#result-content .versus-score div span').forEach((el,i)=>{el.textContent=VS_NAMES[i]+' · '+match.actors[i].spec.name;});
+  $('result-primary').textContent=done?'עוד קרב!':'ל'+versusRoundLabel()+'!';$('result-primary').onclick=()=>{$('result-dialog').close();startVersus(done);};
+  $('result-secondary').textContent='החלפת יצורים';$('result-secondary').onclick=leaveBattle;
+  const shown=match;setTimeout(()=>{if(match===shown&&!$('result-dialog').open)$('result-dialog').showModal();},1500);
+}
 // The loop must survive any drawing error: a frozen game is worse than one missed frame.
 let frameErrors=0,hitStop=0;
 function frame(timestamp){
@@ -381,14 +448,15 @@ function frameBody(timestamp){
     if(match.status!=='paused'&&match.status!=='finished'){
       if(hitStop>0){hitStop-=dt;}else accumulator+=dt;
       while(accumulator>=1/60){
-        step(match,currentInput(),1/60);input.special=false;accumulator-=1/60;
+        if(match.versus){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,currentInput(),1/60);input.special=false;accumulator-=1/60;
         for(const e of match.events){sound.effect(e);if(e.type==='hit')renderer.shake=Math.max(renderer.shake,e.side===0?2.2:.8);if(e.type==='ko')hitStop=Math.max(hitStop,.12);if(e.type==='quake')renderer.shake=5;if(e.type==='go')toast('קדימה!',.8);
           if(e.type==='lava-warning')toast('הלבה מתעוררת!',1.4);
-          if(e.type==='hold-start')toast(e.side===0?'החזיקו מעמד!':'תפילו אותו!',1.4);
-          if(e.type==='ko')toast(e.side===1?'הפלתם אותו!':'חוזרים בעוד רגע',1.4);
+          const vs=match.versus;
+          if(e.type==='hold-start')toast(vs?VS_NAMES[e.side]+' מחזיק את הרוח!':e.side===0?'החזיקו מעמד!':'תפילו אותו!',1.4);
+          if(e.type==='ko')toast(vs?VS_NAMES[e.side]+' נפל!':e.side===1?'הפלתם אותו!':'חוזרים בעוד רגע',1.4);
           if(e.type==='goal'){const G=GOALS[1-e.side];renderer.cinematic(G.x,G.y-50,1.45,1.5);}
-          if(e.type==='goal')toast(e.side===0?'גול!!!':'היריב הבקיע',1.6);
-          if(e.type==='ball-loose'&&match.status==='playing'&&e.side===0)toast('הפנינה נפלה!',1.1);if(e.type==='kick-far'&&e.side===0)toast('התקרבו לשער ואז בעטו',1.6);
+          if(e.type==='goal')toast(vs?'גול של '+VS_NAMES[e.side]+'!':e.side===0?'גול!!!':'היריב הבקיע',1.6);
+          if(e.type==='ball-loose'&&match.status==='playing'&&(e.side===0||vs))toast('הפנינה נפלה!',1.1);if(e.type==='kick-far'&&(e.side===0||vs))toast('התקרבו לשער ואז בעטו',1.6);
           if(e.type==='overtime')toast('גול זהב!',1.6);
           if(e.type==='swap'){const c=CREATURES[e.id];renderer.swap(e.side,e.id,e.side===0?skinOf(profile,e.id):null);if(e.side===0){$('player-name').textContent=c.name;$('player-symbol').innerHTML=icon(c.specialIcon);$('special-action-icon').innerHTML=icon(c.specialIcon);$('special-action-name').textContent=c.special;$('special-button').style.setProperty('--c',c.color);}else{$('rival-name').textContent=c.name;$('rival-symbol').innerHTML=icon(c.specialIcon);}toast(c.name+' נכנס!',1.4);}}
         if(match.status==='finished'){const w=match.actors[match.winner>=0?match.winner:0];renderer.cinematic(w.x,w.y-70,1.5,1.9);onFinish();break;}
@@ -427,6 +495,10 @@ function bindControls(){
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyW','KeyA','KeyS','KeyD','KeyE','KeyJ'].includes(e.code)){
       e.preventDefault();keys.add(e.code);if(!e.repeat&&e.code==='KeyE')input.special=true;
     }
+    // Player two's keys sit on the right of the keyboard.
+    else if(match.versus&&['Enter','NumpadEnter','Numpad0','Slash','KeyF','KeyQ','ShiftRight','Period'].includes(e.code)){
+      e.preventDefault();keys.add(e.code);if(!e.repeat&&e.code==='KeyQ')input.special=true;if(!e.repeat&&['ShiftRight','Period'].includes(e.code))input2.special=true;
+    }
   });
   window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',pauseBattle);document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseBattle();});
   const canvas=$('arena');canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -438,23 +510,29 @@ function bindControls(){
     for(const event of ['pointerup','pointercancel','lostpointercapture'])el.addEventListener(event,()=>{el.classList.remove('held');if(kind==='fire')input.buttonFire=false;});
     el.addEventListener('keydown',e=>{if(e.code==='Enter'&&(match?.status==='playing'||kind==='fire'&&match?.status==='countdown')){e.preventDefault();if(!e.repeat){if(kind==='fire')input.toggleFire=!input.toggleFire;else input[kind]=true;}}});el.addEventListener('blur',()=>{if(kind==='fire')input.buttonFire=false;});
   }
-  const joystick=$('joystick');let stickPointer=null;
-  function setStick(e){const rect=document.querySelector('.joystick-ring').getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2,r=rect.width*.42;let x=(e.clientX-cx)/r,y=(e.clientY-cy)/r;const d=Math.hypot(x,y);if(d>1){x/=d;y/=d;}
-    const power=d<.12?0:Math.min(1,d/.4);input.stickX=d?x/Math.min(1,d)*power:0;input.stickY=d?y/Math.min(1,d)*power:0;$('joystick-knob').style.transform=`translate(${x*r}px,${y*r}px)`;}
-  // The joystick appears wherever the thumb lands on the left side of the screen.
-  const zone=$('stick-zone');
-  const releaseStick=()=>{stickPointer=null;input.stickX=0;input.stickY=0;$('joystick-knob').style.transform='';joystick.style.left='';joystick.style.top='';joystick.style.bottom='';joystick.classList.remove('floating');};
-  zone.addEventListener('pointerdown',e=>{if(stickPointer!==null||match?.status==='finished')return;e.preventDefault();stickPointer=e.pointerId;try{zone.setPointerCapture(e.pointerId);}catch{}const box=joystick.offsetParent?.getBoundingClientRect()||{left:0,top:0};joystick.classList.add('floating');joystick.style.left=(e.clientX-box.left-joystick.offsetWidth/2)+'px';joystick.style.top=(e.clientY-box.top-joystick.offsetHeight/2)+'px';joystick.style.bottom='auto';setStick(e);});
-  zone.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)setStick(e);});
-  for(const event of ['pointerup','pointercancel','lostpointercapture'])zone.addEventListener(event,e=>{if(e.pointerId===stickPointer)releaseStick();});
-  joystick.addEventListener('pointerdown',e=>{if(stickPointer!==null)return;e.preventDefault();stickPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);setStick(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)setStick(e);});
-  for(const event of ['pointerup','pointercancel','lostpointercapture'])joystick.addEventListener(event,e=>{if(e.pointerId===stickPointer){stickPointer=null;input.stickX=0;input.stickY=0;$('joystick-knob').style.transform='';}});
+  // The joystick appears wherever the thumb lands on its side of the screen. In a friend battle the right side is player two's.
+  bindStick($('stick-zone'),$('joystick'),$('joystick-knob'),input);bindStick($('stick-zone-2'),$('joystick-2'),$('joystick-knob-2'),input2);
+  $('special-button-2').addEventListener('pointerdown',e=>{e.preventDefault();if(match?.status!=='playing')return;sound.unlock();try{$('special-button-2').setPointerCapture(e.pointerId);}catch{}$('special-button-2').classList.add('held');input2.special=true;});
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])$('special-button-2').addEventListener(event,()=>$('special-button-2').classList.remove('held'));
+  $('home-versus').onclick=()=>{sound.click();showView('versus');};$('versus-start').onclick=()=>{sound.click();startVersus(true);};
   for(const type of ['pointerdown','touchend','click','keydown'])document.addEventListener(type,()=>{if(sound.ctx?.state!=='running')sound.unlock();},{passive:true});
   document.addEventListener('click',()=>{if(matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});},{once:true});
 }
+function bindStick(zone,joystick,knob,state){
+  let pointer=null;const ring=joystick.querySelector('.joystick-ring');
+  const set=e=>{const rect=ring.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2,r=rect.width*.42;let x=(e.clientX-cx)/r,y=(e.clientY-cy)/r;const d=Math.hypot(x,y);if(d>1){x/=d;y/=d;}
+    const power=d<.12?0:Math.min(1,d/.4);state.stickX=d?x/Math.min(1,d)*power:0;state.stickY=d?y/Math.min(1,d)*power:0;knob.style.transform=`translate(${x*r}px,${y*r}px)`;};
+  const release=()=>{pointer=null;state.stickX=0;state.stickY=0;knob.style.transform='';for(const k of ['left','right','top','bottom'])joystick.style[k]='';joystick.classList.remove('floating');};
+  zone.addEventListener('pointerdown',e=>{if(pointer!==null||match?.status==='finished')return;e.preventDefault();pointer=e.pointerId;try{zone.setPointerCapture(e.pointerId);}catch{}const box=joystick.offsetParent?.getBoundingClientRect()||{left:0,top:0};joystick.classList.add('floating');joystick.style.right='auto';joystick.style.left=(e.clientX-box.left-joystick.offsetWidth/2)+'px';joystick.style.top=(e.clientY-box.top-joystick.offsetHeight/2)+'px';joystick.style.bottom='auto';set(e);});
+  zone.addEventListener('pointermove',e=>{if(e.pointerId===pointer)set(e);});
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])zone.addEventListener(type,e=>{if(e.pointerId===pointer)release();});
+  joystick.addEventListener('pointerdown',e=>{if(pointer!==null)return;e.preventDefault();pointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}set(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)set(e);});
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])joystick.addEventListener(type,e=>{if(e.pointerId===pointer){pointer=null;state.stickX=0;state.stickY=0;knob.style.transform='';}});
+}
 // Read-only diagnostics. Browser journeys still operate the real controls.
 // Verification only: advance a battle by simulated time and draw one frame, even in a hidden tab.
-const advance=(seconds,input={})=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match.status!=='finished';i++){step(match,{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish')onFinish();}updateTutorial(seconds);renderer.render(match,1/60,clock+=seconds);renderHUD();return match.status;};
+// With live=true the battle reads the real controls (sticks, buttons, keys), the way the frame loop does.
+const advance=(seconds,input={},live=false)=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match.status!=='finished';i++){if(live&&match.versus){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,live?currentInput():{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish')onFinish();}updateTutorial(seconds);renderer.render(match,1/60,clock+=seconds);renderHUD();return match.status;};
 window.__LEAGUE__=Object.freeze({advance,stick:()=>({x:+input.stickX.toFixed(2),y:+input.stickY.toFixed(2)}),audio:()=>({ctx:sound.ctx?.state||'none',scene:sound.scene,music:Object.fromEntries(Object.entries(sound.music||{}).map(([k,t])=>[k,{paused:t.el.paused,time:+t.el.currentTime.toFixed(1),ready:t.el.readyState,gain:+t.g.gain.value.toFixed(2)}]))}),skip:()=>{if(!match||match.status==='finished')return false;finish(match,0,'test');onFinish();return true;},camera:()=>({scale:+renderer.scale.toFixed(3),offsetX:Math.round(renderer.offsetX),offsetY:Math.round(renderer.offsetY),close:!!renderer.cam,cinematic:!!renderer.punch,size:renderer.size}),snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,mode:match.mode||null,ball:match.ball?{x:match.ball.x,y:match.ball.y,carrier:match.ball.carrier,score:[...match.ball.score]}:null,wind:match.wind?{holder:match.wind.holder,feathers:match.wind.feathers.map(f=>({x:f.x,y:f.y}))}:null,lava:match.lava?{scale:match.lava.scale,embers:match.lava.embers.map(e=>({x:e.x,y:e.y}))}:null,trio:match.trio?[trioLeft(match,0),trioLeft(match,1)]:null,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,out:a.out||0,feathers:a.feathers||0,power:a.power||0,maxHp:a.spec.hp,specialCd:a.specialCd,superCharge:a.superCharge,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
 async function boot(){
   $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);buildRoster();renderStoryPanel();bindControls();updateHeader();showView(journeyView(profile));$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);
