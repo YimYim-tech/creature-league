@@ -140,7 +140,7 @@ export class Renderer {
       if(this.zoomed){const k=this.h/720*.8;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.translate(this.w/2-640*k,this.h/2-390*k);c.scale(k,k);}
       const label=m.countdown>.3?String(Math.ceil(m.countdown-.3)):'קדימה!';c.save();if(!this.zoomed){c.fillStyle='#072c3b40';c.fillRect(0,0,1280,720);}this.label(label,640,372,84,'#fff','center');this.label(m.roundLabel||'קרב על הזירה',640,428,22,'#ffffff','center');c.restore();
     }
-    if(m.versus&&(m.status==='countdown'||m.time<5))m.actors.forEach((a,i)=>this.label('שחקן '+(i+1),a.x,a.y+42,18,i?'#8a1d2e':'#08424b','center'));
+    if(m.versus&&(m.status==='countdown'||m.time<5))m.actors.forEach((a,i)=>this.label(m.names?.[i]||'שחקן '+(i+1),a.x,a.y+42,18,i?'#8a1d2e':'#08424b','center'));
     else if(m.status==='playing'&&m.time<5){this.label('אתם',m.actors[0].x,m.actors[0].y+42,18,'#08424b','center');}
   }
   label(text,x,y,size,color='#fff',align='center') {const c=this.ctx;c.font=`900 ${size}px 'Frank Ruhl Libre', Heebo, Arial`;c.textAlign=align;c.textBaseline='middle';c.fillStyle=color;c.fillText(text,x,y);}
@@ -201,7 +201,7 @@ export class Renderer {
     for(let g=0;g<2;g++){const G=GOALS[g],dir=g===0?-1:1,col=g===0?'#59c9ff':'#ffcf5a',top=G.y-G.half,bot=G.y+G.half,H=78;
       c.save();c.globalAlpha=.22+.06*Math.sin(t*3);ellipse(c,G.x,G.y,110,G.half+34,col);c.restore();
       const gate=this.art.props?.[g===0?'gate-blue':'gate-gold'];
-      if(gate){const h=G.half*2+H+30,w=h*gate.width/gate.height;c.save();c.translate(G.x,0);if(g===1)c.scale(-1,1);c.drawImage(gate,-w/2,bot+14-h,w,h);c.restore();if(m.time<8||m.status==='countdown')this.label(m.versus?'השער של שחקן '+(g+1):g===0?'השער שלכם':'שער היריב',G.x-dir*70,top-H-26,22,g===0?'#0d4f78':'#7a4a00','center');continue;}
+      if(gate){const h=G.half*2+H+30,w=h*gate.width/gate.height;c.save();c.translate(G.x,0);if(g===1)c.scale(-1,1);c.drawImage(gate,-w/2,bot+14-h,w,h);c.restore();if(m.time<8||m.status==='countdown')this.label(m.versus?'השער של '+(m.names?.[g]||'שחקן '+(g+1)):g===0?'השער שלכם':'שער היריב',G.x-dir*70,top-H-26,22,g===0?'#0d4f78':'#7a4a00','center');continue;}
       // Water curtain and net between the posts.
       c.save();c.beginPath();c.moveTo(G.x,top-H);c.lineTo(G.x,bot-H);c.lineTo(G.x,bot);c.lineTo(G.x,top);c.closePath();
       c.beginPath();c.moveTo(G.x,top);c.lineTo(G.x+dir*34,top-12);c.lineTo(G.x+dir*34,bot-12);c.lineTo(G.x,bot);c.closePath();c.fillStyle=col+'55';c.fill();
