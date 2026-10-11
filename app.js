@@ -2,6 +2,7 @@ import {CREATURES,LEVELS,CUP,CHALLENGE,challengeUnlocked,journeyView,makeChallen
 import {upgradeOptions,cleanUpgrades} from './upgrades.js';
 import {MODES,WIND_TARGET,WIND_HOLD,MAX_POWER,BALL_GOALS,trioLeft,GOALS} from './core.js';
 import {SPARKS_PER_BOX,BOX_TIERS,FRAMES,boxTier,boxesWaiting,roadAhead,addSparks,openBox,chooseBoxPrize} from './core.js';
+import {GOAL_SPARKS,dayKey,refreshDaily,progressDaily} from './core.js';
 import {BLESSINGS,TOWER_GUARD_EVERY,TOWER_PICK_EVERY,towerFloor,towerStats,startTowerRun,makeTowerMatch,recordTower,chooseTowerPick,endTowerRun} from './core.js';
 import {creatureLevel,levelProgress,levelBoost,MAX_LEVEL,LEVEL_BONUS,RANKS,PRIZE_EVERY,LEAGUE_SAFE,rankOf,nextRank,leagueLevel,nextPrizeAt,makeLeagueMatch,recordLeague} from './core.js';
 import {trioTeam,missionEased,missionLevel,ISLANDS,STEPS,STORY_CARDS,STORY_CARD_IDS,currentStep,storyComplete,litIslands,starLit,islandOf,homeIsland,makeStoryMatch,recordStory,completeCastle,storyCardOwned,BATTLE_STEPS,starsOf,totalStars,islandStars,canReplay,friendlyStep,stepIndex} from './story.js';
@@ -39,7 +40,7 @@ function renderHome(){
   $('home-name').textContent=c.name;$('home-gems').innerHTML=necklaceHTML();
   $('home-where').textContent=!step?'המסע הושלם!':step.kind==='castle'?'הטירה הזהובה':islandOf(step.island).name+(step.kind==='castle'?'':' · שלב '+(STEPS.filter(s=>s.island===step.island).indexOf(step)+1)+' מתוך '+STEPS.filter(s=>s.island===step.island).length);
   $('home-title').textContent=!step?'קרב ליגה · דרגת '+rankOf(profile.league.trophies).name:step.kind==='castle'?'מתקנים את הכוכב':step.kind==='mission'?'משימה: '+MODES[step.mode].name:step.kind==='free'?'משחררים את '+CREATURES[step.rival].name:step.kind==='mirror'?'הבבואה שלך':step.title||'שומר האי';
-  livePortrait('home-portrait',c.id,{skin:skinOf(profile,c.id)});renderBoxStrip();renderLeagueStrip();renderTowerStrip();$('home-name').textContent=c.name+' · רמה '+creatureLevel(profile,c.id);
+  livePortrait('home-portrait',c.id,{skin:skinOf(profile,c.id)});renderBoxStrip();renderLeagueStrip();renderTowerStrip();renderGoalsStrip();$('home-name').textContent=c.name+' · רמה '+creatureLevel(profile,c.id);
   // A new player sees one road; the cup and training open after the first island.
   $('lobby').classList.toggle('early',profile.story.done<4);
 }
@@ -134,10 +135,10 @@ function showView(name){
   // On a touch screen a battle goes full screen and asks for landscape.
   if(name==='battle'&&matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});
   if(name==='battle')window.scrollTo(0,0);
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle','versus','boxes','league','tower'].includes(name)));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle','versus','boxes','league','tower','goals'].includes(name)));
   if(name!=='battle'){clearInput();sound.setScene('lobby');sound.resume();document.body.classList.remove('versus-play');}
   if(name!=='wild')storyIntro=storyIntro&&name==='battle';
-  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();if(name==='versus')renderVersus();if(name==='players'){$('player-form').hidden=true;renderPlayers();}if(name==='boxes')renderBoxes();if(name==='league')renderLeague();if(name==='tower')renderTower();
+  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();if(name==='versus')renderVersus();if(name==='players'){$('player-form').hidden=true;renderPlayers();}if(name==='boxes')renderBoxes();if(name==='league')renderLeague();if(name==='tower')renderTower();if(name==='goals'){refreshTodayGoals();renderGoals();}
   window.scrollTo({top:0,behavior:'instant'});requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'instant'}));
 }
 function buildRoster(){
@@ -375,11 +376,13 @@ function resumeBattle(){if(!match||match.status!=='paused')return;$('pause-dialo
 function leaveBattle(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());match=null;showView(mode==='versus'?'versus':mode==='tower'?'tower':mode==='league'?'league':mode==='story'?'story':mode==='quick'?'lobby':mode==='wild'?(wildTarget&&!isUnlocked(profile,wildTarget)?'wild':'lobby'):journeyView(profile));}
 function onFinish(){
   if(match.versus){finishVersusRound();return;}
+  const boxStart=profile.box.earned;
   const finalWin=mode==='cup'&&cupFinal&&match.winner===0;
   const storyResult=mode==='story'?recordStory(profile,match):null;if(storyResult&&!storyResult.replay)storyEvent=storyResult;
   const hero=match.actors[0].id,winsBefore=profile.creatures[hero]?.wins||0,wildId=storyResult?.released||match.wild,wasLocked=!!storyResult?.released||(wildId&&!isUnlocked(profile,wildId));
   const levelBefore=creatureLevel(profile,hero),leagueResult=mode==='league'?recordLeague(profile,match):null,towerResult=mode==='tower'?recordTower(profile,match):null;
-  const boxBefore=profile.box.earned;recordResult(profile,match,mode);persist();const newBoxes=profile.box.earned-boxBefore;clearInput();sound.setScene('lobby');if(match.winner===0)sound.play('voice-victory',{delay:.7});
+  const boxBefore=profile.box.earned;recordResult(profile,match,mode);persist();const newBoxes=profile.box.earned-boxBefore;
+  refreshTodayGoals();const daily=progressDaily(profile,{win:match.winner===0,creature:hero,supers:match.actors[0].stats.specials,mode,towerCleared:!!towerResult?.won,storyStep:!!(storyResult&&!storyResult.replay),replayStars:storyResult?.replay?storyResult.stars:0});persist();clearInput();sound.setScene('lobby');if(match.winner===0)sound.play('voice-victory',{delay:.7});
   const winsAfter=profile.creatures[hero]?.wins||0,newSkin=SKINS.find(k=>k.wins>winsBefore&&k.wins<=winsAfter),released=wasLocked&&isUnlocked(profile,wildId);
   const p=match.actors[0],r=match.actors[1],stats=resultStats(match),win=match.winner===0,draw=match.winner===-1;
   const challengeWin=mode==='challenge'&&win;
@@ -393,7 +396,7 @@ function onFinish(){
   if(match.reason==='time')tip=match.ball?'הזמן נגמר: מי שהבקיע יותר גולים ניצח.':match.trio?'הזמן נגמר: מי שנשארו לו יותר יצורים ניצח.':'הזמן נגמר: הניצחון נקבע לפי אחוז החיים שנותר לכל יצור.';
   const starCount=win?(storyResult?.stars||(p.hp/p.spec.hp>=.5?3:p.hp/p.spec.hp>=.25?2:1)):0;
   $('result-content').innerHTML=`${newSkin?`<div class="skin-unlock" style="--c:${p.spec.color}"><span class="skin-swatch skin-${newSkin.id}"></span><div><small>מראה חדש נפתח!</small><b>${p.spec.name} ${newSkin.name}</b></div></div>`:''}${finalWin||released?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${finalWin?'gold':win?'':'loss'}">${icon(finalWin?'trophy':win?'star':draw?'shield':'bolt')}</div><span class="result-kicker">${mode==='cup'?'גביע החופים':'קרב מהיר'} · ${LEVELS[match.level].name}</span><h2 class="result-title">${title}</h2><p>${sub}</p>${starCount?`<div class="result-stars" aria-label="${starCount} כוכבים">${[1,2,3].map(i=>`<span class="${i<=starCount?'on':''}" style="--d:${i*.18}s">${icon('star')}</span>`).join('')}</div>`:''}${match.ball||match.trio?`<div class="result-score"><div><strong></strong>${p.spec.name}</div><span>:</span><div><strong></strong>${r.spec.name}</div></div>`:''}${win?'':`<p class="result-tip">${tip}</p>`}`;
-  $('result-content').insertAdjacentHTML('beforeend',(leagueResult?leagueResultHTML(leagueResult):'')+(towerResult?towerResultHTML(towerResult):'')+levelResultHTML(hero,levelBefore)+resultBoxHTML(match.winner===0?2:1,newBoxes+(leagueResult?.boxes||0),!released));
+  $('result-content').insertAdjacentHTML('beforeend',(leagueResult?leagueResultHTML(leagueResult):'')+(towerResult?towerResultHTML(towerResult):'')+levelResultHTML(hero,levelBefore)+dailyResultHTML(daily)+resultBoxHTML(match.winner===0?2:1,profile.box.earned-boxStart,!released));
   $('result-box-open')?.addEventListener('click',()=>{$('result-dialog').close();match=null;showView('boxes');});
   if(match.ball){const s=document.querySelectorAll('.result-score strong');if(s.length>=2){s[0].textContent=match.ball.score[0];s[1].textContent=match.ball.score[1];}}
   if(match.trio){const s=document.querySelectorAll('.result-score strong');if(s.length>=2){s[0].textContent=trioLeft(match,0)+'/3';s[1].textContent=trioLeft(match,1)+'/3';}}
@@ -429,6 +432,31 @@ function leagueResultHTML(r){
 function levelResultHTML(id,before){
   const c=CREATURES[id];if(!c||!profile.creatures[id])return '';const lp=levelProgress(profile,id),up=lp.level>before;
   return `<div class="result-level${up?' up':''}"><b>${up?esc(c.name)+(c.female?' עלתה':' עלה')+' לרמה '+lp.level+'!':esc(c.name)+' · רמה '+lp.level}</b><span class="level-bar"><i style="width:${Math.round(lp.pct*100)}%"></i></span></div>`;
+}
+// ------------------------------------------------------------------ goals of the day
+function refreshTodayGoals(){if(refreshDaily(profile,dayKey(),{seed:players.active,friends:players.players.length>1,storyLeft:!!currentStep(profile)}))persist();}
+function goalText(g){const c=CREATURES[g.param];return {winElement:'נצחו קרב עם יצור '+g.param,winWith:'נצחו קרב עם '+(c?.name||''),wins:'נצחו '+g.need+' קרבות',league:'שחקו '+g.need+' קרבות ליגה',tower:'טפסו '+g.need+' קומות במגדל',supers:'השתמשו '+g.need+' פעמים בכוח־העל',story:'התקדמו שלב אחד במסע',replayStars:'שלושה כוכבים בקרב חוזר במפה',friend:'קרב חבר נגד חבר'}[g.type]||'';}
+const ELEMENT_ICON={'מים':'wave','חשמל':'bolt','עוצמה':'mountain','אש':'flame','אור':'sun','רעד':'burrow','היפנוט':'spiral','טבע':'leaf','רוח':'swirl','אנרגיה':'sparkle'};
+function goalPicture(g,i){
+  if(g.type==='winWith')return `<canvas id="goal-art-${i}" aria-hidden="true"></canvas>`;
+  const name=g.type==='winElement'?ELEMENT_ICON[g.param]||'star':{wins:'star',league:'trophy',tower:'tower',supers:'bolt',story:'arrow',replayStars:'star',friend:'duo'}[g.type]||'star';return icon(name);
+}
+function renderGoalsStrip(){const G=profile.daily.goals,done=G.filter(g=>g.done).length;$('home-goals-title').innerHTML='<span class="strip-long">משימות היום · </span><span class="strip-short">משימות </span>'+done+'/'+G.length;$('home-goals-dots').innerHTML=G.map(g=>`<i class="${g.done?'on':''}"></i>`).join('');$('home-goals').classList.toggle('ready',done<G.length);}
+function renderGoals(){
+  const G=profile.daily.goals,today=dayKey();
+  $('goals-list').innerHTML=G.map((g,i)=>`<div class="goal${g.done?' done':''}"><div class="goal-pic" style="--c:${CREATURES[g.param]?.color||'#f2c14e'}">${goalPicture(g,i)}</div><div class="goal-copy"><b>${goalText(g)}</b><span class="level-bar"><i style="width:${Math.round(g.have/g.need*100)}%"></i></span><small>${g.done?'הושלם! +'+GOAL_SPARKS+' ניצוצות':g.have+' מתוך '+g.need+' · פרס: '+GOAL_SPARKS+' ניצוצות'}</small></div>${g.done?'<span class="goal-check">✓</span>':`<button class="button secondary" data-goal-go="${i}">יאללה</button>`}</div>`).join('');
+  G.forEach((g,i)=>{if(g.type==='winWith')livePortrait('goal-art-'+i,g.param,{skin:skinOf(profile,g.param)});});
+  $('goals-bonus').textContent=profile.daily.bonusDay===today?'כל משימות היום הושלמו, והתיבה במתנה כבר אצלכם!':'עוד '+G.filter(g=>!g.done).length+' משימות לתיבה במתנה.';
+  // Each goal knows where it is played.
+  document.querySelectorAll('[data-goal-go]').forEach(el=>el.onclick=()=>{sound.click();const g=G[+el.dataset.goalGo];
+    if(g.type==='winWith'){profile.selected=g.param;persist();}
+    if(g.type==='winElement'){const id=Object.keys(CREATURES).find(k=>isUnlocked(profile,k)&&CREATURES[k].element===g.param);if(id){profile.selected=id;persist();}}
+    const open=profile.story.done>=4;
+    if(g.type==='league'||(['winWith','winElement','wins','supers'].includes(g.type)&&open&&!currentStep(profile)))showView('league');else if(g.type==='tower')showView('tower');else if(g.type==='friend')showView('versus');else if(g.type==='replayStars')showView('story');else if(g.type==='story')goStory();else showView('lobby');});
+}
+function dailyResultHTML(d){
+  if(!d.moved.length&&!d.bonus)return '';
+  return `<div class="result-goals">${d.moved.map(g=>`<span${g.done?' class="done"':''}>${icon('target')} ${goalText(g)} · ${g.done?'✓ +'+GOAL_SPARKS+' ניצוצות':g.have+'/'+g.need}</span>`).join('')}${d.bonus?'<span class="done bonus">כל משימות היום הושלמו! תיבה במתנה</span>':''}</div>`;
 }
 // ------------------------------------------------------------------ the mask tower
 const pickInfo=(run,id)=>{const b=BLESSINGS.find(x=>x.id===id);if(b)return {name:b.name,text:b.text,icon:b.icon};const u=upgradeOptions(CREATURES[run.creature]).find(x=>x.id===id);return u?{name:u.name,text:u.benefit,icon:u.icon}:{name:id,text:'',icon:'star'};};
@@ -527,7 +555,7 @@ const profileOf=id=>id===players.active?profile:readProfile(playerStorage(id));
 const faceOf=p=>p.face||(isUnlocked(profileOf(p.id),profileOf(p.id).selected)?profileOf(p.id).selected:'maimi');
 function switchPlayer(id){
   if(!findPlayer(id))return;players.active=id;savePlayers();storage=playerStorage(id);profile=readProfile(storage);sound.setEnabled(profile.sound);
-  match=null;wildTarget=null;storyEvent=null;versus.players=[id,null];updateHeader();showView('lobby');
+  match=null;wildTarget=null;storyEvent=null;versus.players=[id,null];refreshTodayGoals();updateHeader();showView('lobby');
 }
 function renderPlayers(){
   const form=!$('player-form').hidden;$('players-grid').hidden=form;
@@ -623,7 +651,7 @@ function finishVersusRound(){
   versus.round++;const done=versus.wins.some(n=>n>=VS_WINS),[a,b]=match.actors;
   const title=w<0?'תיקו!':done?'ניצחון ל'+vsName(w)+'!':'הסיבוב ל'+vsName(w)+'!';
   const sub=done?'איזה קרב! עוד אחד?':w<0?'אף אחד לא לקח את הסיבוב. עוד סיבוב!':'עוד לב ♥ ל'+vsName(1-w)+' בסיבוב הבא.';
-  if(done){sound.play('voice-victory',{delay:.7});versus.players.forEach((pid,i)=>{if(pid==='guest'||(i===1&&versus.players[0]===pid))return;const pp=pid===players.active?profile:readProfile(playerStorage(pid));addSparks(pp,i===w?2:1);if(pid===players.active)persist();else saveProfile(playerStorage(pid),pp);});}
+  if(done){sound.play('voice-victory',{delay:.7});versus.players.forEach((pid,i)=>{if(pid==='guest'||(i===1&&versus.players[0]===pid))return;const pp=pid===players.active?profile:readProfile(playerStorage(pid));addSparks(pp,i===w?2:1);refreshDaily(pp,dayKey(),{seed:pid,friends:true,storyLeft:!!currentStep(pp)});progressDaily(pp,{friend:true});if(pid===players.active)persist();else saveProfile(playerStorage(pid),pp);});}
   $('result-content').innerHTML=`${done?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${done?'gold':''}">${icon(done?'trophy':w<0?'shield':'star')}</div><span class="result-kicker">חבר נגד חבר</span><h2 class="result-title"></h2><div class="result-score versus-score"><div><strong>${versus.wins[0]}</strong><span></span></div><span>:</span><div><strong>${versus.wins[1]}</strong><span></span></div></div><p></p>`;
   document.querySelector('#result-content .result-title').textContent=title;document.querySelector('#result-content > p').textContent=sub;
   document.querySelectorAll('#result-content .versus-score div span').forEach((el,i)=>{el.textContent=vsName(i)+' · '+match.actors[i].spec.name;});
@@ -667,7 +695,7 @@ function frameBody(timestamp){
 function openHelp(){pauseBattle();if(!$('help-dialog').open)$('help-dialog').showModal();}
 function handleNavigation(view){sound.click();if(screen==='battle'&&match?.status!=='finished'){pauseBattle();return;}match=null;showView(view);}
 function bindControls(){
-  $('quick-start').onclick=()=>startBattle('quick');$('home-play').onclick=()=>{sound.click();if(currentStep(profile))goStory();else startBattle('league');};$('home-tower').onclick=()=>{sound.click();showView('tower');};$('tower-start').onclick=()=>{sound.click();if(!profile.tower.run){startTowerRun(profile,profile.selected);persist();}startBattle('tower');};$('tower-quit').onclick=()=>{sound.click();endTowerRun(profile);persist();renderTower();renderTowerStrip();};$('home-league').onclick=()=>{sound.click();showView('league');};$('league-start').onclick=()=>{sound.click();startBattle('league');};$('home-map').onclick=()=>{sound.click();showView('story');};$('home-change').onclick=()=>{sound.click();$('roster').scrollIntoView({behavior:'smooth',block:'start'});};
+  $('quick-start').onclick=()=>startBattle('quick');$('home-play').onclick=()=>{sound.click();if(currentStep(profile))goStory();else startBattle('league');};$('home-goals').onclick=()=>{sound.click();showView('goals');};$('home-tower').onclick=()=>{sound.click();showView('tower');};$('tower-start').onclick=()=>{sound.click();if(!profile.tower.run){startTowerRun(profile,profile.selected);persist();}startBattle('tower');};$('tower-quit').onclick=()=>{sound.click();endTowerRun(profile);persist();renderTower();renderTowerStrip();};$('home-league').onclick=()=>{sound.click();showView('league');};$('league-start').onclick=()=>{sound.click();startBattle('league');};$('home-map').onclick=()=>{sound.click();showView('story');};$('home-change').onclick=()=>{sound.click();$('roster').scrollIntoView({behavior:'smooth',block:'start'});};
   $('story-continue').onclick=()=>{sound.click();showView('story');};$('story-mini').onclick=()=>{sound.click();showView('story');};$('story-go').onclick=()=>{sound.click();goStory();};$('castle-egg').onclick=tapEgg;$('castle-back').onclick=()=>showView('story');$('castle-next').onclick=revealCastle;$('cup-start').onclick=()=>startBattle('cup');$('cup-teaser').onclick=()=>showView('cup');$('journey-start').onclick=continueJourney;$('challenge-start').onclick=()=>startBattle('challenge');$('upgrade-confirm').onclick=confirmUpgrade;$('workshop-back').onclick=()=>showView('cup');
   $('difficulty').onchange=()=>{profile.level=$('difficulty').value;persist();};
   $('brand-home').onclick=()=>handleNavigation('lobby');document.querySelectorAll('[data-view]').forEach(el=>el.onclick=()=>handleNavigation(el.dataset.view));document.querySelectorAll('[data-home]').forEach(el=>el.onclick=()=>showView('lobby'));
@@ -734,7 +762,7 @@ function bindStick(zone,joystick,knob,state){
 const advance=(seconds,input={},live=false)=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match.status!=='finished';i++){if(live&&match.versus){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,live?currentInput():{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish')onFinish();}updateTutorial(seconds);renderer.render(match,1/60,clock+=seconds);renderHUD();return match.status;};
 window.__LEAGUE__=Object.freeze({advance,stick:()=>({x:+input.stickX.toFixed(2),y:+input.stickY.toFixed(2)}),audio:()=>({ctx:sound.ctx?.state||'none',scene:sound.scene,music:Object.fromEntries(Object.entries(sound.music||{}).map(([k,t])=>[k,{paused:t.el.paused,time:+t.el.currentTime.toFixed(1),ready:t.el.readyState,gain:+t.g.gain.value.toFixed(2)}]))}),skip:()=>{if(!match||match.status==='finished')return false;finish(match,0,'test');onFinish();return true;},camera:()=>({scale:+renderer.scale.toFixed(3),offsetX:Math.round(renderer.offsetX),offsetY:Math.round(renderer.offsetY),close:!!renderer.cam,cinematic:!!renderer.punch,size:renderer.size}),snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,mode:match.mode||null,ball:match.ball?{x:match.ball.x,y:match.ball.y,carrier:match.ball.carrier,score:[...match.ball.score]}:null,wind:match.wind?{holder:match.wind.holder,feathers:match.wind.feathers.map(f=>({x:f.x,y:f.y}))}:null,lava:match.lava?{scale:match.lava.scale,embers:match.lava.embers.map(e=>({x:e.x,y:e.y}))}:null,trio:match.trio?[trioLeft(match,0),trioLeft(match,1)]:null,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,out:a.out||0,feathers:a.feathers||0,power:a.power||0,maxHp:a.spec.hp,specialCd:a.specialCd,superCharge:a.superCharge,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
 async function boot(){
-  $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);buildRoster();renderStoryPanel();bindControls();updateHeader();showView(players.players.length>1?'players':'lobby');$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);
+  $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);refreshTodayGoals();buildRoster();renderStoryPanel();bindControls();updateHeader();showView(players.players.length>1?'players':'lobby');$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);
     if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
   }catch(error){console.error(error);$('loading-text').textContent='חלק מהציורים לא נטענו. בדקו שהמשחק נפתח דרך קובץ ההפעלה ונסו שוב.';$('load-retry').hidden=false;}
 }

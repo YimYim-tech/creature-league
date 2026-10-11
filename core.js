@@ -517,7 +517,7 @@ export function step(m,input={},dt=1/60,rivalInput=null) {
 }
 export function resultStats(m) {const a=m.actors[0];return {damage:Math.round(a.stats.damage),blocked:Math.round(a.stats.blocked),accuracy:a.stats.shots?Math.round(a.stats.hits/a.stats.shots*100):0,specials:a.stats.specials,healed:Math.round(a.stats.healed),weakHits:a.stats.weakHits,seconds:Math.round(m.time)};}
 export const STORAGE_KEY='creature-league.v1';
-export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{},box:{sparks:1,earned:0,opened:0,pending:null},looks:{},frames:[],frame:null,league:freshLeague(),tower:{best:0,runs:0,run:null}};}
+export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{},box:{sparks:1,earned:0,opened:0,pending:null},looks:{},frames:[],frame:null,league:freshLeague(),tower:{best:0,runs:0,run:null},daily:{day:'',goals:[],bonusDay:''}};}
 export function readProfile(storage) {
   const fresh=freshProfile();try{const data=JSON.parse(storage.getItem(STORAGE_KEY));if(!data||data.version!==1)return fresh;
     for(const key of ['wins','played','cups','challengeWins','bestStreak','streak'])fresh[key]=Number.isFinite(data[key])?clamp(Math.floor(data[key]),0,1e8):0;
@@ -537,7 +537,7 @@ export function readProfile(storage) {
     if(Array.isArray(data.newCards))fresh.newCards=[...new Set(data.newCards.filter(id=>isUnlocked(fresh,id)||fresh.storyCards.includes(id)))];
     for(const id of Object.keys(CREATURES)){const skin=data.skins?.[id];if(typeof skin==='string'&&SKINS.some(s=>s.id===skin))fresh.skins[id]=skin;}
     if(!isUnlocked(fresh,fresh.selected))fresh.selected='maimi';
-    readBoxes(data,fresh);readLeague(data,fresh);readTower(data,fresh);
+    readBoxes(data,fresh);readLeague(data,fresh);readTower(data,fresh);readDaily(data,fresh);
     if(data.lastBuild&&CREATURES[data.lastBuild.player])fresh.lastBuild={player:data.lastBuild.player,upgrades:cleanUpgrades(data.lastBuild.upgrades)};return fresh;
   }catch{return fresh;}
 }
@@ -749,3 +749,51 @@ export function recordTower(profile,m){
 }
 export function chooseTowerPick(profile,id){const run=profile.tower.run;if(!run?.pending?.includes(id))return false;run.picks.push(id);run.pending=null;return true;}
 export function endTowerRun(profile){if(!profile.tower.run)return false;profile.tower.run=null;profile.tower.runs++;return true;}
+
+// ------------------------------------------------------------------ goals of the day
+// Three small goals a day, each with a picture. A goal not finished today simply stays: there is no streak to lose.
+// Each finished goal gives two sparks; all three on one day give a gift box.
+export const GOAL_SPARKS=2,GOAL_COUNT=3;
+export const GOAL_TYPES={
+  winElement:{need:1,icon:'element',family:'who'},winWith:{need:1,icon:'creature',family:'who'},wins:{need:3,icon:'star'},
+  league:{need:2,icon:'trophy'},tower:{need:3,icon:'tower'},supers:{need:5,icon:'bolt'},
+  story:{need:1,icon:'arrow'},replayStars:{need:1,icon:'star'},friend:{need:1,icon:'duo'},
+};
+export const dayKey=(date=new Date())=>date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+const hashText=t=>{let h=2166136261;for(const ch of String(t)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;};
+function readDaily(data,fresh){
+  const d=data.daily;if(!d||typeof d!=='object')return;const day=/^\d{4}-\d{2}-\d{2}$/;
+  const goals=Array.isArray(d.goals)?d.goals.filter(g=>g&&GOAL_TYPES[g.type]).slice(0,GOAL_COUNT).map(g=>({type:g.type,param:typeof g.param==='string'&&g.param.length<24?g.param:null,need:clamp(Math.floor(+g.need||GOAL_TYPES[g.type].need),1,99),have:clamp(Math.floor(+g.have||0),0,99),done:!!g.done})):[];
+  fresh.daily={day:day.test(d.day)?d.day:'',goals,bonusDay:day.test(d.bonusDay)?d.bonusDay:''};
+}
+// The goals a child can do right now, from what is already open to them.
+function eligibleGoals(profile,{friends=false,storyLeft=true}={}){
+  const team=Object.keys(CREATURES).filter(id=>isUnlocked(profile,id)),elements=[...new Set(team.map(id=>CREATURES[id].element))];
+  const out=[{type:'wins'},{type:'supers'}];
+  for(const el of elements)out.push({type:'winElement',param:el});
+  for(const id of team)if(id!==profile.selected)out.push({type:'winWith',param:id});
+  const open=(profile.story?.done||0)>=4;
+  if(storyLeft)out.push({type:'story'});
+  if(open){out.push({type:'league'},{type:'tower'});}
+  if((profile.story?.done||0)>0)out.push({type:'replayStars'});
+  if(friends)out.push({type:'friend'});
+  return out;
+}
+// A new day keeps unfinished goals and fills the free places with new ones of other kinds.
+export function refreshDaily(profile,today=dayKey(),{seed='',friends=false,storyLeft=true}={}){
+  const D=profile.daily;if(D.day===today&&D.goals.length)return false;
+  const keep=D.goals.filter(g=>!g.done),r=seeded(hashText(today+'|'+seed)),pool=eligibleGoals(profile,{friends,storyLeft}).filter(g=>!keep.some(k=>k.type===g.type));
+  const goals=[...keep];
+  while(goals.length<GOAL_COUNT&&pool.length){const g=pool.splice(Math.floor(r()*pool.length),1)[0],fam=GOAL_TYPES[g.type].family;if(goals.some(x=>x.type===g.type||fam&&GOAL_TYPES[x.type].family===fam))continue;goals.push({type:g.type,param:g.param??null,need:GOAL_TYPES[g.type].need,have:0,done:false});}
+  D.day=today;D.goals=goals;return true;
+}
+// After a battle: what moved forward. A finished goal pays at once; the third one of the day brings the gift box.
+export function progressDaily(profile,ev,today=dayKey()){
+  const D=profile.daily,moved=[];let boxes=0;
+  for(const g of D.goals){if(g.done)continue;const c=CREATURES[ev.creature];
+    const add=g.type==='wins'?(ev.win?1:0):g.type==='supers'?(ev.supers||0):g.type==='winElement'?(ev.win&&c?.element===g.param?1:0):g.type==='winWith'?(ev.win&&ev.creature===g.param?1:0)
+      :g.type==='league'?(ev.mode==='league'?1:0):g.type==='tower'?(ev.towerCleared?1:0):g.type==='story'?(ev.storyStep?1:0):g.type==='replayStars'?(ev.replayStars>=3?1:0):g.type==='friend'?(ev.friend?1:0):0;
+    if(!add)continue;g.have=Math.min(g.need,g.have+add);if(g.have>=g.need){g.done=true;boxes+=addSparks(profile,GOAL_SPARKS);}moved.push(g);}
+  let bonus=false;if(D.goals.length&&D.goals.every(g=>g.done)&&D.bonusDay!==today){D.bonusDay=today;profile.box.earned++;bonus=true;}
+  return {moved,boxes,bonus};
+}

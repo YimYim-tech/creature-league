@@ -445,3 +445,33 @@ body.versus-play #rival-level{color:#ff9aa8}
   .home-strips .rank-shield,.home-strips .tower-badge{width:24px;height:26px}.home-strips .rank-shield svg,.home-strips .tower-badge svg{width:14px;height:14px}
   .home-strips .box-strip-chest .chest.mini{width:30px;height:25px}
 }
+
+/* ------------------------------------------------------------------ goals of the day */
+.goals-strip{display:flex;align-items:center;gap:10px;padding:6px 16px 6px 10px;border:0;border-radius:14px;background:#0b1a22b3;color:#f3e6c8;box-shadow:0 0 0 2px #c9a35d66;cursor:pointer;font:inherit}
+.goals-strip.ready{box-shadow:0 0 0 2px #7fe0a8,0 0 14px #7fe0a855}
+.goals-badge{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:50%;background:radial-gradient(circle,#ffffff 0 22%,#d9463b 23% 42%,#ffffff 43% 62%,#d9463b 63%);box-shadow:0 0 0 2px #3a1d0f,0 3px 6px #0008}
+.goals-badge svg{display:none}
+.goals-dots{display:inline-flex;gap:4px}.goals-dots i{width:10px;height:10px;border-radius:50%;background:#0005;box-shadow:inset 0 0 0 2px #7fe0a8}.goals-dots i.on{background:#7fe0a8}
+.goals-view{padding:16px 22px 26px;max-width:760px;margin-inline:auto}
+.goals-heading{text-align:center;margin-bottom:12px}
+.goals-heading h1{margin:0;font-family:var(--display);font-weight:900;font-size:40px;color:var(--parchment);text-shadow:0 2px 0 #0009}
+.goals-heading h1 em{font-style:normal;color:#9ff0c0}
+.goals-heading p{margin:4px 0 0;color:#dccfb0;font-size:14px}
+.goals-list{display:grid;gap:10px}
+.goal{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:var(--grain),var(--parchment);color:var(--ink);box-shadow:var(--frame),0 8px 16px #0006}
+.goal.done{opacity:.75}
+.goal-pic{display:grid;place-items:center;width:64px;height:64px;border-radius:14px;background:radial-gradient(circle,color-mix(in srgb,var(--c) 35%,#fff6e0),#f1e4c4 70%);color:var(--brick)}
+.goal-pic svg{width:34px;height:34px}.goal-pic canvas{width:64px;height:64px}
+.goal-copy{display:grid;gap:4px}.goal-copy b{font-size:17px}.goal-copy small{font-size:12px;opacity:.8}
+.goal-copy .level-bar{background:#0002}
+.goal-check{font-size:28px;color:#1f9d5a;font-weight:900;padding:0 6px}
+.goals-bonus{text-align:center;color:var(--gold-hi);font-weight:700;margin-top:12px}
+.result-goals{display:grid;gap:3px;margin:8px auto 0;width:fit-content;padding:5px 12px;border-radius:12px;background:#0002;font-size:13px}
+.result-goals span{display:flex;align-items:center;gap:6px}.result-goals svg{width:16px;height:16px}
+.result-goals .done{font-weight:900;color:#1f7a45}.result-goals .bonus{color:#9a6a00}
+@media (max-height:600px) and (orientation:landscape){
+  .goals-view{padding:6px 12px 12px}.goals-heading h1{font-size:24px}.goals-heading p{font-size:11px}.goals-heading{margin-bottom:6px}
+  .goals-list{gap:6px}.goal{padding:5px 10px;gap:10px}.goal-pic{width:48px;height:48px}.goal-pic svg{width:26px;height:26px}.goal-pic canvas{width:48px;height:48px}.goal-copy b{font-size:14px}
+  .home-strips .goals-badge{width:24px;height:24px}.home-strips .goals-dots{display:none}
+  .result-goals{margin-top:4px;font-size:11px}
+}
