@@ -351,3 +351,43 @@ body.versus-play #rival-level{color:#ff9aa8}
 .island-step .button{min-height:36px;padding:4px 12px;font-size:14px}
 @media (max-height:600px) and (orientation:landscape){.island-dialog{padding:14px 16px}.island-dialog h2{font-size:22px}.island-step{padding:5px 10px}.island-step b{font-size:15px}.island-steps{gap:5px}}
 .island-step-lock svg{width:20px;height:20px;opacity:.5}
+
+/* ------------------------------------------------------------------ the league and creature levels */
+.home-strips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.home-strips .box-strip{margin:0}
+.lobby-view.early .league-strip{display:none}
+.league-strip{display:flex;align-items:center;gap:10px;padding:6px 16px 6px 10px;border:0;border-radius:14px;background:#0b1a22b3;color:#f3e6c8;box-shadow:0 0 0 2px #c9a35d66;cursor:pointer;font:inherit}
+/* A rank: a small shield in the rank's colour with a trophy. */
+.rank-shield{display:grid;place-items:center;width:38px;height:42px;flex:none;color:#3a1d0f;background:linear-gradient(180deg,color-mix(in srgb,var(--r) 60%,#fff),var(--r) 55%,color-mix(in srgb,var(--r) 60%,#000));clip-path:polygon(50% 0,100% 14%,100% 58%,50% 100%,0 58%,0 14%);filter:drop-shadow(0 2px 3px #0008)}
+.rank-shield svg{width:20px;height:20px}
+.rank-shield.big{width:84px;height:94px}.rank-shield.big svg{width:42px;height:42px}
+.league-bar,.level-bar{position:relative;display:block;height:8px;border-radius:5px;background:#0005;overflow:hidden;min-width:120px}
+.league-bar i,.level-bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#f2c14e,#ffe9a0);border-radius:inherit}
+.league-bar.big{height:14px}
+.league-view{padding:16px 22px 28px;max-width:980px;margin-inline:auto}
+.league-head{display:flex;align-items:center;gap:16px;justify-content:center;text-align:right}
+.league-head h1{margin:0;font-family:var(--display);font-weight:900;font-size:38px;color:var(--parchment);text-shadow:0 2px 0 #0009}
+.league-head p{margin:2px 0 0;color:#dccfb0;font-size:14px}
+.league-progress{display:grid;gap:6px;max-width:520px;margin:14px auto 6px;text-align:center;color:var(--gold-hi);font-weight:700}
+.league-road{list-style:none;display:flex;gap:8px;justify-content:center;margin:10px 0 4px;padding:0;direction:rtl;overflow-x:auto}
+.road-stop{display:grid;justify-items:center;gap:1px;min-width:62px;padding:6px 6px;border-radius:12px;background:#0b1a2266;color:#dccfb0}
+.road-stop b{font-size:14px;color:var(--parchment)}.road-stop small{font-size:11px}
+.road-stop.got{opacity:.6}.road-stop.got small{color:#9ff0c0}
+.road-stop.next{box-shadow:0 0 0 2px var(--gold-hi),0 0 16px #ffcf5a66;background:#3a2a0a99}
+.league-fighters{justify-content:center}
+#league-start{display:flex;margin:6px auto 0;position:sticky;bottom:10px;z-index:5;box-shadow:0 10px 26px #000b}
+.chip-level{font-size:10px;opacity:.75}
+.tcard-level{font-size:11px;font-weight:900;padding:1px 8px;border-radius:999px;background:#0008;color:#ffe9a0;box-shadow:0 0 0 1px #ffe9a066}
+.tcard-level.master{background:linear-gradient(90deg,#f2c14e,#fff3b8);color:#3a1d0f}
+.card-level{display:grid;gap:4px;margin:8px 0 10px}.card-level b{font-size:16px}.card-level small{font-size:12px;opacity:.8}
+.result-league,.result-level{display:flex;align-items:center;justify-content:center;gap:12px;margin:8px auto 0;width:fit-content;padding:5px 12px;border-radius:12px;background:#0002}
+.result-league b{display:block;font-size:17px}.result-league small{font-size:12px;opacity:.8}
+.result-level{display:grid;gap:4px;min-width:200px}.result-level b{font-size:14px}
+.result-level.up{background:linear-gradient(90deg,#f2c14e55,#fff3b855);box-shadow:0 0 0 2px #f2c14e}
+@media (max-height:600px) and (orientation:landscape){
+  .home-strips{margin-top:6px;gap:6px;flex-wrap:nowrap}.league-strip{padding:3px 10px 3px 6px}.league-strip .box-strip-copy b{font-size:12px}.rank-shield{width:28px;height:31px}.rank-shield svg{width:15px;height:15px}
+  .league-strip .league-bar{min-width:90px}
+  .league-view{padding:6px 12px 12px}.league-head h1{font-size:24px}.league-head p{font-size:11px}.rank-shield.big{width:52px;height:58px}.rank-shield.big svg{width:26px;height:26px}
+  .league-progress{margin:6px auto 2px;font-size:12px}.league-road{margin:4px 0}.road-stop{min-width:50px;padding:3px 4px}
+  .result-league,.result-level{margin-top:4px;padding:3px 10px}
+}

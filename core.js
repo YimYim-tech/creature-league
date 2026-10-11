@@ -17,9 +17,14 @@ export const CREATURES = Object.freeze({
   fireguard: { id:'fireguard', magic:90, name:'שומר האש', element:'אש', role:'אריה הלבה', color:'#ff8a2a', dark:'#8a2c0a', hp:235, speed:230, damage:19, interval:.48, shotSpeed:560, armor:.1, radius:28, height:118, specialCooldown:7.5, special:'שאגת להבה', specialIcon:'flame', description:'שאגת אש קדימה: שורפת מיד את מי שמולו ומשאירה רצפה בוערת.', tip:'השאגה קצרה: התקרבו ליריב לפני שאתם שואגים.', number:'43', rarity:'אגדי', facesLeft:true, shotRadius:10, aiRange:240, specialRange:260 },
   zoharon: { id:'zoharon', magic:95, name:'זוהרון', element:'אור', role:'דרקון הכוכבים', color:'#ffc23a', dark:'#8a5a0a', hp:215, speed:250, damage:15, interval:.38, shotSpeed:720, armor:.06, radius:27, height:120, specialCooldown:7, special:'מטר כוכבים', specialIcon:'star', description:'מטר כוכבים נופל סביב היריב, אחד אחרי השני. כל כוכב מסמן עיגול זהוב לפני שהוא נוחת.', tip:'הפעילו את המטר כשהיריב עומד במקום או ליד הקיר: קשה לברוח מכל הכוכבים.', number:'44', rarity:'אגדי', facesLeft:true, aiRange:300, specialRange:560, star:true },
   kokhavit: { id:'kokhavit', magic:95, name:'כוכבית', element:'אור', role:'אילת הבדולח', color:'#ffe27a', dark:'#7a6418', hp:200, speed:275, damage:12, interval:.32, shotSpeed:700, armor:.04, radius:25, height:126, specialCooldown:7, special:'לב של אור', specialIcon:'shield', description:'מחזירה לעצמה חיים ומקבלת מגן אור שבולע את שתי הפגיעות הבאות.', tip:'שמרו את הסופר לרגע שהחיים יורדים. המגן עוצר גם את הסופר של היריב.', number:'45', rarity:'אגדי', facesLeft:true, aiRange:280, specialRange:2000, star:true, female:true },
+  // Box creatures: found only in a gold box, where the child chooses.
+  chutal: { id:'chutal', magic:85, name:'חוטל', element:'מים', role:'לוכדת החוטים', color:'#9fd8ff', dark:'#2a5f85', hp:180, speed:272, damage:12, interval:.34, shotSpeed:640, armor:.04, radius:23, height:98, specialCooldown:7, special:'חוט חזרה', specialIcon:'spiral', description:'זורקת חוט אור שתופס את היריב ומושך אותו ממש אליה.', tip:'זרקו את החוט כשהיריב רחוק או מתחבא מאחורי אבן: הוא נמשך ישר אליכם, ואז יורים מקרוב.', number:'46', rarity:'אגדי', facesLeft:true, female:true, box:true, aiRange:260, specialRange:540 },
+  hedanon: { id:'hedanon', magic:85, name:'הדנון', element:'רוח', role:'שומע הכל', color:'#b9a2ff', dark:'#4c3a8c', hp:155, speed:292, damage:10, interval:.29, shotSpeed:700, armor:0, radius:21, height:108, specialCooldown:7, special:'הד חוזר', specialIcon:'sound', description:'גל קול שפוגע איפה שהיריב עומד, וההד שלו חוזר ופוגע שוב רגע אחר כך.', tip:'הפעילו את ההד כשהיריב בפינה או תקוע: קשה לברוח משתי פגיעות.', number:'47', rarity:'אגדי', facesLeft:true, box:true, aiRange:280, specialRange:480 },
+  tlaor: { id:'tlaor', magic:90, name:'טלאור', element:'טבע', role:'תופר האור', color:'#ffaa4a', dark:'#7a3d0c', hp:205, speed:256, damage:14, interval:.4, shotSpeed:620, armor:.08, radius:24, height:104, specialCooldown:8, special:'תפר אור', specialIcon:'sparkle', description:'תופר בחוטי אור את האבנים השבורות בזירה, מתקן את עצמו ומקבל שריון לרגע.', tip:'חכו שהאבנים יישברו והחיים ירדו, ואז תפרו הכל בבת אחת.', number:'48', rarity:'אגדי', facesLeft:true, box:true, aiRange:240, specialRange:2000 },
   galgalor: { id:'galgalor', magic:65, name:'גלגל אור', element:'אנרגיה', role:'מבולגן בכוונה', color:'#7fe8ff', dark:'#1f7f9c', hp:165, speed:265, damage:11, interval:.3, shotSpeed:620, armor:0, radius:22, height:84, specialCooldown:7, special:'פיצוץ אנרגיה', specialIcon:'sparkle', description:'שחרור אנרגיה לכל הכיוונים: עשרה קליעים בבת אחת.', tip:'קפצו לאמצע הקרב ושחררו את הפיצוץ קרוב ליריב.', number:'05', rarity:'רגיל', wobble:.13, aiRange:220, specialRange:260 },
 });
 export const LEVELS = {
+  beginner:{name:'מתחילים',subtitle:'צעד ראשון בליגה',reaction:.62,fireScale:2.8,aimError:.36,speedScale:.72,specialDelay:5},
   rookie:{name:'חימום', subtitle:'לומדים את הזירה', reaction:.50, fireScale:2.2, aimError:.27, speedScale:.80, specialDelay:4},
   challenger:{name:'אתגר', subtitle:'כבר יודעים להתחמק', reaction:.30, fireScale:1.65, aimError:.18, speedScale:.92, specialDelay:2.5},
   veteran:{name:'ותיקים', subtitle:'כמעט אלופים', reaction:.25, fireScale:1.45, aimError:.14, speedScale:.96, specialDelay:1.8},
@@ -225,9 +230,10 @@ function actor(id,side,ids=[]) {
 }
 // A friend battle: two people share one screen, so both sides play by the same rules and nothing is saved.
 export const HEART_BONUS=.25;
-export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0]}={}) {
+export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0],boost=0,giantRival=false}={}) {
   if(!LEVELS[level])throw new Error('Unknown difficulty');
-  if(versus){boss=false;challenge=null;wild=null;story=null;giant=false;mirror=false;upgrades=[];if(mode==='trio')mode=null;}
+  if(versus){boss=false;challenge=null;wild=null;story=null;giant=false;mirror=false;upgrades=[];boost=0;if(mode==='trio')mode=null;}
+  if(giantRival)giant=true;
   // A trio match starts with the first creature of each team.
   const teamIds=mode==='trio'?[(team||[player,'havzuk','slauz']).filter(id=>CREATURES[id]).slice(0,3),(rivalTeam||[rival,'lohatan','zikuk']).filter(id=>CREATURES[id]).slice(0,3)]:null;
   if(teamIds){if(teamIds[0].length<3||teamIds[1].length<3)throw new Error('A trio needs three creatures');player=teamIds[0][0];rival=teamIds[1][0];upgrades=[];}
@@ -239,6 +245,7 @@ export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date
     shots:[],waves:[],zones:[],effects:[],events:[],nextId:0,pickup:null,pickupAt:12,ai:{timer:0,angle:0,strafe:1,strafeTime:0,moveX:0,moveY:0,aimX:0,aimY:0,fire:false,special:false},
     covers:[{x:449,y:350,r:35,hp:80,maxHp:80},{x:831,y:440,r:35,hp:80,maxHp:80},{x:650,y:237,r:28,hp:65,maxHp:65},{x:630,y:555,r:28,hp:65,maxHp:65}].map((c,i)=>({...c,...(challenge===CHALLENGE.id?{collapseAt:5+i*4}:{})}))};
   match.teamIds=teamIds;
+  {const k=clamp(+boost||0,0,.5);if(k){const a=match.actors[0];a.spec={...a.spec,hp:Math.round(a.spec.hp*(1+k)),damage:Math.round(a.spec.damage*(1+k))};a.hp=a.spec.hp;match.boost=k;}}
   if(versus){match.versus=true;
     // Each extra heart is a quarter more life: the way a younger friend gets a fair chance.
     match.actors.forEach((a,i)=>{const extra=clamp(Math.floor(hearts?.[i]||0),0,2);if(extra){a.spec={...a.spec,hp:Math.round(a.spec.hp*(1+HEART_BONUS*extra))};a.hp=a.spec.hp;}});}
@@ -342,12 +349,23 @@ function wildSpecial(m,a,surge) {
     // A heart of light: life comes back, and a shield swallows the next hits.
     const amount=Math.min(a.spec.hp-a.hp,a.spec.hp*(surge?.4:.3));a.hp+=amount;a.stats.healed+=amount;
     a.lightShield=surge?3:2;a.lightShieldTime=8;effect(m,'heal',a.x,a.y,{amount,color:'#fff3b0'});event(m,'heal',{side:a.side,amount});
+  } else if(a.id==='chutal'){
+    // A thread of light: it catches the rival and pulls it close.
+    m.shots.push({id:++m.nextId,owner:a.side,x:a.x+dir.x*(a.radius+10),y:a.y+dir.y*(a.radius+10),vx:dir.x*920,vy:dir.y*920,r:13,damage:surge?20:14,life:.62,color:a.spec.color,kind:'thread',pull:true});
+  } else if(a.id==='hedanon'){
+    // A sound wave where the rival stands, and its echo a moment later, a little wider.
+    const p=landing(m,a,480);for(const [delay,k] of [[.2,1],[.8,1.3]])m.zones.push({owner:a.side,kind:'echo',x:p.x,y:p.y,r:(surge?100:84)*k,age:0,life:delay+.35,delay,done:false,damage:surge?24:18});
+  } else if(a.id==='tlaor'){
+    // Stitches of light: broken stones are sewn back, the fox mends itself and its patches hold for a moment.
+    for(const c of m.covers)if(c.hp<c.maxHp&&!c.reef&&c.collapseAt==null){c.hp=c.maxHp;effect(m,'stitch',c.x,c.y,{color:'#ffd27a'});}
+    const amount=Math.min(a.spec.hp-a.hp,a.spec.hp*(surge?.32:.24));a.hp+=amount;a.stats.healed+=amount;a.guard=Math.max(a.guard,surge?2.4:1.8);
+    effect(m,'stitch',a.x,a.y,{color:'#ffd27a'});effect(m,'heal',a.x,a.y,{amount,color:'#ffd27a'});event(m,'heal',{side:a.side,amount});
   } else if(a.id==='galgalor'){
     const n=surge?14:10;for(let i=0;i<n;i++){const ang=a.aim+i*Math.PI*2/n;
       m.shots.push({id:++m.nextId,owner:a.side,x:a.x+Math.cos(ang)*(a.radius+8),y:a.y+Math.sin(ang)*(a.radius+8),vx:Math.cos(ang)*560,vy:Math.sin(ang)*560,r:8,damage:surge?13:12,life:1.1,color:a.spec.color,kind:'galgalor'});}
   }
 }
-const TRAIL={zoharon:'electric',kokhavit:'electric',windguard:'electric',seaguard:'water',fireguard:'fire',maimi:'water',tehomon:'water',tzlilon:'water',havzuk:'electric',zikuk:'electric',galgalor:'electric',lohatan:'fire',slauz:'shield',retetoz:'shield',shorshu:'shield'};
+const TRAIL={chutal:'water',hedanon:'electric',tlaor:'fire',zoharon:'electric',kokhavit:'electric',windguard:'electric',seaguard:'water',fireguard:'fire',maimi:'water',tehomon:'water',tzlilon:'water',havzuk:'electric',zikuk:'electric',galgalor:'electric',lohatan:'fire',slauz:'shield',retetoz:'shield',shorshu:'shield'};
 export const trailKind=id=>TRAIL[id]||'shield';
 function stepBoss(m,a,dt) {
   const b=a.boss,p=m.actors[0];b.timer-=dt;a.moveX=0;a.moveY=0;
@@ -389,7 +407,7 @@ function aiInput(m,dt) {
   const angle=Math.atan2(dy+p.moveY*p.spec.speed*lead*.8,dx+p.moveX*p.spec.speed*lead)+(m.random()-.5)*level.aimError*2;
   ai.aimX=a.x+Math.cos(angle)*500;ai.aimY=a.y+Math.sin(angle)*500;ai.fire=d<760&&!(p.out>0);
   if(m.ball?.carrier===1){const G=GOALS[0],gd=length(G.x-a.x,G.y-a.y);ai.aimX=G.x;ai.aimY=G.y+(m.random()-.5)*G.half;ai.fire=gd<BALL_TUNE.aiKick*(m.level==='rookie'?.8:1);ai.special=gd<BALL_TUNE.aiKick*1.5&&gd>BALL_TUNE.aiKick&&a.superCharge>=1;}
-  ai.special=m.time>level.specialDelay&&d<(a.spec.specialRange||300)&&d>(a.spec.specialMin||0)&&p.stun<=0&&(a.id!=='kokhavit'||a.hp<a.spec.hp*.75);
+  ai.special=m.time>level.specialDelay&&d<(a.spec.specialRange||300)&&d>(a.spec.specialMin||0)&&p.stun<=0&&(!['kokhavit','tlaor'].includes(a.id)||a.hp<a.spec.hp*.75);
   if(m.calm){ai.fire=false;ai.special=false;}return ai;
 }
 // Like Brawl Stars: after a few calm seconds without hitting or being hit, health refills.
@@ -430,6 +448,8 @@ function updateProjectiles(m,dt) {
     if(m.ball&&m.ball.carrier<0){const bt=segmentCircle(s.x,s.y,x,y,m.ball.x,m.ball.y,s.r+16);if(bt!=null&&bt<t){s.life=0;m.ball.vx+=s.vx*.4;m.ball.vy+=s.vy*.4;effect(m,'stone',m.ball.x,m.ball.y,{color:'#d6f1ff'});continue;}}
     for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){if(helped){s.chipped??=[];if(!s.chipped.includes(c)){s.chipped.push(c);c.hp=Math.max(0,c.hp-s.damage*.5);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});event(m,'cover',{broken:c.hp===0});}continue;}hit=c;t=ct;}}
     if(hit){s.x+=(x-s.x)*t;s.y+=(y-s.y)*t;s.life=0;if(s.explode)burst(m,s);
+      // The thread pulls whoever it catches to just in front of its owner.
+      if(s.pull&&hit.side!=null&&hit.invincible<=0&&!hit.boss){const o=m.actors[s.owner],n=norm(hit.x-o.x||.01,hit.y-o.y),gap=o.radius+hit.radius+34,from={x:hit.x,y:hit.y};hit.x=o.x+n.x*gap;hit.y=o.y+n.y*gap*.8;confine(hit);resolveCover(m,hit);hit.slow=Math.max(hit.slow,.9);effect(m,'thread',hit.x,hit.y,{from,to:{x:o.x,y:o.y},color:o.spec.color});event(m,'pull',{side:hit.side});}
       if(hit.side!=null){damage(m,hit,s.damage,m.actors[s.owner],{special:s.kind!==m.actors[s.owner]?.id&&s.kind!=='blast',hitAngle:Math.atan2(-s.vy,-s.vx),pushX:s.kind==='maimi'?s.vx*.018:0,pushY:s.kind==='maimi'?s.vy*.018:0});}
       else{hit.hp=Math.max(0,hit.hp-s.damage);effect(m,'stone',s.x,s.y,{color:'#ead2a9'});event(m,'cover',{broken:hit.hp===0});}
     }else{s.x=x;s.y=y;}
@@ -449,6 +469,7 @@ function updateProjectiles(m,dt) {
   m.waves=m.waves.filter(w=>w.age<w.life);
   for(const z of m.zones){z.age+=dt;z.pulse-=dt;const a=m.actors[z.owner],target=m.actors[1-z.owner];
     const inside=length(target.x-z.x,target.y-z.y)<z.r+target.radius;
+    if(z.kind==='echo'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'echo',z.x,z.y,{color:a.spec.color,r:z.r});if(inside&&target.invincible<=0&&!(target.out>0))damage(m,target,z.damage,a,{special:true});}continue;}
     if(z.kind==='star'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'starfall',z.x,z.y,{color:'#ffe27a',r:z.r});if(inside&&target.invincible<=0&&!(target.out>0)){const n=norm(target.x-z.x||.01,target.y-z.y);damage(m,target,z.damage,a,{special:true,pushX:n.x*30,pushY:n.y*24});}}continue;}
     if(z.kind==='roots'){if(!z.done&&z.age>=z.delay){z.done=true;if(inside&&target.invincible<=0){target.root=Math.max(target.root,z.root);damage(m,target,z.damage,a,{special:true});effect(m,'rooted',target.x,target.y,{color:'#9be06a'});}}continue;}
     if(z.kind==='tornado'){z.x+=z.vx*dt;z.y+=z.vy*dt;if(length((z.x-WORLD.cx)/WORLD.rx,(z.y-WORLD.cy)/WORLD.ry)>.93){z.vx*=-.6;z.vy*=-.6;}
@@ -495,16 +516,16 @@ export function step(m,input={},dt=1/60,rivalInput=null) {
 }
 export function resultStats(m) {const a=m.actors[0];return {damage:Math.round(a.stats.damage),blocked:Math.round(a.stats.blocked),accuracy:a.stats.shots?Math.round(a.stats.hits/a.stats.shots*100):0,specials:a.stats.specials,healed:Math.round(a.stats.healed),weakHits:a.stats.weakHits,seconds:Math.round(m.time)};}
 export const STORAGE_KEY='creature-league.v1';
-export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{},box:{sparks:1,earned:0,opened:0,pending:null},looks:{},frames:[],frame:null};}
+export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{},box:{sparks:1,earned:0,opened:0,pending:null},looks:{},frames:[],frame:null,league:freshLeague()};}
 export function readProfile(storage) {
   const fresh=freshProfile();try{const data=JSON.parse(storage.getItem(STORAGE_KEY));if(!data||data.version!==1)return fresh;
     for(const key of ['wins','played','cups','challengeWins','bestStreak','streak'])fresh[key]=Number.isFinite(data[key])?clamp(Math.floor(data[key]),0,1e8):0;
     if(!fresh.cups)fresh.challengeWins=0;
     if(CREATURES[data.selected])fresh.selected=data.selected;if(LEVELS[data.level])fresh.level=data.level;fresh.sound=data.sound!==false;
     fresh.history=Array.isArray(data.history)?data.history.filter(h=>h&&CREATURES[h.player]&&CREATURES[h.rival]&&typeof h.id==='string'&&Number.isFinite(h.damage)&&Number.isFinite(h.accuracy)).slice(0,12):[];
-    for(const id of Object.keys(CREATURES)){const c=data.creatures?.[id];if(c&&Number.isFinite(c.wins)&&Number.isFinite(c.played))fresh.creatures[id]={wins:clamp(c.wins,0,1e8),played:clamp(c.played,0,1e8),damage:Number.isFinite(c.damage)?clamp(c.damage,0,1e10):0};}
+    for(const id of Object.keys(CREATURES)){const c=data.creatures?.[id];if(c&&Number.isFinite(c.wins)&&Number.isFinite(c.played)){const wins=clamp(c.wins,0,1e8),played=clamp(c.played,0,1e8);fresh.creatures[id]={wins,played,damage:Number.isFinite(c.damage)?clamp(c.damage,0,1e10):0,xp:Number.isFinite(c.xp)?clamp(Math.floor(c.xp),0,1e8):wins*XP_WIN+Math.max(0,played-wins)*XP_PLAY};}}
     if(data.cup&&Number.isInteger(data.cup.stage)&&data.cup.stage>=0&&data.cup.stage<3)fresh.cup={stage:data.cup.stage,player:CREATURES[data.cup.player]?data.cup.player:fresh.selected,upgrades:cleanUpgrades(data.cup.upgrades).slice(0,data.cup.stage)};
-    fresh.unlocked=Array.isArray(data.unlocked)?[...new Set(data.unlocked.filter(id=>WILD.includes(id)||STAR_GUARDS.includes(id)))]:[];
+    fresh.unlocked=Array.isArray(data.unlocked)?[...new Set(data.unlocked.filter(id=>WILD.includes(id)||STAR_GUARDS.includes(id)||CREATURES[id]?.box))]:[];
     {let done=Number.isInteger(data.story?.done)?clamp(data.story.done,0,100):0;
     // Version 3 added the tide ball before the sea guardian (step 6) and the trio gate before the castle (step 13).
     if((data.story?.v||2)<3)done+=(done>6?1:0)+(done>13?1:0);
@@ -515,7 +536,7 @@ export function readProfile(storage) {
     if(Array.isArray(data.newCards))fresh.newCards=[...new Set(data.newCards.filter(id=>isUnlocked(fresh,id)||fresh.storyCards.includes(id)))];
     for(const id of Object.keys(CREATURES)){const skin=data.skins?.[id];if(typeof skin==='string'&&SKINS.some(s=>s.id===skin))fresh.skins[id]=skin;}
     if(!isUnlocked(fresh,fresh.selected))fresh.selected='maimi';
-    readBoxes(data,fresh);
+    readBoxes(data,fresh);readLeague(data,fresh);
     if(data.lastBuild&&CREATURES[data.lastBuild.player])fresh.lastBuild={player:data.lastBuild.player,upgrades:cleanUpgrades(data.lastBuild.upgrades)};return fresh;
   }catch{return fresh;}
 }
@@ -533,7 +554,7 @@ export function chooseUpgrade(profile,id) {
 export function recordResult(profile,m,mode) {
   if(m.status!=='finished'||profile.history.some(h=>h.id===m.id))return false;
   const won=m.winner===0;profile.played++;if(won){profile.wins++;profile.streak++;profile.bestStreak=Math.max(profile.bestStreak,profile.streak);}else profile.streak=0;
-  const id=m.actors[0].id,c=profile.creatures[id]??{wins:0,played:0,damage:0};c.played++;if(won)c.wins++;c.damage+=Math.round(m.actors[0].stats.damage);profile.creatures[id]=c;
+  const id=m.actors[0].id,c=profile.creatures[id]??{wins:0,played:0,damage:0,xp:0};c.played++;if(won)c.wins++;c.xp=(c.xp||0)+(won?XP_WIN:XP_PLAY);c.damage+=Math.round(m.actors[0].stats.damage);profile.creatures[id]=c;
   profile.history.unshift({id:m.id,player:id,rival:m.actors[1].id,won,draw:m.winner===-1,mode,upgrades:[...m.actors[0].upgrades],...resultStats(m)});profile.history=profile.history.slice(0,12);
   if(mode==='cup'&&won&&profile.cup){profile.cup.stage++;if(profile.cup.stage>=3){profile.cups++;profile.lastBuild={player:id,upgrades:[...m.actors[0].upgrades]};profile.cup=null;}}
   if(mode==='challenge'&&m.challenge===CHALLENGE.id&&challengeUnlocked(profile)&&won)profile.challengeWins=(profile.challengeWins||0)+1;
@@ -613,3 +634,42 @@ export function openBox(profile,random=Math.random){
   return {tier,prizes,choice};
 }
 export function chooseBoxPrize(profile,index){const p=profile.box.pending?.choice?.[index];if(!p)return null;applyPrize(profile,p);profile.box.pending=null;return p;}
+
+// ------------------------------------------------------------------ creature levels
+// Every battle teaches the creature something: a win gives more, a loss still counts. Level 10 is mastery.
+export const XP_WIN=10,XP_PLAY=4,LEVEL_XP=[0,20,50,90,140,200,270,350,440,540],MAX_LEVEL=LEVEL_XP.length,LEVEL_BONUS=.02;
+export const creatureXp=(profile,id)=>profile.creatures[id]?.xp||0;
+export function creatureLevel(profile,id){const xp=creatureXp(profile,id);let lv=1;while(lv<MAX_LEVEL&&xp>=LEVEL_XP[lv])lv++;return lv;}
+export function levelProgress(profile,id){const level=creatureLevel(profile,id),xp=creatureXp(profile,id);if(level>=MAX_LEVEL)return {level,pct:1,toNext:0};const a=LEVEL_XP[level-1],b=LEVEL_XP[level];return {level,pct:(xp-a)/(b-a),toNext:b-xp};}
+export const levelBoost=(profile,id)=>LEVEL_BONUS*(creatureLevel(profile,id)-1);
+
+// ------------------------------------------------------------------ the league
+// An endless trophy road. The rival's level follows the child, so about six battles in ten are won.
+export const RANKS=[{id:'bronze',name:'ארד',at:0,color:'#c98a4b'},{id:'silver',name:'כסף',at:100,color:'#c8d3de'},{id:'gold',name:'זהב',at:250,color:'#f2c14e'},{id:'diamond',name:'יהלום',at:450,color:'#7fe3ff'},{id:'champion',name:'אלופים',at:700,color:'#ff8a5c'},{id:'legend',name:'אגדה',at:1000,color:'#c69cff'}];
+export const LEAGUE_LEVELS=['beginner','rookie','challenger','veteran','champion'],PRIZE_EVERY=30,LEAGUE_WIN=8,LEAGUE_LOSS=3,LEAGUE_SAFE=60;
+export function freshLeague(){return {trophies:0,best:0,skill:1,played:0,wins:0};}
+function readLeague(data,fresh){const l=data.league,num=v=>Number.isFinite(v)?v:null;if(!l||typeof l!=='object')return;
+  const trophies=clamp(Math.floor(num(l.trophies)??0),0,1e6);fresh.league={trophies,best:Math.max(trophies,clamp(Math.floor(num(l.best)??0),0,1e6)),skill:clamp(num(l.skill)??1,0,LEAGUE_LEVELS.length-.01),played:clamp(Math.floor(num(l.played)??0),0,1e8),wins:clamp(Math.floor(num(l.wins)??0),0,1e8)};}
+export const rankOf=t=>RANKS.filter(r=>t>=r.at).at(-1);
+export const nextRank=t=>RANKS.find(r=>r.at>t)||null;
+export const leagueLevel=profile=>LEAGUE_LEVELS[clamp(Math.floor(profile.league.skill),0,LEAGUE_LEVELS.length-1)];
+export const nextPrizeAt=profile=>(Math.floor(profile.league.best/PRIZE_EVERY)+1)*PRIZE_EVERY;
+// The prizes on the road between two best scores: a box every 30 trophies, and one more for every new rank.
+export function prizesBetween(from,to){const boxes=Math.max(0,Math.floor(to/PRIZE_EVERY)-Math.floor(from/PRIZE_EVERY)),ranks=RANKS.filter(r=>r.at>from&&r.at<=to);return {boxes:boxes+ranks.length,ranks};}
+export function makeLeagueMatch(profile,options={},random=Math.random){
+  const player=isUnlocked(profile,profile.selected)?profile.selected:'maimi',rivals=Object.keys(CREATURES).filter(id=>id!==player);
+  const rival=rivals[Math.floor(random()*rivals.length)],roll=random(),mode=roll<.12?'lava':roll<.22?'wind':roll<.32?'ball':null;
+  const arenas=['wind','sea','fire','mirror','castle'],arena=mode?({lava:'fire',wind:'wind',ball:'sea'})[mode]:arenas[Math.floor(random()*arenas.length)];
+  // Now and then a giant: bigger and slower to fall, so it fights one level lower.
+  let level=leagueLevel(profile);const giant=!mode&&random()<.1;if(giant)level=LEAGUE_LEVELS[Math.max(0,LEAGUE_LEVELS.indexOf(level)-1)];
+  const m=makeMatch({...options,player,rival,level,mode,arena,giantRival:giant,boost:options.boost??levelBoost(profile,player)});m.league=true;return m;
+}
+export function recordLeague(profile,m){
+  if(m.status!=='finished'||!m.league)return null;
+  const L=profile.league,won=m.winner===0,draw=m.winner===-1,a=m.actors[0],before=L.trophies,best=L.best,rankBefore=rankOf(before);
+  const delta=won?LEAGUE_WIN+(a.hp/a.spec.hp>=.5?2:0):draw?0:L.trophies<LEAGUE_SAFE?0:-Math.min(LEAGUE_LOSS,L.trophies-rankBefore.at);
+  L.trophies=Math.max(0,L.trophies+delta);L.best=Math.max(L.best,L.trophies);L.played++;if(won)L.wins++;
+  L.skill=clamp(L.skill+(won?.35:draw?0:-.5),0,LEAGUE_LEVELS.length-.01);
+  const prizes=prizesBetween(best,L.best);if(prizes.boxes)profile.box.earned+=prizes.boxes;
+  return {delta,trophies:L.trophies,rank:rankOf(L.trophies),rankUp:prizes.ranks.at(-1)||null,boxes:prizes.boxes};
+}
