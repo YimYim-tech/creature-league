@@ -391,3 +391,57 @@ body.versus-play #rival-level{color:#ff9aa8}
   .league-progress{margin:6px auto 2px;font-size:12px}.league-road{margin:4px 0}.road-stop{min-width:50px;padding:3px 4px}
   .result-league,.result-level{margin-top:4px;padding:3px 10px}
 }
+
+/* ------------------------------------------------------------------ the mask tower */
+.lobby-view.early .tower-strip{display:none}
+.tower-strip{display:flex;align-items:center;gap:10px;padding:6px 16px 6px 10px;border:0;border-radius:14px;background:#0b1a22b3;color:#f3e6c8;box-shadow:0 0 0 2px #c9a35d66;cursor:pointer;font:inherit}
+.tower-strip.ready{box-shadow:0 0 0 2px #b88cff,0 0 16px #b88cff66}
+.tower-strip small{font-size:12px;opacity:.85}
+.tower-badge{display:grid;place-items:center;width:38px;height:42px;flex:none;border-radius:10px 10px 4px 4px;background:linear-gradient(180deg,#8f7bd6,#4a3a8c);color:#fff3c4;box-shadow:0 0 0 2px #2b2147,0 3px 6px #0008}
+.tower-badge svg{width:22px;height:22px}
+.tower-view{padding:14px 22px 26px;max-width:1080px;margin-inline:auto}
+.tower-layout{display:grid;grid-template-columns:minmax(0,.55fr) minmax(0,1.45fr);gap:24px;align-items:start}
+.tower-art{list-style:none;margin:0;padding:10px 12px;display:grid;gap:6px;border-radius:18px 18px 8px 8px;background:linear-gradient(180deg,#2b2147,#14102a);box-shadow:0 0 0 2px #8f7bd6,0 12px 26px #000a}
+.tower-floor{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;height:42px;border-radius:8px;background:repeating-linear-gradient(90deg,#3a2f63 0 34px,#30275a 34px 36px);color:#d8ccff;font-weight:900}
+.tower-floor b{font-size:18px}.tower-floor span{font-size:11px;padding:1px 6px;border-radius:999px;background:#ffcf3a;color:#3a1d0f}
+.tower-floor em{position:absolute;inset-inline-start:8px;font-style:normal;font-size:11px;color:#ffe9a0}
+.tower-floor.done{opacity:.55}
+.tower-floor.here{background:linear-gradient(90deg,#ffcf3a,#fff3b8);color:#3a1d0f;box-shadow:0 0 18px #ffcf3a88}
+.tower-floor.guard:not(.here){box-shadow:inset 0 0 0 2px #ffcf3a88}
+.tower-copy h1{margin:2px 0;font-family:var(--display);font-weight:900;font-size:40px;color:var(--parchment);text-shadow:0 2px 0 #0009}
+.tower-copy h1 em{font-style:normal;color:#c9b8ff}
+.tower-copy p{color:#dccfb0;font-size:15px;margin:4px 0 10px}
+.tower-run{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+.tower-hero{font-weight:900;padding:4px 12px;border-radius:999px;background:color-mix(in srgb,var(--c) 30%,#0b1a22);color:#fff;box-shadow:0 0 0 2px var(--c)}
+.tower-lives{color:#ffe9a0;font-weight:700;font-size:14px}
+.tower-picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:6px 0 12px}
+.tower-picks:empty{display:none}
+.tower-pick{min-height:0}.tower-pick h2{font-size:18px;margin:4px 0}.tower-pick p{font-size:13px;margin:0}
+.tower-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px}
+.tower-actions .text-button{color:#dccfb0}
+@media (max-width:760px){.tower-layout{grid-template-columns:1fr}.tower-art{grid-template-columns:repeat(7,1fr);direction:ltr}.tower-floor{height:36px}}
+@media (max-height:600px) and (orientation:landscape){
+  .tower-view{padding:6px 12px 12px}.tower-layout{grid-template-columns:minmax(0,.4fr) minmax(0,1.6fr);gap:14px}
+  .tower-floor{height:30px}.tower-floor b{font-size:14px}.tower-art{gap:4px;padding:6px 8px}
+  .tower-copy h1{font-size:24px}.tower-copy p{font-size:12px;margin:2px 0 6px}.tower-picks{gap:6px}.tower-pick h2{font-size:14px}.tower-pick p{font-size:11px}
+  .tower-strip{padding:3px 10px 3px 6px}.tower-strip .box-strip-copy b{font-size:12px}.tower-strip small{font-size:10px}.tower-badge{width:28px;height:31px}.tower-badge svg{width:16px;height:16px}
+  .home-strips{flex-wrap:wrap}
+}
+/* A sideways phone: the creatures to choose from scroll in one row, and the start button stays in view. */
+@media (max-height:600px) and (orientation:landscape){
+  .tower-view .wild-fighters,.league-view .wild-fighters{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding:2px}
+  .tower-view .fighter-chip,.league-view .fighter-chip{flex:none;width:66px}.tower-view .fighter-chip canvas,.league-view .fighter-chip canvas{width:50px;height:50px}
+  .tower-actions{position:sticky;bottom:6px;z-index:5}
+}
+/* Short labels for the home strips; a sideways phone shows three compact buttons in one row. */
+.strip-short{display:none}
+@media (max-height:600px) and (orientation:landscape){
+  .home-strips{flex-wrap:nowrap;gap:6px}
+  .home-strips>button{flex:1 1 0;min-width:0;flex-direction:column;gap:2px;padding:4px 6px}
+  .home-strips .strip-long,.home-strips .league-bar,.home-strips .spark-meter{display:none}
+  .home-strips .strip-short{display:inline}
+  .home-strips .box-strip-copy{text-align:center;gap:0}.home-strips .box-strip-copy b{font-size:12px;white-space:nowrap}
+  .home-strips .tower-strip small{font-size:10px;white-space:nowrap}
+  .home-strips .rank-shield,.home-strips .tower-badge{width:24px;height:26px}.home-strips .rank-shield svg,.home-strips .tower-badge svg{width:14px;height:14px}
+  .home-strips .box-strip-chest .chest.mini{width:30px;height:25px}
+}

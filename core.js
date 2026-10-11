@@ -230,7 +230,7 @@ function actor(id,side,ids=[]) {
 }
 // A friend battle: two people share one screen, so both sides play by the same rules and nothing is saved.
 export const HEART_BONUS=.25;
-export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0],boost=0,giantRival=false}={}) {
+export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0],boost=0,giantRival=false,run=null}={}) {
   if(!LEVELS[level])throw new Error('Unknown difficulty');
   if(versus){boss=false;challenge=null;wild=null;story=null;giant=false;mirror=false;upgrades=[];boost=0;if(mode==='trio')mode=null;}
   if(giantRival)giant=true;
@@ -245,6 +245,7 @@ export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date
     shots:[],waves:[],zones:[],effects:[],events:[],nextId:0,pickup:null,pickupAt:12,ai:{timer:0,angle:0,strafe:1,strafeTime:0,moveX:0,moveY:0,aimX:0,aimY:0,fire:false,special:false},
     covers:[{x:449,y:350,r:35,hp:80,maxHp:80},{x:831,y:440,r:35,hp:80,maxHp:80},{x:650,y:237,r:28,hp:65,maxHp:65},{x:630,y:555,r:28,hp:65,maxHp:65}].map((c,i)=>({...c,...(challenge===CHALLENGE.id?{collapseAt:5+i*4}:{})}))};
   match.teamIds=teamIds;
+  if(run&&!versus)applyRun(match,run);
   {const k=clamp(+boost||0,0,.5);if(k){const a=match.actors[0];a.spec={...a.spec,hp:Math.round(a.spec.hp*(1+k)),damage:Math.round(a.spec.damage*(1+k))};a.hp=a.spec.hp;match.boost=k;}}
   if(versus){match.versus=true;
     // Each extra heart is a quarter more life: the way a younger friend gets a fair chance.
@@ -516,7 +517,7 @@ export function step(m,input={},dt=1/60,rivalInput=null) {
 }
 export function resultStats(m) {const a=m.actors[0];return {damage:Math.round(a.stats.damage),blocked:Math.round(a.stats.blocked),accuracy:a.stats.shots?Math.round(a.stats.hits/a.stats.shots*100):0,specials:a.stats.specials,healed:Math.round(a.stats.healed),weakHits:a.stats.weakHits,seconds:Math.round(m.time)};}
 export const STORAGE_KEY='creature-league.v1';
-export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{},box:{sparks:1,earned:0,opened:0,pending:null},looks:{},frames:[],frame:null,league:freshLeague()};}
+export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{},box:{sparks:1,earned:0,opened:0,pending:null},looks:{},frames:[],frame:null,league:freshLeague(),tower:{best:0,runs:0,run:null}};}
 export function readProfile(storage) {
   const fresh=freshProfile();try{const data=JSON.parse(storage.getItem(STORAGE_KEY));if(!data||data.version!==1)return fresh;
     for(const key of ['wins','played','cups','challengeWins','bestStreak','streak'])fresh[key]=Number.isFinite(data[key])?clamp(Math.floor(data[key]),0,1e8):0;
@@ -536,7 +537,7 @@ export function readProfile(storage) {
     if(Array.isArray(data.newCards))fresh.newCards=[...new Set(data.newCards.filter(id=>isUnlocked(fresh,id)||fresh.storyCards.includes(id)))];
     for(const id of Object.keys(CREATURES)){const skin=data.skins?.[id];if(typeof skin==='string'&&SKINS.some(s=>s.id===skin))fresh.skins[id]=skin;}
     if(!isUnlocked(fresh,fresh.selected))fresh.selected='maimi';
-    readBoxes(data,fresh);readLeague(data,fresh);
+    readBoxes(data,fresh);readLeague(data,fresh);readTower(data,fresh);
     if(data.lastBuild&&CREATURES[data.lastBuild.player])fresh.lastBuild={player:data.lastBuild.player,upgrades:cleanUpgrades(data.lastBuild.upgrades)};return fresh;
   }catch{return fresh;}
 }
@@ -673,3 +674,78 @@ export function recordLeague(profile,m){
   const prizes=prizesBetween(best,L.best);if(prizes.boxes)profile.box.earned+=prizes.boxes;
   return {delta,trophies:L.trophies,rank:rankOf(L.trophies),rankUp:prizes.ranks.at(-1)||null,boxes:prizes.boxes};
 }
+
+// ------------------------------------------------------------------ the mask tower
+// An endless climb. Every floor is a new battle; every fifth floor a giant guardian. Every second floor the child
+// picks one of three powers for this climb. One rescue star lets a lost floor be tried again. A climb is saved between floors.
+export const TOWER_GUARD_EVERY=5,TOWER_PICK_EVERY=2,TOWER_LIVES=1;
+export const BLESSINGS=[
+  {id:'heart',name:'לב חזק',text:'עוד 20% חיים',icon:'shield',max:3},
+  {id:'claw',name:'מכה חזקה',text:'עוד 15% נזק',icon:'bolt',max:3},
+  {id:'swift',name:'רגליים קלות',text:'מהירות גבוהה ב־10%',icon:'swirl',max:2},
+  {id:'spark',name:'ניצוץ ראשון',text:'כוח־העל מתחיל כל קומה חצי מלא',icon:'sparkle',max:1},
+];
+const TOWER_UPGRADES=UPGRADE_IDS;
+const towerLevel=floor=>floor<=2?'beginner':floor<=4?'rookie':floor<=7?'challenger':floor<=10?'veteran':'champion';
+function readTower(data,fresh){
+  const t=data.tower;if(!t||typeof t!=='object')return;const int=v=>Number.isInteger(v)&&v>=0?Math.min(v,1e6):0;
+  fresh.tower={best:int(t.best),runs:int(t.runs),run:null};const r=t.run;
+  if(r&&Number.isInteger(r.seed)&&Number.isInteger(r.floor)&&r.floor>=1&&CREATURES[r.creature]){
+    const picks=Array.isArray(r.picks)?r.picks.filter(id=>BLESSINGS.some(b=>b.id===id)||TOWER_UPGRADES.includes(id)).slice(0,40):[];
+    const pending=Array.isArray(r.pending)?r.pending.filter(id=>BLESSINGS.some(b=>b.id===id)||TOWER_UPGRADES.includes(id)).slice(0,3):null;
+    fresh.tower.run={seed:r.seed,floor:Math.min(r.floor,9999),creature:r.creature,picks,lives:clamp(int(r.lives),0,TOWER_LIVES),pending:pending?.length?pending:null};}
+}
+// What one floor holds. It depends only on the climb's seed and the floor, so a floor tried again is the same floor.
+export function towerFloor(seed,floor,player='maimi'){
+  const r=seeded((seed>>>0)*31+floor*7919),pick=list=>list[Math.floor(r()*list.length)];
+  const guard=floor%TOWER_GUARD_EVERY===0,giants=['windguard','seaguard','fireguard','tehomon','lohatan','slauz'].filter(id=>id!==player);
+  const rival=guard?pick(giants):pick(Object.keys(CREATURES).filter(id=>id!==player));
+  const roll=r(),mode=!guard&&floor>2&&roll<.3?pick(['lava','wind','ball']):null;
+  const arenas=['wind','sea','fire','mirror','castle'],arena=mode?({lava:'fire',wind:'wind',ball:'sea'})[mode]:pick(arenas);
+  const twist=!mode&&!guard&&floor>3&&r()<.35?pick(['crumble','open']):null;
+  // Above floor 10 the rivals keep growing a little, so the climb never ends on its own.
+  // A guardian is a giant, so it fights one level lower, like the league's giants.
+  const level=guard?LEAGUE_LEVELS[Math.max(0,LEAGUE_LEVELS.indexOf(towerLevel(floor))-1)]:towerLevel(floor);
+  return {floor,rival,level,mode,arena,giant:guard,twist,rivalHp:1+.06*Math.max(0,floor-10)};
+}
+export const towerPicked=(run,id)=>run.picks.filter(p=>p===id).length;
+export function towerStats(run){const n=id=>towerPicked(run,id);return {hp:1+.2*n('heart'),damage:1+.15*n('claw'),speed:1+.1*n('swift'),charge:n('spark')?.5:0,upgrades:run.picks.filter(p=>TOWER_UPGRADES.includes(p)).slice(0,2)};}
+// Three different powers the child can still take: blessings up to their limit, and at most two cup powers.
+export function towerOptions(run){
+  const r=seeded((run.seed>>>0)*17+run.floor*104729),ups=run.picks.filter(p=>TOWER_UPGRADES.includes(p));
+  const pool=[...BLESSINGS.filter(b=>towerPicked(run,b.id)<b.max).map(b=>b.id),...(ups.length<2?TOWER_UPGRADES.filter(u=>!ups.includes(u)):[])];
+  const out=[];while(out.length<3&&pool.length)out.push(pool.splice(Math.floor(r()*pool.length),1)[0]);return out;
+}
+function applyRun(m,run){
+  const st=towerStats(run),a=m.actors[0],b=m.actors[1];
+  a.spec={...a.spec,hp:Math.round(a.spec.hp*st.hp),damage:Math.round(a.spec.damage*st.damage),speed:Math.round(a.spec.speed*st.speed)};a.hp=a.spec.hp;a.superCharge=st.charge;
+  if(run.rivalHp>1){b.spec={...b.spec,hp:Math.round(b.spec.hp*run.rivalHp)};b.hp=b.spec.hp;}
+  if(run.twist==='open')m.covers=[];
+  if(run.twist==='crumble')m.covers.forEach((c,i)=>{c.collapseAt=6+i*4;});
+  m.twist=run.twist||null;
+}
+export function startTowerRun(profile,creature,seed=Date.now()){
+  if(!isUnlocked(profile,creature))creature='maimi';
+  profile.tower.run={seed:(seed>>>0)||1,floor:1,creature,picks:[],lives:TOWER_LIVES,pending:null};return profile.tower.run;
+}
+export function makeTowerMatch(profile,options={}){
+  const run=profile.tower.run;if(!run||run.pending)return null;
+  const f=towerFloor(run.seed,run.floor,run.creature),st=towerStats(run);
+  const m=makeMatch({...options,player:run.creature,rival:f.rival,level:f.level,mode:f.mode,arena:f.arena,giantRival:f.giant,upgrades:st.upgrades,boost:options.boost??levelBoost(profile,run.creature),run:{picks:run.picks,rivalHp:f.rivalHp,twist:f.twist,seed:run.seed,floor:run.floor}});
+  m.tower={floor:run.floor,guard:f.giant};return m;
+}
+// After a tower battle: climb on, use the rescue star, or end the climb. A spark for every floor; a box for every
+// five floors of a new record.
+export function recordTower(profile,m){
+  const T=profile.tower,run=T.run;if(!run||!m.tower||m.tower.floor!==run.floor||m.status!=='finished')return null;
+  if(m.winner===0){
+    const cleared=run.floor,bestBefore=T.best;run.floor++;T.best=Math.max(T.best,cleared);addSparks(profile,1);
+    const boxes=Math.floor(T.best/TOWER_GUARD_EVERY)-Math.floor(bestBefore/TOWER_GUARD_EVERY);if(boxes>0)profile.box.earned+=boxes;
+    if(cleared%TOWER_PICK_EVERY===0){const opts=towerOptions(run);if(opts.length)run.pending=opts;}
+    return {won:true,cleared,record:cleared>bestBefore,boxes,pick:!!run.pending};
+  }
+  if(run.lives>0){run.lives--;return {won:false,retry:true,floor:run.floor};}
+  T.run=null;T.runs++;return {won:false,ended:true,floor:run.floor,best:T.best};
+}
+export function chooseTowerPick(profile,id){const run=profile.tower.run;if(!run?.pending?.includes(id))return false;run.picks.push(id);run.pending=null;return true;}
+export function endTowerRun(profile){if(!profile.tower.run)return false;profile.tower.run=null;profile.tower.runs++;return true;}
