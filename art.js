@@ -107,7 +107,7 @@ export class Renderer {
   }
   point(clientX,clientY) {const r=this.canvas.getBoundingClientRect();return {x:(clientX-r.left-this.offsetX)/this.scale,y:(clientY-r.top-this.offsetY)/this.scale+38};}
   render(m,dt,clock) {
-    this.resize();this.follow(m,dt);this.clock=clock;this.propKey=PROP_KEYS.includes(m.arena)?m.arena:'coast';this.shadowed=!!m.story&&!m.mirror;this.versus=!!m.versus;const c=this.ctx;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.fillStyle='#0b2026';c.fillRect(0,0,this.w,this.h);
+    this.resize();this.follow(m,dt);this.clock=clock;this.propKey=PROP_KEYS.includes(m.arena)?m.arena:'coast';this.shadowed=!!m.story&&!m.mirror&&!m.friendly;this.versus=!!m.versus;const c=this.ctx;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.fillStyle='#0b2026';c.fillRect(0,0,this.w,this.h);
     this.shake=Math.max(0,this.shake-dt*22);c.translate(this.offsetX,this.offsetY);c.scale(this.scale,this.scale);
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;if(!reduced&&this.shake>0)c.translate(Math.sin(clock*93)*this.shake,Math.cos(clock*117)*this.shake*.6);
     c.drawImage(this.art.arenas?.[m.arena]||this.art.arena,0,0,1280,720);

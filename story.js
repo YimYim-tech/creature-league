@@ -109,6 +109,20 @@ export function missionStars(step, m) {
   if (step.mode === 'trio') return trioLeft(m, 0);
   return m.time < 35 ? 3 : m.time < 60 ? 2 : 1;
 }
+// Every battle step earns one to three stars: missions by how well the goal went, fights by the life left.
+export function stepStars(step, m) {
+  if (m.winner !== 0) return 0;
+  if (step.kind === 'mission') return missionStars(step, m);
+  const a = m.actors[0], left = a.hp / a.spec.hp; return left >= .5 ? 3 : left >= .25 ? 2 : 1;
+}
+export const BATTLE_STEPS = STEPS.filter(s => s.kind !== 'castle');
+export const starsOf = (profile, id) => profile.missionStars[id] || 0;
+export const totalStars = profile => BATTLE_STEPS.reduce((n, s) => n + starsOf(profile, s.id), 0);
+export function islandStars(profile, island) {const steps = BATTLE_STEPS.filter(s => s.island === island); return {got:steps.reduce((n, s) => n + starsOf(profile, s.id), 0), max:steps.length * 3};}
+// A step already behind the player can be played again for more stars; it never changes the journey.
+export const canReplay = (profile, id) => {const i = stepIndex(id); return i >= 0 && i < profile.story.done && STEPS[i].kind !== 'castle';};
+// A mission against a creature the child already freed is a friendly race, not a fight with the shadow.
+export const friendlyStep = (profile, step) => step?.kind === 'mission' && step.mode !== 'trio' && isUnlocked(profile, step.opponent);
 // A trio team: three different released creatures, the chosen one first.
 export function trioTeam(profile, wanted = null) {
   const ok = (wanted || []).filter((id, i, all) => isUnlocked(profile, id) && all.indexOf(id) === i);
@@ -117,8 +131,14 @@ export function trioTeam(profile, wanted = null) {
   return [first, ...Object.keys(CREATURES).filter(id => id !== first && isUnlocked(profile, id))].slice(0, 3);
 }
 export function makeStoryMatch(profile, options = {}) {
-  const step = currentStep(profile);
+  const replay = options.replay && canReplay(profile, options.replay), step = replay ? STEPS[stepIndex(options.replay)] : currentStep(profile);
   if (!step || step.kind === 'castle') return null;
+  const m = buildStoryMatch(profile, step, options);
+  if (replay) m.replay = true;
+  if (replay || friendlyStep(profile, step)) m.friendly = true;
+  return m;
+}
+function buildStoryMatch(profile, step, options) {
   const player = isUnlocked(profile, profile.selected) ? profile.selected : 'maimi';
   if (step.kind === 'mission') return makeMatch({...options, player, rival:step.opponent, level:missionLevel(profile, step), story:step.id, arena:step.island, mode:step.mode,
     team:step.mode === 'trio' ? trioTeam(profile, options.team) : null, rivalTeam:step.rivals || null});
@@ -128,15 +148,23 @@ export function makeStoryMatch(profile, options = {}) {
 // Called after a finished story match. Returns what changed, for the screens to celebrate.
 export function recordStory(profile, m) {
   const step = currentStep(profile);
+  if (m.replay) return recordReplay(profile, m);
   if (!step || m.status !== 'finished' || m.story !== step.id) return null;
   if (m.winner !== 0) {profile.missionLosses[step.id] = (profile.missionLosses[step.id] || 0) + 1; return null;}
   profile.story.done++;
-  const stars = step.kind === 'mission' ? missionStars(step, m) : 0;
+  const stars = stepStars(step, m);
   if (stars) profile.missionStars[step.id] = Math.max(profile.missionStars[step.id] || 0, stars);
   let released = null;
   if (step.kind !== 'mission' && WILD.includes(step.rival) && !isUnlocked(profile, step.rival)) {profile.unlocked.push(step.rival); profile.newCards.push(step.rival); released = step.rival;}
   const lit = step.kind === 'guardian' || step.kind === 'mirror' ? step.island : null;
   return {step, released, lit, stars};
+}
+function recordReplay(profile, m) {
+  const step = STEPS.find(s => s.id === m.story);
+  if (!step || m.status !== 'finished' || m.winner !== 0) return null;
+  const stars = stepStars(step, m), before = starsOf(profile, step.id);
+  if (stars > before) profile.missionStars[step.id] = stars;
+  return {step, replay:true, stars, best:Math.max(stars, before), improved:stars > before, released:null, lit:null};
 }
 export function completeCastle(profile) {
   const step = currentStep(profile);
