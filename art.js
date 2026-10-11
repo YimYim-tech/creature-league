@@ -41,10 +41,12 @@ function drawTinted(ctx,p,x,y,height,{flip,clip,dt,hit,alpha,look,silhouette,tim
   b.globalCompositeOperation='source-atop';
   if(silhouette){b.fillStyle=silhouette;b.fillRect(0,0,w,h);}
   else{b.globalAlpha=look.alpha;b.fillStyle=look.tint;b.fillRect(0,0,w,h);b.globalAlpha=1;
-    if(look.id==='gold'){const g=b.createLinearGradient(0,0,w,h),o=(time*.35)%1;g.addColorStop(Math.max(0,o-.12),'#fff0');g.addColorStop(o,'#fff8');g.addColorStop(Math.min(1,o+.12),'#fff0');b.fillStyle=g;b.fillRect(0,0,w,h);}}
+    if(look.id==='gold'){const g=b.createLinearGradient(0,0,w,h),o=(time*.35)%1;g.addColorStop(Math.max(0,o-.12),'#fff0');g.addColorStop(o,'#fff8');g.addColorStop(Math.min(1,o+.12),'#fff0');b.fillStyle=g;b.fillRect(0,0,w,h);}
+    // The rainbow look: bands of colour drift slowly across the creature.
+    if(look.rainbow){const g=b.createLinearGradient(0,h,w,0),o=(time*.18)%1;['#ff6b6b','#ffb347','#fff36b','#6bff9c','#6bc8ff','#b98cff'].forEach((col,i)=>g.addColorStop((i/6+o)%1,col));b.globalAlpha=.5;b.fillStyle=g;b.fillRect(0,0,w,h);b.globalAlpha=1;}}
   b.globalCompositeOperation='source-over';
   ctx.save();ctx.globalAlpha*=alpha;ctx.drawImage(buffer,0,0,w,h,x-boxW/2,y-height*1.07,boxW,boxH);ctx.restore();
-  if(look?.sparkle)for(let i=0;i<6;i++){const a=time*1.7+i*1.05,r=(.45+.15*Math.sin(time*3+i))*width;star(ctx,x+Math.cos(a)*r*.7,y-height*.5+Math.sin(a)*height*.42,3+2*Math.sin(time*6+i),'#fff3b0');}
+  if(look?.sparkle)for(let i=0;i<6;i++){const a=time*1.7+i*1.05,r=(.45+.15*Math.sin(time*3+i))*width;star(ctx,x+Math.cos(a)*r*.7,y-height*.5+Math.sin(a)*height*.42,3+2*Math.sin(time*6+i),look.sparkleColor||'#fff3b0');}
 }
 function star(ctx,x,y,r,color){ctx.save();ctx.translate(x,y);ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,d=i%2?r*.35:r;ctx.lineTo(Math.cos(a)*d,Math.sin(a)*d);}ctx.closePath();ctx.fillStyle=color;ctx.fill();ctx.restore();}
 export function drawPortrait(canvas,p,id,t,dt,{active=false,locked=false,skin=null,glowColor=null}={}) {

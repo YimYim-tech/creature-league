@@ -33,7 +33,7 @@ export const CUP = [
 export const CHALLENGE = Object.freeze({id:'crumbling',title:'הזירה המתפוררת',rival:'havzuk',level:'champion'});
 export const challengeUnlocked=profile=>profile.cups>0;
 export const STARTERS=Object.keys(CREATURES).filter(id=>CREATURES[id].starter);
-export const WILD=Object.keys(CREATURES).filter(id=>!CREATURES[id].starter&&!CREATURES[id].star);
+export const WILD=Object.keys(CREATURES).filter(id=>!CREATURES[id].starter&&!CREATURES[id].star&&!CREATURES[id].box);
 // The star guardians wait in the golden castle and join when the star is mended.
 export const STAR_GUARDS=Object.keys(CREATURES).filter(id=>CREATURES[id].star);
 export const RARITY={'רגיל':{stars:1},'נדיר':{stars:2},'אגדי':{stars:3}};
@@ -51,9 +51,17 @@ export const SKINS=[
   {id:'ice',name:'קרח',wins:1,tint:'#bff6ff',alpha:.42},
   {id:'night',name:'צל לילה',wins:3,tint:'#3b1d7a',alpha:.5},
   {id:'gold',name:'זהב אלופים',wins:6,tint:'#ffcf3a',alpha:.55,sparkle:true},
+  // Looks that come only from star boxes, one creature at a time.
+  {id:'lava',name:'לבה',box:'common',tint:'#ff5a1f',alpha:.48},
+  {id:'ocean',name:'אוקיינוס',box:'common',tint:'#1c6fe8',alpha:.45},
+  {id:'forest',name:'יער',box:'common',tint:'#3aa845',alpha:.45},
+  {id:'candy',name:'סוכריה',box:'common',tint:'#ff79c9',alpha:.42},
+  {id:'moon',name:'אבן ירח',box:'rare',tint:'#e8f0ff',alpha:.55,sparkle:true,sparkleColor:'#ffffff'},
+  {id:'rainbow',name:'קשת',box:'legendary',tint:'#ffffff',alpha:.12,rainbow:true,sparkle:true},
+  {id:'galaxy',name:'גלקסיה',box:'legendary',tint:'#1b0c45',alpha:.6,sparkle:true,sparkleColor:'#9fe6ff'},
 ];
 export const skinById=id=>SKINS.find(s=>s.id===id)||SKINS[0];
-export const skinUnlocked=(profile,id,skin)=>(profile.creatures[id]?.wins||0)>=skinById(skin).wins;
+export const skinUnlocked=(profile,id,skin)=>{const s=skinById(skin);return s.box?!!profile.looks?.[id]?.includes(s.id):(profile.creatures[id]?.wins||0)>=s.wins;};
 export const skinOf=(profile,id)=>{const skin=profile.skins?.[id];return skin&&skinUnlocked(profile,id,skin)?skin:'base';};
 export function chooseSkin(profile,id,skin){if(!isUnlocked(profile,id)||!SKINS.some(s=>s.id===skin)||!skinUnlocked(profile,id,skin))return false;profile.skins[id]=skin;return true;}
 export function flipCard(profile,id){const i=profile.newCards.indexOf(id);if(i<0)return false;profile.newCards.splice(i,1);return true;}
@@ -487,7 +495,7 @@ export function step(m,input={},dt=1/60,rivalInput=null) {
 }
 export function resultStats(m) {const a=m.actors[0];return {damage:Math.round(a.stats.damage),blocked:Math.round(a.stats.blocked),accuracy:a.stats.shots?Math.round(a.stats.hits/a.stats.shots*100):0,specials:a.stats.specials,healed:Math.round(a.stats.healed),weakHits:a.stats.weakHits,seconds:Math.round(m.time)};}
 export const STORAGE_KEY='creature-league.v1';
-export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{}};}
+export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{},box:{sparks:1,earned:0,opened:0,pending:null},looks:{},frames:[],frame:null};}
 export function readProfile(storage) {
   const fresh=freshProfile();try{const data=JSON.parse(storage.getItem(STORAGE_KEY));if(!data||data.version!==1)return fresh;
     for(const key of ['wins','played','cups','challengeWins','bestStreak','streak'])fresh[key]=Number.isFinite(data[key])?clamp(Math.floor(data[key]),0,1e8):0;
@@ -507,6 +515,7 @@ export function readProfile(storage) {
     if(Array.isArray(data.newCards))fresh.newCards=[...new Set(data.newCards.filter(id=>isUnlocked(fresh,id)||fresh.storyCards.includes(id)))];
     for(const id of Object.keys(CREATURES)){const skin=data.skins?.[id];if(typeof skin==='string'&&SKINS.some(s=>s.id===skin))fresh.skins[id]=skin;}
     if(!isUnlocked(fresh,fresh.selected))fresh.selected='maimi';
+    readBoxes(data,fresh);
     if(data.lastBuild&&CREATURES[data.lastBuild.player])fresh.lastBuild={player:data.lastBuild.player,upgrades:cleanUpgrades(data.lastBuild.upgrades)};return fresh;
   }catch{return fresh;}
 }
@@ -529,5 +538,78 @@ export function recordResult(profile,m,mode) {
   if(mode==='cup'&&won&&profile.cup){profile.cup.stage++;if(profile.cup.stage>=3){profile.cups++;profile.lastBuild={player:id,upgrades:[...m.actors[0].upgrades]};profile.cup=null;}}
   if(mode==='challenge'&&m.challenge===CHALLENGE.id&&challengeUnlocked(profile)&&won)profile.challengeWins=(profile.challengeWins||0)+1;
   if(mode==='wild'&&won&&m.wild&&!isUnlocked(profile,m.wild)){profile.unlocked.push(m.wild);profile.newCards.push(m.wild);}
+  addSparks(profile,won?2:1);
   return true;
 }
+
+// ------------------------------------------------------------------ star boxes
+// Earned by playing, never bought. Every battle gives sparks (a win gives two); three sparks make a box.
+// The road of coming boxes is fixed and shown, so a gold box is never a lottery: there the child chooses.
+// Inside a box only things the child does not have yet, so nothing ever repeats.
+export const SPARKS_PER_BOX=3,BOX_ROAD=['silver','wood','gold','wood','silver','wood','wood','gold'];
+export const BOX_TIERS={wood:{name:'תיבת עץ'},silver:{name:'תיבת כסף'},gold:{name:'תיבת זהב'}};
+export const FRAMES=[{id:'ember',name:'גחלת',tier:'common'},{id:'wave',name:'גלים',tier:'common'},{id:'jade',name:'ירקן',tier:'common'},{id:'royal',name:'מלכותי',tier:'rare'},{id:'night',name:'שמי לילה',tier:'rare'},{id:'rainbow',name:'קשת',tier:'legendary'}];
+export const boxTier=n=>BOX_ROAD[n%BOX_ROAD.length];
+export const boxesWaiting=profile=>profile.box.earned-profile.box.opened;
+export const roadAhead=(profile,count=6)=>Array.from({length:count},(_,i)=>({n:profile.box.opened+i,tier:boxTier(profile.box.opened+i),ready:profile.box.opened+i<profile.box.earned}));
+export function addSparks(profile,n){const b=profile.box;b.sparks+=n;let boxes=0;while(b.sparks>=SPARKS_PER_BOX){b.sparks-=SPARKS_PER_BOX;b.earned++;boxes++;}return boxes;}
+function validPrize(p){
+  if(p?.type==='look'&&CREATURES[p.creature]&&SKINS.some(s=>s.box&&s.id===p.skin))return {type:'look',creature:p.creature,skin:p.skin};
+  if(p?.type==='frame'&&FRAMES.some(f=>f.id===p.frame))return {type:'frame',frame:p.frame};
+  if(p?.type==='creature'&&CREATURES[p.id]?.box)return {type:'creature',id:p.id};
+  return null;
+}
+function readBoxes(data,fresh){
+  const b=data.box,int=v=>Number.isInteger(v)&&v>=0?Math.min(v,1e6):null;
+  if(b&&typeof b==='object'){const earned=int(b.earned)??0;fresh.box={sparks:Math.min(int(b.sparks)??0,SPARKS_PER_BOX-1),earned,opened:Math.min(int(b.opened)??0,earned),pending:null};
+    if(b.pending&&BOX_TIERS[b.pending.tier]&&Array.isArray(b.pending.choice)){const choice=b.pending.choice.map(validPrize).filter(Boolean);if(choice.length)fresh.box.pending={tier:b.pending.tier,choice};}}
+  // A child who played before boxes existed finds a welcome box waiting.
+  else if(fresh.played>0)fresh.box={sparks:0,earned:1,opened:0,pending:null};
+  if(data.looks&&typeof data.looks==='object')for(const [id,list] of Object.entries(data.looks))if(CREATURES[id]&&Array.isArray(list))fresh.looks[id]=[...new Set(list.filter(k=>SKINS.some(s=>s.box&&s.id===k)))];
+  fresh.frames=Array.isArray(data.frames)?[...new Set(data.frames.filter(id=>FRAMES.some(f=>f.id===id)))]:[];
+  fresh.frame=fresh.frames.includes(data.frame)?data.frame:null;
+  for(const [id,skin] of Object.entries(data.skins||{}))if(CREATURES[id]&&fresh.looks[id]?.includes(skin))fresh.skins[id]=skin;
+}
+const looksOfTier=tier=>SKINS.filter(s=>s.box===tier).map(s=>s.id);
+const samePrize=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+// Everything of one tier the child does not own yet. Looks are for creatures already on the team.
+function prizePool(profile,tier){
+  const team=Object.keys(CREATURES).filter(id=>isUnlocked(profile,id));
+  return {looks:looksOfTier(tier).flatMap(skin=>team.filter(id=>!profile.looks[id]?.includes(skin)).map(id=>({type:'look',creature:id,skin}))),
+    frames:FRAMES.filter(f=>f.tier===tier&&!profile.frames.includes(f.id)).map(f=>({type:'frame',frame:f.id})),
+    creatures:tier==='legendary'?Object.keys(CREATURES).filter(id=>CREATURES[id].box&&!isUnlocked(profile,id)).map(id=>({type:'creature',id})):[]};
+}
+// One prize of a tier, or of another tier once this one is used up. The favourite creature gets its looks more often,
+// and two prizes in one box go to two different creatures when possible.
+function drawPrize(profile,tier,random,taken=[]){
+  const order=tier==='legendary'?['legendary','rare','common']:tier==='rare'?['rare','common','legendary']:['common','rare','legendary'];
+  const pick=list=>list[Math.floor(random()*list.length)];
+  for(const t of order){
+    const pool=prizePool(profile,t),free=list=>list.filter(p=>!taken.some(q=>samePrize(p,q)));
+    const creatures=free(pool.creatures),frames=free(pool.frames),looks=free(pool.looks);
+    const spread=looks.filter(p=>!taken.some(q=>q.creature===p.creature)),varied=spread.filter(p=>!taken.some(q=>q.skin===p.skin));
+    const base=varied.length?varied:spread.length?spread:looks,fav=base.filter(p=>p.creature===profile.selected);
+    if(creatures.length)return pick(creatures);
+    if(frames.length&&(!looks.length||random()<.25))return pick(frames);
+    if(looks.length)return fav.length&&random()<.4?pick(fav):pick(base);
+  }
+  return null;
+}
+export function applyPrize(profile,p){
+  if(p.type==='look'){profile.looks[p.creature]??=[];if(!profile.looks[p.creature].includes(p.skin))profile.looks[p.creature].push(p.skin);}
+  else if(p.type==='frame'){if(!profile.frames.includes(p.frame))profile.frames.push(p.frame);}
+  else if(p.type==='creature'&&!isUnlocked(profile,p.id)){profile.unlocked.push(p.id);profile.newCards.push(p.id);}
+}
+// Opening the next waiting box: its prizes are the child's at once. A gold box also holds a choice of two big prizes.
+export function openBox(profile,random=Math.random){
+  if(profile.box.pending||boxesWaiting(profile)<=0)return null;
+  const tier=boxTier(profile.box.opened),prizes=[],add=t=>{const p=drawPrize(profile,t,random,prizes);if(p)prizes.push(p);};
+  add('common');if(tier==='silver')add('rare');
+  for(const p of prizes)applyPrize(profile,p);
+  let choice=null;
+  if(tier==='gold'){choice=[];for(let i=0;i<2;i++){const p=drawPrize(profile,'legendary',random,[...prizes,...choice]);if(p)choice.push(p);}
+    if(choice.length<2){for(const p of choice){applyPrize(profile,p);prizes.push(p);}choice=null;}}
+  profile.box.opened++;if(choice)profile.box.pending={tier,choice};
+  return {tier,prizes,choice};
+}
+export function chooseBoxPrize(profile,index){const p=profile.box.pending?.choice?.[index];if(!p)return null;applyPrize(profile,p);profile.box.pending=null;return p;}

@@ -1,6 +1,7 @@
 import {CREATURES,LEVELS,CUP,CHALLENGE,challengeUnlocked,journeyView,makeChallengeMatch,makeMatch,step,readProfile,saveProfile,recordResult,resultStats,clamp,startCup,needsUpgrade,chooseUpgrade,STARTERS,WILD,RARITY,SKINS,isUnlocked,releasedCount,wildLevel,makeWildMatch,skinById,skinUnlocked,skinOf,chooseSkin,flipCard,cardStats,finish} from './core.js';
 import {upgradeOptions,cleanUpgrades} from './upgrades.js';
 import {MODES,WIND_TARGET,WIND_HOLD,MAX_POWER,BALL_GOALS,trioLeft,GOALS} from './core.js';
+import {SPARKS_PER_BOX,BOX_TIERS,FRAMES,boxTier,boxesWaiting,roadAhead,addSparks,openBox,chooseBoxPrize} from './core.js';
 import {trioTeam,missionEased,missionLevel,ISLANDS,STEPS,STORY_CARDS,STORY_CARD_IDS,currentStep,storyComplete,litIslands,starLit,islandOf,homeIsland,makeStoryMatch,recordStory,completeCastle,storyCardOwned} from './story.js';
 import {loadArt,createPuppet,drawPortrait,Renderer} from './art.js';
 import {Sound} from './audio.js';
@@ -36,7 +37,7 @@ function renderHome(){
   $('home-name').textContent=c.name;$('home-gems').innerHTML=necklaceHTML();
   $('home-where').textContent=!step?'המסע הושלם!':step.kind==='castle'?'הטירה הזהובה':islandOf(step.island).name+(step.kind==='castle'?'':' · שלב '+(STEPS.filter(s=>s.island===step.island).indexOf(step)+1)+' מתוך '+STEPS.filter(s=>s.island===step.island).length);
   $('home-title').textContent=!step?'קרב הפתעה: יריב ומשימה בהגרלה':step.kind==='castle'?'מתקנים את הכוכב':step.kind==='mission'?'משימה: '+MODES[step.mode].name:step.kind==='free'?'משחררים את '+CREATURES[step.rival].name:step.kind==='mirror'?'הבבואה שלך':step.title||'שומר האי';
-  livePortrait('home-portrait',c.id,{skin:skinOf(profile,c.id)});
+  livePortrait('home-portrait',c.id,{skin:skinOf(profile,c.id)});renderBoxStrip();
   // A new player sees one road; the cup and training open after the first island.
   $('lobby').classList.toggle('early',profile.story.done<4);
 }
@@ -94,9 +95,9 @@ const levelName=level=>LEVELS[level].name;
 const stars=n=>'★'.repeat(n)+'☆'.repeat(3-n);
 const ELEMENT_ART={'רוח':'storm','מים':'water','חשמל':'storm','עוצמה':'canyon','אש':'volcano','אור':'light','רעד':'quake','היפנוט':'nebula','טבע':'forest','אנרגיה':'crystal'};
 // A trading card. The art window is a live canvas so skins and idle motion show on the card.
-function cardHTML(id,{canvasId,skin='base',big=false}={}){
+function cardHTML(id,{canvasId,skin='base',big=false,frame=profile.frame}={}){
   const c=CREATURES[id],r=RARITY[c.rarity]||RARITY['רגיל'],look=skinById(skin);
-  return `<article class="tcard rarity-${r.stars} skin-${look.id}${big?' big':''}" style="--c:${c.color};--d:${c.dark}" data-el="${ELEMENT_ART[c.element]||'water'}">
+  return `<article class="tcard rarity-${r.stars} skin-${look.id}${big?' big':''}${frame?' frame-'+frame:''}" style="--c:${c.color};--d:${c.dark}" data-el="${ELEMENT_ART[c.element]||'water'}">
     <header><span class="tcard-num">#${c.number}</span><span class="tcard-el">${icon(c.specialIcon)}${c.element}</span></header>
     <div class="tcard-art"><canvas id="${canvasId}" aria-hidden="true"></canvas>${look.id!=='base'?`<span class="tcard-skin">${look.name}</span>`:''}</div>
     <div class="tcard-title"><h3>${c.name}</h3><small>${c.role}</small></div>
@@ -122,10 +123,10 @@ function showView(name){
   // On a touch screen a battle goes full screen and asks for landscape.
   if(name==='battle'&&matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});
   if(name==='battle')window.scrollTo(0,0);
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle','versus'].includes(name)));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle','versus','boxes'].includes(name)));
   if(name!=='battle'){clearInput();sound.setScene('lobby');sound.resume();document.body.classList.remove('versus-play');}
   if(name!=='wild')storyIntro=storyIntro&&name==='battle';
-  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();if(name==='versus')renderVersus();if(name==='players'){$('player-form').hidden=true;renderPlayers();}
+  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();if(name==='versus')renderVersus();if(name==='players'){$('player-form').hidden=true;renderPlayers();}if(name==='boxes')renderBoxes();
   window.scrollTo({top:0,behavior:'instant'});requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'instant'}));
 }
 function buildRoster(){
@@ -171,7 +172,7 @@ const albumTotal=()=>Object.keys(CREATURES).length+STORY_CARD_IDS.length,albumOw
 function renderAlbum(){
   const owned=[...Object.keys(CREATURES).filter(id=>isUnlocked(profile,id)),...profile.storyCards],total=albumTotal();
   $('album-progress').textContent=owned.length+' מתוך '+total+' קלפים'+(profile.newCards.length?' · '+profile.newCards.length+' מחכים שתהפכו אותם!':'');
-  $('album-meter').style.width=owned.length/total*100+'%';
+  $('album-meter').style.width=owned.length/total*100+'%';renderFramePicker();
   $('album').innerHTML=Object.values(CREATURES).map(c=>{
     if(!isUnlocked(profile,c.id)){const where=c.star?'בטירה הזהובה':'ב'+(islandOf(homeIsland(c.id))?.name||'מסע השרשרת');return `<button class="album-slot locked" data-album-wild="${c.id}" aria-label="קלף נעול: ${c.name}. מחכה ${where}">${cardBack(c.id,{label:c.star?'שומר הכוכב':'יצור בצל'})}<span class="album-hint">${icon('lock')} מחכה ${where}</span></button>`;}
     if(profile.newCards.includes(c.id))return `<button class="album-slot fresh" data-album-new="${c.id}" aria-label="קלף חדש של ${c.name}. הקישו כדי להפוך">${cardBack(c.id)}<span class="album-hint">חדש! הקישו להפוך</span></button>`;
@@ -205,7 +206,9 @@ function openCard(id){
   cardTarget=id;const c=CREATURES[id],skin=skinOf(profile,id),wins=profile.creatures[id]?.wins||0;
   $('card-dialog-card').innerHTML=cardHTML(id,{canvasId:'dialog-art',skin,big:true});livePortrait('dialog-art',id,{skin,card:true});
   $('card-dialog-title').textContent=c.name;$('card-dialog-title').style.color=c.color;
-  $('skin-picker').innerHTML=SKINS.map(k=>{const open=skinUnlocked(profile,id,k.id),need=k.wins-wins;return `<button class="skin-option skin-${k.id}${k.id===skin?' chosen':''}" data-skin="${k.id}" ${open?'':'disabled'} aria-pressed="${k.id===skin}" style="--c:${c.color}"><span class="skin-swatch"></span><b>${k.name}</b><small>${open?(k.id===skin?'נבחר':'פתוח'):'עוד '+need+' '+(need===1?'ניצחון':'ניצחונות')}</small></button>`;}).join('');
+  $('skin-picker').innerHTML=SKINS.filter(k=>!k.box||skinUnlocked(profile,id,k.id)).map(k=>{const open=skinUnlocked(profile,id,k.id),need=(k.wins||0)-wins;return `<button class="skin-option skin-${k.id}${k.id===skin?' chosen':''}" data-skin="${k.id}" ${open?'':'disabled'} aria-pressed="${k.id===skin}" style="--c:${c.color}"><span class="skin-swatch"></span><b>${k.name}</b><small>${open?(k.id===skin?'נבחר':'פתוח'):'עוד '+need+' '+(need===1?'ניצחון':'ניצחונות')}</small></button>`;}).join('');
+  if(SKINS.some(k=>k.box&&!skinUnlocked(profile,id,k.id)))$('skin-picker').insertAdjacentHTML('beforeend','<button class="skin-option skin-more" data-boxes><span class="skin-swatch"></span><b>עוד מראות</b><small>בתיבות כוכב</small></button>');
+  document.querySelector('#skin-picker [data-boxes]')?.addEventListener('click',()=>{sound.click();$('card-dialog').close();showView('boxes');});
   document.querySelectorAll('[data-skin]').forEach(el=>el.onclick=()=>{if(chooseSkin(profile,id,el.dataset.skin)){persist();sound.click();openCard(id);if(screen==='cards')renderAlbum();}});
   $('card-dialog-play').textContent=profile.selected===id?c.name+' כבר בחר לקרב':'בוחרים את '+c.name+' לקרב';
   $('card-dialog-play').onclick=()=>{profile.selected=id;persist();sound.click();$('card-dialog').close();showView('lobby');};
@@ -365,7 +368,7 @@ function onFinish(){
   const finalWin=mode==='cup'&&cupFinal&&match.winner===0;
   const storyResult=mode==='story'?recordStory(profile,match):null;if(storyResult)storyEvent=storyResult;
   const hero=match.actors[0].id,winsBefore=profile.creatures[hero]?.wins||0,wildId=storyResult?.released||match.wild,wasLocked=!!storyResult?.released||(wildId&&!isUnlocked(profile,wildId));
-  recordResult(profile,match,mode);persist();clearInput();sound.setScene('lobby');if(match.winner===0)sound.play('voice-victory',{delay:.7});
+  const boxBefore=profile.box.earned;recordResult(profile,match,mode);persist();const newBoxes=profile.box.earned-boxBefore;clearInput();sound.setScene('lobby');if(match.winner===0)sound.play('voice-victory',{delay:.7});
   const winsAfter=profile.creatures[hero]?.wins||0,newSkin=SKINS.find(k=>k.wins>winsBefore&&k.wins<=winsAfter),released=wasLocked&&isUnlocked(profile,wildId);
   const p=match.actors[0],r=match.actors[1],stats=resultStats(match),win=match.winner===0,draw=match.winner===-1;
   const challengeWin=mode==='challenge'&&win;
@@ -376,6 +379,8 @@ function onFinish(){
   if(match.reason==='time')tip=match.ball?'הזמן נגמר: מי שהבקיע יותר גולים ניצח.':match.trio?'הזמן נגמר: מי שנשארו לו יותר יצורים ניצח.':'הזמן נגמר: הניצחון נקבע לפי אחוז החיים שנותר לכל יצור.';
   const starCount=win?(storyResult?.stars||(p.hp/p.spec.hp>=.5?3:p.hp/p.spec.hp>=.25?2:1)):0;
   $('result-content').innerHTML=`${newSkin?`<div class="skin-unlock" style="--c:${p.spec.color}"><span class="skin-swatch skin-${newSkin.id}"></span><div><small>מראה חדש נפתח!</small><b>${p.spec.name} ${newSkin.name}</b></div></div>`:''}${finalWin||released?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${finalWin?'gold':win?'':'loss'}">${icon(finalWin?'trophy':win?'star':draw?'shield':'bolt')}</div><span class="result-kicker">${mode==='cup'?'גביע החופים':'קרב מהיר'} · ${LEVELS[match.level].name}</span><h2 class="result-title">${title}</h2><p>${sub}</p>${starCount?`<div class="result-stars" aria-label="${starCount} כוכבים">${[1,2,3].map(i=>`<span class="${i<=starCount?'on':''}" style="--d:${i*.18}s">${icon('star')}</span>`).join('')}</div>`:''}${match.ball||match.trio?`<div class="result-score"><div><strong></strong>${p.spec.name}</div><span>:</span><div><strong></strong>${r.spec.name}</div></div>`:''}${win?'':`<p class="result-tip">${tip}</p>`}`;
+  $('result-content').insertAdjacentHTML('beforeend',resultBoxHTML(match.winner===0?2:1,newBoxes,!released));
+  $('result-box-open')?.addEventListener('click',()=>{$('result-dialog').close();match=null;showView('boxes');});
   if(match.ball){const s=document.querySelectorAll('.result-score strong');if(s.length>=2){s[0].textContent=match.ball.score[0];s[1].textContent=match.ball.score[1];}}
   if(match.trio){const s=document.querySelectorAll('.result-score strong');if(s.length>=2){s[0].textContent=trioLeft(match,0)+'/3';s[1].textContent=trioLeft(match,1)+'/3';}}
   document.querySelector('.result-kicker').textContent=`${mode==='cup'?'גביע החופים':mode==='challenge'?CHALLENGE.title:mode==='wild'?'קרב פרא':mode==='story'?'מסע השרשרת':surprise?'קרב הפתעה':'אימון · קרב בודד'} · ${LEVELS[match.level].name}`;
@@ -383,6 +388,71 @@ function onFinish(){
   $('result-primary').onclick=()=>{$('result-dialog').close();if(released){match=null;pendingReveal=!!storyResult;showView(storyResult?'story':'cards');revealCard(wildId,{joined:true,back:storyResult?'story':null});pendingReveal=false;}else if(storyResult){match=null;showView('story');}else if(challengeWin){match=null;showView('records');}else if(surprise&&win){startSurprise();}else if(finalWin||mode==='quick'&&win){continueJourney();}else if(mode==='cup'&&win){match=null;showView('workshop');}else startBattle(mode);};
   $('result-secondary').textContent=mode==='story'?'הפסקה · חזרה למפה':mode==='quick'||mode==='wild'?'חזרה לבחירת יצור':'הפסקה · ההתקדמות נשמרת';$('result-secondary').onclick=leaveBattle;
   const shown=match;setTimeout(()=>{if(match===shown&&!$('result-dialog').open)$('result-dialog').showModal();},1500);
+}
+// ------------------------------------------------------------------ star boxes
+// Three taps open a box: it shakes, its colour climbs to the colour the road already showed, then the prizes turn over.
+const TIER_ORDER=['wood','silver','gold'];
+const chestHTML=(tier,{mini=false}={})=>`<span class="chest${mini?' mini':''}" data-tier="${tier}"><span class="chest-glow"></span><span class="chest-lid"></span><span class="chest-body"></span><span class="chest-lock"></span></span>`;
+const sparkMeter=n=>Array.from({length:SPARKS_PER_BOX},(_,i)=>`<i class="${i<n?'on':''}"></i>`).join('');
+let boxUI={taps:0,result:null,chosen:null};
+function renderBoxStrip(){
+  const waiting=boxesWaiting(profile)+(profile.box.pending?1:0),left=SPARKS_PER_BOX-profile.box.sparks;
+  $('home-box-chest').innerHTML=chestHTML(profile.box.pending?'gold':boxTier(profile.box.opened),{mini:true});$('home-box').classList.toggle('ready',waiting>0);
+  $('home-box-title').textContent=profile.box.pending?'תיבת הזהב מחכה שתבחרו!':waiting>1?waiting+' תיבות מחכות לך!':waiting?'תיבה מחכה לך!':'עוד '+(left===1?'ניצוץ אחד':left+' ניצוצות')+' לתיבה';
+  $('home-box-meter').innerHTML=sparkMeter(profile.box.sparks);$('home-box-badge').hidden=!waiting;$('home-box-badge').textContent=waiting;
+}
+function resultBoxHTML(gained,newBoxes,canOpen){
+  const waiting=boxesWaiting(profile);
+  return `<div class="result-box">${chestHTML(boxTier(profile.box.opened),{mini:true})}<div><b>${newBoxes?'תיבת כוכב חדשה!':'+'+gained+' ניצוצות'}</b><span class="spark-meter">${sparkMeter(profile.box.sparks)}</span></div>${waiting&&canOpen?'<button class="button secondary" id="result-box-open">פותחים!</button>':''}</div>`;
+}
+function prizeHTML(p,i,choice){
+  const button=choice?`<button class="button primary" data-choose="${String(i).replace(/^c/,'')}">את זה!</button>`:'';
+  if(p.type==='look'){const c=CREATURES[p.creature],k=skinById(p.skin),worn=skinOf(profile,p.creature)===p.skin;
+    return `<div class="prize${choice?' choice':''}" style="--c:${c.color}"><div class="prize-art"><canvas id="prize-${i}" aria-hidden="true"></canvas></div><small class="prize-kind">${k.box==='legendary'?'מראה אגדי':k.box==='rare'?'מראה נדיר':'מראה חדש'}</small><b>${c.name} · ${k.name}</b>${button||(worn?'<span class="prize-worn">לובש עכשיו ✓</span>':`<button class="button secondary" data-wear="${p.creature}:${p.skin}">ללבוש עכשיו</button>`)}</div>`;}
+  if(p.type==='frame'){const f=FRAMES.find(x=>x.id===p.frame),id=isUnlocked(profile,profile.selected)?profile.selected:'maimi',on=profile.frame===f.id;
+    return `<div class="prize${choice?' choice':''}"><div class="prize-art"><article class="tcard frame-sample frame-${f.id}"><canvas id="prize-${i}" aria-hidden="true"></canvas></article></div><small class="prize-kind">${f.tier==='legendary'?'מסגרת אגדית':f.tier==='rare'?'מסגרת נדירה':'מסגרת חדשה'}</small><b>מסגרת ${f.name}</b>${button||(on?'<span class="prize-worn">על הקלפים ✓</span>':`<button class="button secondary" data-frame-on="${f.id}">לשים על הקלפים</button>`)}</div>`;}
+  const c=CREATURES[p.id];
+  return `<div class="prize${choice?' choice':''}" style="--c:${c.color}"><div class="prize-art"><canvas id="prize-${i}" aria-hidden="true"></canvas></div><small class="prize-kind">יצור חדש!</small><b>${c.name}</b>${button}</div>`;
+}
+function prizePortrait(p,i){const id=p.type==='look'?p.creature:p.type==='frame'?(isUnlocked(profile,profile.selected)?profile.selected:'maimi'):p.id;livePortrait('prize-'+i,id,{skin:p.type==='look'?p.skin:skinOf(profile,id)});}
+function renderBoxes(){
+  const waiting=boxesWaiting(profile),pending=profile.box.pending,result=boxUI.result,showing=result||pending;
+  $('boxes-meter').innerHTML=sparkMeter(profile.box.sparks);
+  $('boxes-sub').textContent=pending?'תיבת זהב! בוחרים אחד משני הפרסים.':waiting&&!result?'הקישו על התיבה שלוש פעמים.':'כל קרב נותן ניצוץ, וניצחון נותן שניים. שלושה ניצוצות הם תיבה.';
+  $('box-road').innerHTML=roadAhead(profile,6).map((r,i)=>`<li class="road-box${r.ready?' ready':''}${i===0&&!showing?' next':''}">${chestHTML(r.tier,{mini:true})}<small>${r.ready?'מחכה!':r.tier==='gold'?'זהב: בוחרים':BOX_TIERS[r.tier].name.replace('תיבת ','')}</small></li>`).join('');
+  const chest=$('box-chest');$('box-stage').hidden=!!showing;$('boxes').classList.toggle('showing',!!showing);
+  if(!showing){const tier=boxTier(profile.box.opened);chest.dataset.tier=boxUI.taps?TIER_ORDER[Math.min(TIER_ORDER.indexOf(tier),boxUI.taps-1)]:'wood';chest.classList.toggle('ready',waiting>0);chest.classList.toggle('empty',!waiting);chest.disabled=!waiting;
+    $('box-hint').textContent=waiting?['הקישו על התיבה!','עוד פעמיים!','עוד פעם אחת!'][Math.min(2,boxUI.taps)]:'אין תיבה כרגע. עוד '+(SPARKS_PER_BOX-profile.box.sparks)+' ניצוצות והיא כאן.';}
+  const prizes=result?result.prizes:[],choice=pending?pending.choice:null;
+  $('box-prizes-title').hidden=!showing;$('box-prizes').hidden=!showing;
+  $('box-prizes-title').textContent=choice?'בוחרים פרס אחד:':result?(BOX_TIERS[result.tier].name+(prizes.length?'':' · אספתם כבר הכל!')):'';
+  if(showing){
+    $('box-prizes').innerHTML=(choice?choice.map((p,i)=>prizeHTML(p,'c'+i,true)):[]).join('')+(choice&&prizes.length?'<span class="prize-plus">ובנוסף:</span>':'')+prizes.map((p,i)=>prizeHTML(p,i,false)).join('');
+    $('box-prizes').classList.toggle('has-choice',!!choice);
+    if(choice)choice.forEach((p,i)=>prizePortrait(p,'c'+i));prizes.forEach((p,i)=>prizePortrait(p,i));
+    document.querySelectorAll('[data-choose]').forEach(el=>el.onclick=()=>{const p=chooseBoxPrize(profile,+el.dataset.choose);if(!p)return;persist();sound.reveal(true);boxUI.result={tier:'gold',prizes:[p,...(boxUI.result?.prizes||[])]};renderBoxes();renderBoxStrip();});
+    document.querySelectorAll('[data-wear]').forEach(el=>el.onclick=()=>{const [id,skin]=el.dataset.wear.split(':');if(chooseSkin(profile,id,skin)){persist();sound.click();renderBoxes();}});
+    document.querySelectorAll('[data-frame-on]').forEach(el=>el.onclick=()=>{profile.frame=el.dataset.frameOn;persist();sound.click();renderBoxes();});
+  }
+  const more=boxesWaiting(profile)>0&&!pending&&!!result;
+  $('box-actions').innerHTML=(more?'<button class="button primary" id="box-next">לתיבה הבאה!</button>':'')+(pending?'':`<button class="button ${more?'secondary':'primary'}" id="box-play">לקרב!</button>`);
+  $('box-next')?.addEventListener('click',()=>{sound.click();boxUI={taps:0,result:null};renderBoxes();});
+  $('box-play')?.addEventListener('click',()=>{sound.click();boxUI={taps:0,result:null};showView('lobby');});
+}
+function tapChest(){
+  if(boxesWaiting(profile)<=0||boxUI.result||profile.box.pending)return;
+  const chest=$('box-chest'),tier=boxTier(profile.box.opened);boxUI.taps++;sound.unlock();
+  chest.dataset.tier=TIER_ORDER[Math.min(TIER_ORDER.indexOf(tier),boxUI.taps-1)];chest.classList.remove('shake');void chest.offsetWidth;chest.classList.add('shake');
+  sound.tone?.(260+boxUI.taps*150,.22,'triangle',.12,120);$('box-hint').textContent=['','עוד פעמיים!','עוד פעם אחת!','!'][Math.min(3,boxUI.taps)];
+  if(boxUI.taps<3)return;
+  const r=openBox(profile);persist();if(!r)return;boxUI.result={tier:r.tier,prizes:r.prizes};
+  chest.classList.add('open');sound.reveal(true);
+  setTimeout(()=>{chest.classList.remove('open');boxUI.taps=0;if(screen==='boxes')renderBoxes();renderBoxStrip();},650);
+}
+function renderFramePicker(){
+  const owned=FRAMES.filter(f=>profile.frames.includes(f.id));$('frame-picker').hidden=!owned.length;if(!owned.length)return;
+  $('frame-options').innerHTML=[{id:null,name:'רגילה'},...owned].map(f=>`<button class="frame-option${f.id?' frame-'+f.id:''}${profile.frame===f.id?' chosen':''}" data-frame="${f.id||''}" aria-pressed="${profile.frame===f.id}"><span></span>${f.name}</button>`).join('');
+  document.querySelectorAll('[data-frame]').forEach(el=>el.onclick=()=>{profile.frame=el.dataset.frame||null;persist();sound.click();renderAlbum();});
 }
 // ------------------------------------------------------------------ who is playing?
 function savePlayers(){try{localStorage.setItem(storagePrefix+PLAYERS_KEY,JSON.stringify(players));}catch{}}
@@ -489,10 +559,11 @@ function finishVersusRound(){
   versus.round++;const done=versus.wins.some(n=>n>=VS_WINS),[a,b]=match.actors;
   const title=w<0?'תיקו!':done?'ניצחון ל'+vsName(w)+'!':'הסיבוב ל'+vsName(w)+'!';
   const sub=done?'איזה קרב! עוד אחד?':w<0?'אף אחד לא לקח את הסיבוב. עוד סיבוב!':'עוד לב ♥ ל'+vsName(1-w)+' בסיבוב הבא.';
-  if(done)sound.play('voice-victory',{delay:.7});
+  if(done){sound.play('voice-victory',{delay:.7});versus.players.forEach((pid,i)=>{if(pid==='guest'||(i===1&&versus.players[0]===pid))return;const pp=pid===players.active?profile:readProfile(playerStorage(pid));addSparks(pp,i===w?2:1);if(pid===players.active)persist();else saveProfile(playerStorage(pid),pp);});}
   $('result-content').innerHTML=`${done?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${done?'gold':''}">${icon(done?'trophy':w<0?'shield':'star')}</div><span class="result-kicker">חבר נגד חבר</span><h2 class="result-title"></h2><div class="result-score versus-score"><div><strong>${versus.wins[0]}</strong><span></span></div><span>:</span><div><strong>${versus.wins[1]}</strong><span></span></div></div><p></p>`;
   document.querySelector('#result-content .result-title').textContent=title;document.querySelector('#result-content > p').textContent=sub;
   document.querySelectorAll('#result-content .versus-score div span').forEach((el,i)=>{el.textContent=vsName(i)+' · '+match.actors[i].spec.name;});
+  if(done&&versus.players.some(p=>p!=='guest'))$('result-content').insertAdjacentHTML('beforeend','<p class="result-tip">כל שחקן קיבל ניצוצות לתיבת הכוכב, וגם מי שהפסיד.</p>');
   $('result-primary').textContent=done?'עוד קרב!':'ל'+versusRoundLabel()+'!';$('result-primary').onclick=()=>{$('result-dialog').close();startVersus(done);};
   $('result-secondary').textContent='החלפת יצורים';$('result-secondary').onclick=leaveBattle;
   const shown=match;setTimeout(()=>{if(match===shown&&!$('result-dialog').open)$('result-dialog').showModal();},1500);
@@ -577,7 +648,7 @@ function bindControls(){
   bindStick($('stick-zone'),$('joystick'),$('joystick-knob'),input);bindStick($('stick-zone-2'),$('joystick-2'),$('joystick-knob-2'),input2);
   $('special-button-2').addEventListener('pointerdown',e=>{e.preventDefault();if(match?.status!=='playing')return;sound.unlock();try{$('special-button-2').setPointerCapture(e.pointerId);}catch{}$('special-button-2').classList.add('held');input2.special=true;});
   for(const event of ['pointerup','pointercancel','lostpointercapture'])$('special-button-2').addEventListener(event,()=>$('special-button-2').classList.remove('held'));
-  $('home-versus').onclick=()=>{sound.click();showView('versus');};
+  $('home-versus').onclick=()=>{sound.click();showView('versus');};$('home-box').onclick=()=>{sound.click();showView('boxes');};$('box-chest').onclick=tapChest;
   $('player-chip').onclick=()=>handleNavigation('players');$('player-form').addEventListener('submit',savePlayerForm);$('player-cancel').onclick=()=>{sound.click();closePlayerForm();};$('versus-start').onclick=()=>{sound.click();startVersus(true);};
   for(const type of ['pointerdown','touchend','click','keydown'])document.addEventListener(type,()=>{if(sound.ctx?.state!=='running')sound.unlock();},{passive:true});
   document.addEventListener('click',()=>{if(matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});},{once:true});

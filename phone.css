@@ -227,3 +227,112 @@ body.versus-play #rival-level{color:#ff9aa8}
   .versus-heading h1{font-size:22px}.versus-heading{margin:0 0 4px}
 }
 @media (max-height:600px) and (orientation:landscape){.versus-view{padding:4px 12px 8px}}
+
+/* ------------------------------------------------------------------ star boxes */
+/* The chest: wood with brass bands; silver and gold change the wood and the bands. */
+.chest{--wood:#9a5b2c;--wood-dark:#5a3013;--band:#d8b06a;--glow:#ffd88a;position:relative;display:block;width:190px;height:160px;border:0;padding:0;background:none;cursor:pointer;flex:none}
+.chest[data-tier="silver"]{--wood:#8d9aa8;--wood-dark:#46515d;--band:#f2f6fb;--glow:#dff4ff}
+.chest[data-tier="gold"]{--wood:#e0a326;--wood-dark:#8a5208;--band:#fff3b8;--glow:#ffd34a}
+.chest-body,.chest-lid{position:absolute;background:var(--grain),linear-gradient(180deg,color-mix(in srgb,var(--wood) 85%,#fff),var(--wood) 30%,var(--wood-dark));box-shadow:inset 0 0 0 4px var(--band),inset 0 0 0 6px #0003}
+.chest-body{left:0;right:0;bottom:0;height:60%;border-radius:8px 8px 16px 16px;box-shadow:inset 0 0 0 4px var(--band),inset 0 0 0 6px #0003,inset 0 -10px 0 #0002,0 14px 24px #000a}
+.chest-lid{left:-5px;right:-5px;top:2%;height:42%;border-radius:70px 70px 8px 8px;transform-origin:50% 100%;transition:transform .45s cubic-bezier(.3,1.6,.5,1)}
+.chest-body::before,.chest-lid::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,transparent 17%,var(--band) 17% 23%,transparent 23% 77%,var(--band) 77% 83%,transparent 83%);opacity:.95}
+.chest-lock{position:absolute;left:50%;top:36%;width:32px;height:38px;margin-left:-16px;border-radius:8px 8px 12px 12px;background:linear-gradient(180deg,#fff6cf,#caa257);box-shadow:0 0 0 3px #3a1d0f,0 3px 6px #0006}
+.chest-lock::after{content:"";position:absolute;left:50%;top:45%;width:8px;height:12px;margin-left:-4px;border-radius:4px;background:#3a1d0f}
+.chest-glow{position:absolute;inset:-34px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--glow) 60%,transparent),transparent 62%);opacity:0;transition:opacity .3s}
+.chest.ready .chest-glow{opacity:1;animation:chest-pulse 1.6s ease-in-out infinite}
+.chest.empty{filter:grayscale(.7) brightness(.6);cursor:default}
+.chest.shake{animation:chest-shake .38s}
+.chest.open .chest-lid{transform:translateY(-34px) rotate(-16deg)}
+.chest.open .chest-glow{opacity:1;transform:scale(1.6);transition:transform .5s,opacity .3s}
+@keyframes chest-shake{0%,100%{transform:rotate(0)}20%{transform:rotate(-7deg) scale(1.06)}50%{transform:rotate(6deg) scale(1.08)}80%{transform:rotate(-3deg) scale(1.04)}}
+@keyframes chest-pulse{50%{transform:scale(1.12)}}
+@media(prefers-reduced-motion:reduce){.chest.shake,.chest.ready .chest-glow{animation:none}}
+.chest.mini{width:46px;height:38px;cursor:inherit;pointer-events:none}
+.chest.mini .chest-body,.chest.mini .chest-lid{box-shadow:inset 0 0 0 2px var(--band)}
+.chest.mini .chest-lid{left:-2px;right:-2px;border-radius:30px 30px 4px 4px}
+.chest.mini .chest-lock{width:9px;height:11px;margin-left:-4.5px;border-radius:3px;box-shadow:0 0 0 1.5px #3a1d0f}.chest.mini .chest-lock::after{display:none}
+.chest.mini .chest-glow{inset:-10px}
+/* Sparks: three little diamonds that fill up. */
+.spark-meter{display:inline-flex;gap:5px;align-items:center;direction:ltr}
+.spark-meter i{width:13px;height:13px;transform:rotate(45deg);border-radius:3px;background:#0004;border:2px solid #c9a35d}
+.spark-meter i.on{background:#ffcf3a;border-color:#fff3b8;box-shadow:0 0 8px #ffcf3a}
+.spark-meter.big i{width:20px;height:20px}
+/* Home: the box strip. */
+.box-strip{position:relative;display:flex;align-items:center;gap:12px;margin:12px auto 0;padding:6px 18px 6px 12px;border:0;border-radius:14px;background:#0b1a22b3;color:#f3e6c8;box-shadow:0 0 0 2px #c9a35d66;cursor:pointer;font:inherit}
+.box-strip.ready{box-shadow:0 0 0 2px var(--gold-hi),0 0 18px #ffcf5a66}
+.box-strip.ready .chest-glow{opacity:1;animation:chest-pulse 1.6s ease-in-out infinite}
+.box-strip-copy{display:grid;gap:4px;text-align:right}.box-strip-copy b{font-size:15px}
+.box-badge{position:absolute;top:-8px;right:-8px;min-width:24px;height:24px;border-radius:12px;background:var(--brick);color:#fff;font-weight:900;font-size:14px;display:grid;place-items:center;box-shadow:0 0 0 2px #fff3}
+/* The box screen. */
+.boxes-view{padding:16px 22px 28px;max-width:1080px;margin-inline:auto;text-align:center}
+.boxes-heading h1{font-family:var(--display);font-weight:900;font-size:42px;margin:0;color:var(--parchment);text-shadow:0 2px 0 #0009}
+.boxes-heading h1 em{font-style:normal;color:var(--gold-hi)}
+.boxes-heading p{margin:4px 0 8px;color:#dccfb0;font-size:15px}
+.box-road{list-style:none;display:flex;justify-content:center;gap:10px;margin:10px 0 6px;padding:0;direction:rtl}
+.road-box{display:grid;justify-items:center;gap:2px;padding:6px 8px;border-radius:12px;background:#0b1a2266;min-width:64px}
+.road-box small{font-size:11px;color:#dccfb0}
+.road-box.ready{background:#3a2a0a99;box-shadow:0 0 0 2px var(--gold-hi)}
+.road-box.ready small{color:var(--gold-hi);font-weight:700}
+.road-box.next{box-shadow:0 0 0 2px #fff6}
+.box-stage{display:grid;justify-items:center;gap:10px;margin:26px 0 8px}
+.box-hint{margin:0;font-family:var(--display);font-weight:900;font-size:24px;color:var(--parchment);text-shadow:0 2px 0 #0009}
+.box-prizes-title{margin:12px 0 6px;font-family:var(--display);font-weight:900;font-size:26px;color:var(--gold-hi);text-shadow:0 2px 0 #0009}
+.box-prizes{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:18px;margin:4px 0 14px}
+.prize{display:grid;justify-items:center;gap:4px;width:190px;animation:prize-in .5s cubic-bezier(.3,1.5,.5,1) both}
+.prize:nth-child(2){animation-delay:.12s}.prize:nth-child(3){animation-delay:.24s}.prize:nth-child(4){animation-delay:.36s}
+.prize-card{width:100%}.prize-card .tcard{transform:none}
+.prize b{color:var(--parchment);font-size:16px;text-shadow:0 1px 0 #000a}
+.prize-kind{color:var(--gold-hi);font-weight:700;font-size:12px;letter-spacing:.5px}
+.prize-worn{color:#9ff0c0;font-weight:700;font-size:13px}
+.prize .button{min-height:38px;padding:6px 14px;font-size:14px}
+.prize.choice .prize-card{box-shadow:0 0 0 3px var(--gold-hi),0 0 26px #ffcf5a88;border-radius:16px}
+.prize-plus{align-self:center;color:#dccfb0;font-weight:700}
+.box-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+@keyframes prize-in{from{opacity:0;transform:translateY(20px) scale(.85) rotate(-4deg)}}
+@media(prefers-reduced-motion:reduce){.prize{animation:none}}
+@media (max-height:600px) and (orientation:landscape){
+  .boxes-view{padding:6px 12px 12px}.boxes-heading h1{font-size:26px}.boxes-heading p{font-size:12px;margin:2px 0 4px}
+  .box-road{margin:4px 0}.road-box{padding:3px 6px;min-width:52px}.box-stage{margin:10px 0 4px;gap:4px}.chest:not(.mini){width:140px;height:118px}.box-hint{font-size:18px}
+  .box-prizes-title{font-size:18px;margin:4px 0}.box-prizes{gap:10px;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding:2px 6px 6px}.prize{width:136px;flex:none}.prize b{font-size:13px}
+  .box-strip{margin-top:6px;padding:3px 12px 3px 8px}.box-strip-copy b{font-size:13px}
+}
+/* The result screen: what this battle added toward the next box. */
+.result-box{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px auto 0;padding:6px 12px;border-radius:12px;background:#0002;width:fit-content}
+.result-box b{display:block;font-size:15px;margin-bottom:3px}
+.result-box .button{min-height:36px;padding:4px 14px}
+/* Box looks: the swatches in the look picker. */
+.skin-lava .skin-swatch,.skin-swatch.skin-lava{background:linear-gradient(135deg,#ffd27a,#ff5a1f 55%,#8a1d05)}
+.skin-ocean .skin-swatch,.skin-swatch.skin-ocean{background:linear-gradient(135deg,#9fe0ff,#1c6fe8 55%,#0a2a66)}
+.skin-forest .skin-swatch,.skin-swatch.skin-forest{background:linear-gradient(135deg,#c8f59a,#3aa845 55%,#145a1c)}
+.skin-candy .skin-swatch,.skin-swatch.skin-candy{background:linear-gradient(135deg,#ffe0f3,#ff79c9 55%,#b0247c)}
+.skin-moon .skin-swatch,.skin-swatch.skin-moon{background:radial-gradient(circle at 35% 30%,#fff,#dfe8f7 45%,#9aa8c0)}
+.skin-rainbow .skin-swatch,.skin-swatch.skin-rainbow{background:conic-gradient(#ff6b6b,#ffb347,#fff36b,#6bff9c,#6bc8ff,#b98cff,#ff6b6b)}
+.skin-galaxy .skin-swatch,.skin-swatch.skin-galaxy{background:radial-gradient(circle at 30% 30%,#9fe6ff 0 2px,transparent 3px),radial-gradient(circle at 70% 60%,#fff 0 1.5px,transparent 2.5px),linear-gradient(135deg,#3a1f8a,#1b0c45 60%,#05020f)}
+.skin-more .skin-swatch{background:repeating-conic-gradient(#c9a35d 0 25%,#f1e4c4 0 50%) 50%/12px 12px;opacity:.7}
+/* Card frames from boxes. */
+.tcard.frame-ember{--frame:#e0632e}.tcard.frame-wave{--frame:#2b7fd6}.tcard.frame-jade{--frame:#2fa36b}
+.tcard.frame-royal{--frame:#7c4fd1}.tcard.frame-night{--frame:#24306b}
+.tcard.frame-rainbow{background:conic-gradient(from 200deg,#ff6b6b,#ffb347,#fff36b,#6bff9c,#6bc8ff,#b98cff,#ff6b6b)}
+.frame-picker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+.frame-picker [role=group]{display:flex;gap:6px;flex-wrap:wrap}
+.frame-option{display:flex;align-items:center;gap:6px;padding:4px 12px 4px 6px;border-radius:999px;border:2px solid #c9a35d;background:#fff6e0;color:var(--ink);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.frame-option span{width:18px;height:18px;border-radius:50%;background:#8fa9b3;box-shadow:inset 0 0 0 2px #fff8}
+.frame-option.frame-ember span{background:#e0632e}.frame-option.frame-wave span{background:#2b7fd6}.frame-option.frame-jade span{background:#2fa36b}.frame-option.frame-royal span{background:#7c4fd1}.frame-option.frame-night span{background:#24306b}
+.frame-option.frame-rainbow span{background:conic-gradient(#ff6b6b,#ffb347,#fff36b,#6bff9c,#6bc8ff,#b98cff,#ff6b6b)}
+.frame-option.chosen{background:var(--brick);border-color:var(--brick);color:#fff}
+/* A sideways phone: the three home links share one row, so the box strip stays on screen. */
+@media (max-height:600px) and (orientation:landscape){
+  .home-links{flex-wrap:nowrap;gap:6px}.home-links .button{min-height:36px;padding:5px 10px;font-size:13px;white-space:nowrap}.home-links .button svg{width:17px;height:17px}
+}
+/* A prize shows the creature itself in its new colours; a frame shows a small card. */
+.prize-art{position:relative;display:grid;place-items:center;width:100%;height:190px;border-radius:16px;background:radial-gradient(circle at 50% 60%,color-mix(in srgb,var(--c,#ffcf5a) 35%,transparent),transparent 70%)}
+.prize-art canvas{width:100%;height:100%}
+.prize-art .frame-sample{width:118px;height:auto;aspect-ratio:5/7;padding:8px;transform:none}.prize-art .frame-sample canvas{height:100%}
+.prize.choice .prize-art{box-shadow:0 0 0 3px var(--gold-hi),0 0 26px #ffcf5a88}
+@media (max-height:600px) and (orientation:landscape){
+  .boxes-view.showing .box-road,.boxes-view.showing .boxes-heading p{display:none}
+  .prize-art{height:130px}.prize-art .frame-sample{width:84px;padding:5px}
+}
+/* Centred when the prizes fit, scrollable from the start when they do not. */
+.box-prizes>:first-child{margin-inline-start:auto}.box-prizes>:last-child{margin-inline-end:auto}
