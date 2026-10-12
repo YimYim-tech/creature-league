@@ -526,3 +526,31 @@ button.code-pic{border:0;font:inherit;cursor:pointer}
   .online-who canvas{width:70px;height:58px}.online-who b{font-size:14px}
   #online-fighters{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start}#online-fighters .fighter-chip{flex:none;width:66px}#online-fighters .fighter-chip canvas{width:50px;height:50px}
 }
+/* ---- Chapter 2: the living bridge, the map tabs and the bridge scene */
+.bridge-row{gap:8px}
+.gem.piece{display:inline-grid;place-items:center;color:#d9cfb8}
+.gem.piece svg{width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.gem.piece.lit{color:#fffdf2}.gem.piece.lit:after{display:none}
+.bridge-shard{width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 0 6px #cfe0ffaa)}
+.necklace.big .bridge-shard{width:46px;height:46px}
+.map-tabs{display:flex;gap:6px;margin-bottom:8px}
+.map-tabs button{font:inherit;font-weight:800;padding:6px 14px;border-radius:999px;border:2px solid var(--gold,#c9a35d);background:#24160c;color:#f3e6c8;cursor:pointer}
+.map-tabs button[aria-pressed="true"]{background:var(--gold,#c9a35d);color:#24160c}
+.map-spot.soon{opacity:.72}
+.bridge-stage{position:relative;height:min(40vh,320px);border-radius:20px;overflow:hidden;box-shadow:0 0 0 2px var(--gold,#c9a35d),0 10px 30px #0008}
+.bridge-stage img{width:100%;height:100%;object-fit:cover;object-position:center 4%}
+.bridge-arc{position:absolute;left:3%;right:3%;bottom:6%;width:94%;height:72%}
+.arc-seg{fill:none;stroke:#ffffff55;stroke-width:9;stroke-linecap:round;stroke-dasharray:4 10}
+.arc-seg.on{stroke:#fff3b0;stroke-dasharray:none;filter:drop-shadow(0 0 8px #ffe27a)}
+.bridge-pads{display:flex;justify-content:center;gap:clamp(14px,4vw,36px);margin:16px 0 8px}
+.echo-pad{--hue:#4fc3c7;width:clamp(68px,16vw,104px);aspect-ratio:1.4;border-radius:50%;border:0;cursor:pointer;color:#24306b;background:radial-gradient(circle at 35% 30%,#fff,var(--hue));box-shadow:0 0 0 3px #e9f1ff,0 8px 14px #0007;display:grid;place-items:center;transition:transform .15s}
+.echo-pad.n1{--hue:#d78bd8}.echo-pad.n2{--hue:#ffcf5a}
+.echo-pad svg{width:34%;height:auto;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.echo-pad:disabled{cursor:default;filter:saturate(.7) brightness(.92)}
+.echo-pad.sing{animation:pad-sing .7s ease-out}
+.echo-pad:not(:disabled):active{transform:scale(.94)}
+@keyframes pad-sing{0%{transform:scale(1)}40%{transform:scale(1.14);box-shadow:0 0 0 4px #fff,0 0 34px 14px var(--hue)}100%{transform:scale(1)}}
+.bridge-view .story-actions{display:flex;gap:10px;justify-content:center}
+.bridge-view .necklace{margin:6px auto 0}
+@media(prefers-reduced-motion:reduce){.echo-pad.sing{animation:none;filter:brightness(1.3)}}
+@media (max-height:600px) and (orientation:landscape){.bridge-stage{height:30vh}.bridge-pads{margin:8px 0 4px}.echo-pad{width:64px}}

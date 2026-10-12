@@ -9,6 +9,16 @@ export const ISLANDS = [
   {id:'mirror', name:'אי המראה', gem:'#f4efe2', gemName:'הלבן'},
 ];
 
+// Chapter 2, "The Masked Separator": worlds whose bridges were cut. Each world has one idea that runs
+// through all of its steps (introduce, develop, twist, finish), and ends with a bridge scene that adds a
+// piece to the living bridge around the mask shard. The design is in docs/2026-10-11 …פרק-2…Design.
+export const WORLDS = [
+  {id:'echo', name:'עמק ההדים', gem:'#4fc3c7', piece:'מחבר ההקשבה'},
+  {id:'tracks', name:'ארץ שני המסלולים', gem:'#ff9a2e', piece:'מחבר הקצב'},
+  {id:'patch', name:'יער הטלאים', gem:'#86d957', piece:'מחבר השינוי'},
+  {id:'distance', name:'איי המרחק', gem:'#9fd8ff', piece:'מחבר המרחק'},
+];
+
 // Lines are spoken by the guides. "shadow" is the Little Shadow, "ron" is Ron.
 export const STEPS = [
   {id:'wind-free', island:'wind', kind:'free', rival:'shorshu', level:'rookie',
@@ -63,6 +73,27 @@ export const STEPS = [
   {id:'castle', island:'castle', kind:'castle',
     intro:'זו הטירה הזהובה. פעם שמרתי עליה... ואני זה ששבר את הכוכב. אני לא בורח מזה יותר. בוא נתקן אותו ביחד.',
     after:'מישהו מנתק את הגשרים בין העולמות... המפריד במסכה. הוא השאיר שבר מהמסכה שלו. ההרפתקה הבאה מתחילה.'},
+  // ---- Chapter 2. The Echo Valley: listening.
+  {id:'echo-hide', chapter:2, island:'echo', kind:'free', rival:'ozenav', level:'rookie', hide:true,
+    intro:'משהו ממלא לאוזנב את הראש ברעש, אז הוא מתחבא. כשזזים, לא רואים אותו. עצרו רגע בשקט, ותשמעו איפה הוא.',
+    after:'הנה. עכשיו הוא שוב מצליח לשמוע אותנו. אוזנב בנבחרת!'},
+  {id:'echo-free', chapter:2, island:'echo', kind:'free', rival:'rishrush', level:'rookie',
+    intro:'רשרוש מדבר כל כך חזק שהוא כבר לא שומע אפילו את עצמו. כשהפעמונים שלו מצלצלים, הצלילים עוד רגע עפים. שמעתם? זוזו הצידה!',
+    after:'איזה שקט… נראה לי שעכשיו יש לו משהו שהוא באמת רוצה להגיד. רשרוש בנבחרת, והוא יודע לעוף!'},
+  {id:'echo-mission', chapter:2, island:'echo', kind:'mission', mode:'echo', opponent:'rishrush', buddy:'ozenav', level:'rookie',
+    intro:'האבנים משמיעות מנגינה. תקשיבו טוב, ואז תדרכו עליהן באותו הסדר. שכחתם? עצרו רגע: אוזנב שומע לפני כולם, והוא יראה לכם.',
+    easier:'הפעם ההדים קצת יותר שקטים. אתם יכולים!',
+    after:'ההדים נעלמו. בפעם הראשונה בעמק, קול שנשלח מצד אחד הגיע באמת לצד השני.'},
+  {id:'echo-guard', chapter:2, island:'echo', kind:'guardian', rival:'kashevet', level:'rookie', title:'קשבת',
+    intro:'קשבת לא בודקת מי הכי חזק. היא בודקת אם אנחנו יודעים לעצור ולהקשיב. כשהאבן על החזה שלה מאירה, התרחקו!',
+    after:'היא שמעה אותנו. עכשיו היא מוכנה לפתוח את הדרך, והיא מצטרפת לנבחרת!'},
+  {id:'echo-bridge', chapter:2, island:'echo', kind:'bridge', notes:[0,2,1],
+    intro:'זה גשר הקול. משני צדי התהום מחכים לשמוע. הקשיבו לשלושת הצלילים, והקישו אותם באותו הסדר.',
+    after:'כשהגשר חזר, נשמעה משני צדיו אותה מילה: "שמעתי". והמחבר הראשון נכנס לשבר המסכה!'},
+  // ---- The Land of Two Tracks: together, at the same pace. Its first step is the fast tiger Michael asked for.
+  {id:'tracks-chase', chapter:2, island:'tracks', kind:'free', rival:'zankor', level:'rookie', flee:true,
+    intro:'זנקור הוא הנמר הכי מהיר בכל העולמות. מאז שהגשר נחתך הוא רק רץ לבד, ולא מסתכל אחורה. הוא לא יחכה לכם: תפסו אותו בקליעים!',
+    after:'תפסתם אותו! זנקור עצר, ובפעם הראשונה הסתכל אחורה. הנמר המהיר בנבחרת!'},
 ];
 
 // Story cards: not fighters, but part of the album.
@@ -79,6 +110,15 @@ export const STORY_CARDS = {
 };
 export const STORY_CARD_IDS = Object.keys(STORY_CARDS);
 
+export const CHAPTER2_START = STEPS.findIndex(s => s.chapter === 2);
+export const chapterOf = step => step?.chapter || 1;
+export const inChapter2 = profile => profile.story.done >= CHAPTER2_START;
+// The worlds of chapter 2 whose bridge scene is behind the player: each one adds a piece to the living bridge.
+export function bridgePieces(profile) {
+  return WORLDS.filter(w => {const i = STEPS.findIndex(s => s.island === w.id && s.kind === 'bridge'); return i >= 0 && profile.story.done > i;}).map(w => w.id);
+}
+// A world that has steps but no bridge yet is still being built: the journey waits there.
+export const worldReady = id => STEPS.some(s => s.island === id && s.kind === 'bridge');
 export const freshStory = () => ({done:0});
 export function cleanStory(data) {return {done:Number.isInteger(data?.done)?clamp(data.done,0,STEPS.length):0};}
 export const storyComplete = profile => profile.story.done >= STEPS.length;
@@ -90,12 +130,12 @@ export function litIslands(profile) {
 }
 export const starLit = profile => litIslands(profile).length === ISLANDS.length;
 const CASTLE = {id:'castle', name:'הטירה הזהובה', gem:'#e8b931', gemName:'הזהוב'};
-export const islandOf = id => ISLANDS.find(i => i.id === id) ?? (id === 'castle' ? CASTLE : undefined);
+export const islandOf = id => ISLANDS.find(i => i.id === id) ?? WORLDS.find(w => w.id === id) ?? (id === 'castle' ? CASTLE : undefined);
 // Which island a still-shadowed creature waits on.
 export const homeIsland = creature => CREATURES[creature]?.star ? 'castle' : STEPS.find(s => s.rival === creature)?.island ?? null;
 
 // Two losses on the same step bring the opponent down one level: no child stays stuck, on missions or guardians.
-const LEVEL_ORDER = ['rookie', 'challenger', 'veteran', 'champion'];
+const LEVEL_ORDER = ['beginner', 'rookie', 'challenger', 'veteran', 'champion'];
 export const missionEased = (profile, step) => !!step?.level && (profile.missionLosses[step.id] || 0) >= 2;
 export function missionLevel(profile, step) {
   if (!missionEased(profile, step)) return step.level;
@@ -107,6 +147,7 @@ export function missionStars(step, m) {
   if (step.mode === 'lava') {const a = m.actors[0], left = a.hp / a.spec.hp; return left >= .5 ? 3 : left >= .25 ? 2 : 1;}
   if (step.mode === 'ball') {const lead = m.ball.score[0] - m.ball.score[1]; return lead >= 4 ? 3 : lead >= 2 ? 2 : 1;}
   if (step.mode === 'trio') return trioLeft(m, 0);
+  if (step.mode === 'echo') {const r = m.echo.songs[1]; return r === 0 ? 3 : r === 1 ? 2 : 1;}
   return m.time < 35 ? 3 : m.time < 60 ? 2 : 1;
 }
 // Every battle step earns one to three stars: missions by how well the goal went, fights by the life left.
@@ -115,12 +156,14 @@ export function stepStars(step, m) {
   if (step.kind === 'mission') return missionStars(step, m);
   const a = m.actors[0], left = a.hp / a.spec.hp; return left >= .5 ? 3 : left >= .25 ? 2 : 1;
 }
-export const BATTLE_STEPS = STEPS.filter(s => s.kind !== 'castle');
+export const BATTLE_STEPS = STEPS.filter(s => s.kind !== 'castle' && s.kind !== 'bridge');
+export const chapterSteps = ch => BATTLE_STEPS.filter(s => chapterOf(s) === ch);
+export const chapterStars = (profile, ch) => chapterSteps(ch).reduce((n, s) => n + starsOf(profile, s.id), 0);
 export const starsOf = (profile, id) => profile.missionStars[id] || 0;
 export const totalStars = profile => BATTLE_STEPS.reduce((n, s) => n + starsOf(profile, s.id), 0);
 export function islandStars(profile, island) {const steps = BATTLE_STEPS.filter(s => s.island === island); return {got:steps.reduce((n, s) => n + starsOf(profile, s.id), 0), max:steps.length * 3};}
 // A step already behind the player can be played again for more stars; it never changes the journey.
-export const canReplay = (profile, id) => {const i = stepIndex(id); return i >= 0 && i < profile.story.done && STEPS[i].kind !== 'castle';};
+export const canReplay = (profile, id) => {const i = stepIndex(id); return i >= 0 && i < profile.story.done && STEPS[i].kind !== 'castle' && STEPS[i].kind !== 'bridge';};
 // A mission against a creature the child already freed is a friendly race, not a fight with the shadow.
 export const friendlyStep = (profile, step) => step?.kind === 'mission' && step.mode !== 'trio' && isUnlocked(profile, step.opponent);
 // A trio team: three different released creatures, the chosen one first.
@@ -132,7 +175,7 @@ export function trioTeam(profile, wanted = null) {
 }
 export function makeStoryMatch(profile, options = {}) {
   const replay = options.replay && canReplay(profile, options.replay), step = replay ? STEPS[stepIndex(options.replay)] : currentStep(profile);
-  if (!step || step.kind === 'castle') return null;
+  if (!step || step.kind === 'castle' || step.kind === 'bridge') return null;
   const m = buildStoryMatch(profile, step, options);
   if (replay) m.replay = true;
   if (replay || friendlyStep(profile, step)) m.friendly = true;
@@ -141,9 +184,11 @@ export function makeStoryMatch(profile, options = {}) {
 function buildStoryMatch(profile, step, options) {
   const player = isUnlocked(profile, profile.selected) ? profile.selected : 'maimi';
   if (step.kind === 'mission') return makeMatch({...options, player, rival:step.opponent, level:missionLevel(profile, step), story:step.id, arena:step.island, mode:step.mode,
-    team:step.mode === 'trio' ? trioTeam(profile, options.team) : null, rivalTeam:step.rivals || null});
+    team:step.mode === 'trio' ? trioTeam(profile, options.team) : null, rivalTeam:step.rivals || null,
+    // The freed friend who helps only comes when it really is in the team, and never as the creature playing.
+    buddy:step.buddy && isUnlocked(profile, step.buddy) && step.buddy !== player ? step.buddy : null});
   const rival = step.kind === 'mirror' ? player : step.rival;
-  return makeMatch({...options, player, rival, level:missionLevel(profile, step), story:step.id, arena:step.island, giant:step.kind === 'guardian', mirror:step.kind === 'mirror'});
+  return makeMatch({...options, player, rival, level:missionLevel(profile, step), story:step.id, arena:step.island, giant:step.kind === 'guardian', mirror:step.kind === 'mirror', hide:!!step.hide, flee:!!step.flee});
 }
 // Called after a finished story match. Returns what changed, for the screens to celebrate.
 export function recordStory(profile, m) {
@@ -156,7 +201,7 @@ export function recordStory(profile, m) {
   if (stars) profile.missionStars[step.id] = Math.max(profile.missionStars[step.id] || 0, stars);
   let released = null;
   if (step.kind !== 'mission' && WILD.includes(step.rival) && !isUnlocked(profile, step.rival)) {profile.unlocked.push(step.rival); profile.newCards.push(step.rival); released = step.rival;}
-  const lit = step.kind === 'guardian' || step.kind === 'mirror' ? step.island : null;
+  const lit = (step.kind === 'guardian' || step.kind === 'mirror') && ISLANDS.some(i => i.id === step.island) ? step.island : null;
   return {step, released, lit, stars};
 }
 function recordReplay(profile, m) {
@@ -174,6 +219,13 @@ export function completeCastle(profile) {
   // The star guardians wake up and join.
   for (const id of STAR_GUARDS) if (!profile.unlocked.includes(id)) {profile.unlocked.push(id); profile.newCards.push(id);}
   return true;
+}
+// The bridge scene at the end of a world: when the notes are played back, the world's piece joins the living bridge.
+export function completeBridge(profile) {
+  const step = currentStep(profile);
+  if (step?.kind !== 'bridge') return null;
+  profile.story.done++;
+  return step.island;
 }
 export const storyCardOwned = (profile, id) => profile.storyCards.includes(id);
 export const creatureName = id => CREATURES[id]?.name ?? STORY_CARDS[id]?.name ?? '';

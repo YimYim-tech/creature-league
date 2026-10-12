@@ -1,8 +1,10 @@
 import {Skeleton,Animator,drawSkeleton} from './vendor/rig.js';
-import {CREATURES,WORLD,clamp,skinById,GOALS,BALL_GOALS} from './core.js';
+import {CREATURES,WORLD,clamp,skinById,GOALS,BALL_GOALS,HIDE_LISTEN} from './core.js';
 export const ARENA_URL='./art/2026-09-15__Coastal-Arena__Background__v01__FINAL.png';
 // Each island of the necklace journey has its own painted arena; a missing one falls back to the coast.
-export const ISLAND_ARENAS=['wind','sea','fire','mirror','castle'];
+export const ISLAND_ARENAS=['wind','sea','fire','mirror','castle','echo'];
+// A world whose arena is not painted yet borrows one that fits.
+const ARENA_STAND_IN={tracks:'wind'};
 const loaded=new Map();
 function loadImage(url) {return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Image failed: '+url));img.src=url;});}
 export async function loadArt(onProgress=()=>{}) {
@@ -17,7 +19,7 @@ export async function loadArt(onProgress=()=>{}) {
   return {arena,arenas,entries,props};
 }
 const PROP_KEYS=['coast','wind','sea','fire','mirror','castle'];
-export const SHOT_ART={zoharon:'beam',kokhavit:'spark',maimi:'water',havzuk:'lightning',slauz:'stone',lohatan:'fire',tehomon:'whirl',zikuk:'beam',retetoz:'wave',tzlilon:'hypno',shorshu:'leaf',windguard:'wind',seaguard:'spear',fireguard:'fireball',fireball:'fireball',galgalor:'spark',chutal:'water',hedanon:'wave',tlaor:'spark',thread:'beam'};
+export const SHOT_ART={zoharon:'beam',kokhavit:'spark',maimi:'water',havzuk:'lightning',slauz:'stone',lohatan:'fire',tehomon:'whirl',zikuk:'beam',retetoz:'wave',tzlilon:'hypno',shorshu:'leaf',windguard:'wind',seaguard:'spear',fireguard:'fireball',fireball:'fireball',galgalor:'spark',chutal:'water',hedanon:'wave',tlaor:'spark',thread:'beam',ozenav:'wave',rishrush:'spark',bell:'spark',kashevet:'wind',zankor:'lightning'};
 export const PROP_NAMES=[...PROP_KEYS.flatMap(k=>['rock-'+k,'rubble-'+k]),'pearl','feather','ember','crystal','gate-blue','gate-gold',...Object.values(SHOT_ART).filter((v,i,a)=>a.indexOf(v)===i).map(v=>'shot-'+v),'burst-star','burst-splash'];
 export function createPuppet(id) {const data=loaded.get(id);const skeleton=new Skeleton(data.rig);return {...data,skeleton,animator:new Animator(skeleton,data.clips)};}
 function ellipse(ctx,x,y,rx,ry,fill,stroke,width=1) {ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}}
@@ -70,7 +72,7 @@ const PLAY_VIEW={x:72,y:26,w:1136,h:668};
 export class Renderer {
   constructor(canvas,art) {this.canvas=canvas;this.ctx=canvas.getContext('2d');this.art=art;this.puppets=[];this.skins=[null,null];this.clock=0;this.scale=1;this.offsetX=0;this.offsetY=0;this.shake=0;this.phone=false;this.cam=null;}
   swap(side,id,skin=null) {this.puppets[side]=createPuppet(id);this.skins[side]=skin;}
-  setMatch(m,skins=[null,null]) {this.cam=null;this.puppets=m.actors.map(a=>createPuppet(a.id));this.skins=skins;}
+  setMatch(m,skins=[null,null]) {this.cam=null;this.puppets=m.actors.map(a=>createPuppet(a.id));this.skins=skins;this.buddy=m.echo?.buddy?createPuppet(m.echo.buddy.id):null;}
   resize() {this.wide=PHONE_WIDE.matches||PHONE_TALL.matches;this.phone=false;this.size=this.wide?1.3:1;const rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.dpr=dpr;
     if(this.canvas.width!==Math.round(rect.width*dpr)||this.canvas.height!==Math.round(rect.height*dpr)){this.canvas.width=Math.round(rect.width*dpr);this.canvas.height=Math.round(rect.height*dpr);}
     this.scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height);this.offsetX=(rect.width-WORLD.width*this.scale)/2;this.offsetY=(rect.height-WORLD.height*this.scale)/2;
@@ -110,7 +112,9 @@ export class Renderer {
     this.resize();this.follow(m,dt);this.clock=clock;this.propKey=PROP_KEYS.includes(m.arena)?m.arena:'coast';this.shadowed=!!m.story&&!m.mirror&&!m.friendly;this.versus=!!m.versus;const c=this.ctx;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.fillStyle='#0b2026';c.fillRect(0,0,this.w,this.h);
     this.shake=Math.max(0,this.shake-dt*22);c.translate(this.offsetX,this.offsetY);c.scale(this.scale,this.scale);
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;if(!reduced&&this.shake>0)c.translate(Math.sin(clock*93)*this.shake,Math.cos(clock*117)*this.shake*.6);
-    c.drawImage(this.art.arenas?.[m.arena]||this.art.arena,0,0,1280,720);
+    c.drawImage(this.art.arenas?.[m.arena]||this.art.arenas?.[ARENA_STAND_IN[m.arena]]||this.art.arena,0,0,1280,720);
+    // Hide-and-seek: the rival is hidden until the child stands still and listens.
+    this.hidden=!!m.hide&&m.hide.seen<=0&&m.status==='playing'&&m.actors[1].hp>0;
     // A gentle edge shade leaves the arena floor bright and readable.
     const shade=c.createLinearGradient(0,0,0,720);shade.addColorStop(0,'#102b3866');shade.addColorStop(.25,'#102b3800');shade.addColorStop(.8,'#102b3800');shade.addColorStop(1,'#102b3844');c.fillStyle=shade;c.fillRect(0,0,1280,720);
     c.save();c.globalAlpha=.5;c.setLineDash([5,12]);ellipse(c,WORLD.cx,WORLD.cy,WORLD.rx,WORLD.ry,null,'#a7f3e4',2);c.restore();
@@ -118,19 +122,26 @@ export class Renderer {
     for(const cover of m.covers)if(cover.hp<=0)this.drawRubble(cover);
     if(m.lava)for(const e of m.lava.embers)this.drawEmber(e,clock);
     if(m.wind)for(const f of m.wind.feathers)this.drawFeather(f,clock);
+    if(m.echo)this.drawEchoStones(m,clock);
+    if(m.hide&&this.hidden)this.drawListening(m);
     if(m.ball){this.drawGoals(m,clock);if(m.ball.carrier<0)this.drawBall(m,clock);}
     for(const z of m.zones)this.drawZone(z,clock);
     for(const a of m.actors)if(a.boss)this.drawBossPlan(a,clock);
     if(m.pickup)this.drawPickup(m.pickup,clock);
     for(const w of m.waves)this.drawWave(w,m,clock);
     for(const a of m.actors){
-      ellipse(c,a.x,a.y+3,a.radius*1.45,a.radius*.48,'#182b3555');
+      if(a.side===1&&this.hidden)continue;
+      // A flying creature casts a smaller, softer shadow: it is up in the air.
+      const fly=a.spec.flies&&a.hp>0;
+      ellipse(c,a.x,a.y+3,a.radius*(fly?1.1:1.45),a.radius*(fly?.36:.48),fly?'#182b3540':'#182b3555');
       ellipse(c,a.x,a.y+3,a.radius*1.5,a.radius*.58,null,a.side===0?'#11bcca':a.side===2?'#f2c14e':'#d24f63',3);
+      if(a.tellT>0)this.drawTell(a);
       if(a.windup>0){const surge=a.upgrades.includes('surge'),r=surge?235:182,pct=1-a.windup/(surge?.85:.6);ellipse(c,a.x,a.y,r,r*.8,'#fc713027','#fa9858',2);ellipse(c,a.x,a.y,r*pct,r*.8*pct,'#ffbc6544');}
     }
-    const things=[...m.covers.filter(c=>c.hp>0).map(c=>({y:c.y,cover:c})),...m.actors.filter(a=>!(a.out>0)).map(a=>({y:a.y,actor:a}))].sort((a,b)=>a.y-b.y);
-    for(const obj of things){if(obj.cover)this.drawCover(obj.cover,m.time);else this.drawActor(obj.actor,dt,m.status);}
-    const enemy=m.actors[1];if(!m.versus&&m.status==='playing'&&enemy.fireCd<.23&&enemy.windup<=0&&(!enemy.boss||enemy.boss.phase==='guard')){c.save();c.globalAlpha=.65;c.setLineDash([5,5]);line(c,[[enemy.x,enemy.y-38],[enemy.x+Math.cos(enemy.aim)*78,enemy.y-38+Math.sin(enemy.aim)*78]],'#d53c5b',3);c.restore();}
+    const B=m.echo?.buddy;
+    const things=[...m.covers.filter(c=>c.hp>0).map(c=>({y:c.y,cover:c})),...m.actors.filter(a=>!(a.out>0)).map(a=>({y:a.y,actor:a})),...(B&&this.buddy?[{y:B.y,buddy:B}]:[])].sort((a,b)=>a.y-b.y);
+    for(const obj of things){if(obj.cover)this.drawCover(obj.cover,m.time);else if(obj.buddy)this.drawBuddy(obj.buddy,dt,m.status);else this.drawActor(obj.actor,dt,m.status);}
+    const enemy=m.actors[1];if(!m.versus&&!this.hidden&&m.status==='playing'&&enemy.fireCd<.23&&enemy.windup<=0&&(!enemy.boss||enemy.boss.phase==='guard')){c.save();c.globalAlpha=.65;c.setLineDash([5,5]);line(c,[[enemy.x,enemy.y-38],[enemy.x+Math.cos(enemy.aim)*78,enemy.y-38+Math.sin(enemy.aim)*78]],'#d53c5b',3);c.restore();}
     for(const s of m.shots)this.drawShot(s,clock);
     for(const e of m.effects)this.drawEffect(e);
     if(m.wind)for(const a of m.actors)if(!(a.out>0))this.drawCarry(a,m);
@@ -166,13 +177,20 @@ export class Renderer {
     if(a.hp>0&&a.boss?.phase==='windup')clip='telegraph';if(a.hp>0&&a.boss?.phase==='recover')clip='hit';
     if(status==='countdown')clip='idle';const puppet=this.puppets[a.side],f=this.size||1;
     if(f!==1){c.save();c.translate(a.x,a.y);c.scale(f,f);c.translate(-a.x,-a.y);}
+    // Birds fly: the body floats above its shadow, a little higher in a guardian's second stage.
+    const lift=a.spec.flies&&a.hp>0?(a.giant?32:24)+(a.phase2?26:0)+Math.sin(this.clock*4+a.side*2)*5:0;c.save();c.translate(0,-lift);
+    const hidden=a.side===1&&this.hidden;
+    if(a.dash&&a.hp>0){c.save();c.globalCompositeOperation='lighter';for(let i=1;i<=6;i++){const k=i/6;ellipse(c,a.x-a.moveX*60*k,a.y-a.spec.height*.4-a.moveY*48*k,a.radius*(1.2-k*.6),a.spec.height*.22*(1-k*.5),a.spec.color+'55');}c.restore();}
     // Some drawings face left in the source art; flipping follows the drawing.
     const flip=facesLeft(a.id)?a.facing>0:a.facing<0;
     if(a.root>0)this.drawRoots(a);
     if(a.lightShield>0&&a.hp>0)this.drawLightShield(a);
-    if(a.side===1&&this.shadowed&&a.hp>0)this.drawShadowAura(a);
+    if(a.side===1&&this.shadowed&&a.hp>0&&!hidden)this.drawShadowAura(a);
     if(a.power>0){c.save();c.globalAlpha=.35+.08*Math.sin(this.clock*6);ellipse(c,a.x,a.y,a.radius*(1.7+a.power*.12),a.radius*.62,'#ff8a2a55','#ffb43a',3);c.restore();}
-    drawPuppet(c,puppet,a.x,a.y,a.spec.height*(1+.07*(a.power||0)),{flip,clip:a.stun>0&&a.hp>0?'hit':clip,dt:status==='paused'||a.stun>0?0:dt,hit:a.hit>.05,alpha:a.invincible>0?.65:1,skin:this.skins[a.side],time:this.clock});
+    drawPuppet(c,puppet,a.x,a.y,a.spec.height*(1+.07*(a.power||0)),{flip,clip:a.stun>0&&a.hp>0?'hit':clip,dt:status==='paused'||a.stun>0?0:dt,hit:a.hit>.05,alpha:a.invincible>0?.65:1,skin:this.skins[a.side],time:this.clock,...(hidden?{alpha:.1}:{})});
+    if(hidden){c.restore();if(f!==1)c.restore();return;}
+    if(a.hear>0&&a.hp>0)this.drawHearing(a);
+    if(a.silence>0&&a.hp>0)this.drawSilence(a);
     if(a.hit>.06&&a.hp>0){c.save();c.globalCompositeOperation='lighter';c.globalAlpha=Math.min(1,a.hit*5);glow(c,a.x,a.y-a.spec.height*.5,a.spec.height*.55,'#ffffffcc');c.restore();}
     if(a.stun>0&&a.hp>0)this.drawDizzy(a);
     if(a.regen){c.save();for(let i=0;i<5;i++){const k=(this.clock*.9+i/5)%1,px=a.x+Math.sin(i*2.4+this.clock*2)*a.radius*.9,py=a.y-10-k*a.spec.height*.9;c.globalAlpha=(1-k)*.9;c.fillStyle='#5dff9e';c.fillRect(px-2,py-7,4,14);c.fillRect(px-7,py-2,14,4);}c.restore();}
@@ -180,8 +198,39 @@ export class Renderer {
     // Near the top edge the bar stops at the screen edge, so health never leaves the screen.
     const barW=70,topWorld=-this.offsetY/this.scale+6,barY=Math.max(a.y-a.spec.height-17,a.y+(topWorld-a.y)/f);c.fillStyle='#092432bb';c.beginPath();c.roundRect(a.x-barW/2,barY,barW,7,4);c.fill();c.fillStyle=a.side===0?'#39dccc':a.side===2?'#f2c14e':'#fc7a7f';c.beginPath();c.roundRect(a.x-barW/2+1,barY+1,Math.max(0,(barW-2)*a.hp/a.spec.hp),5,3);c.fill();
     if((a.side!==1||this.versus)&&a.hp>0&&!(a.out>0))this.drawLightGem(a.x-barW/2-13,barY+3,a.superCharge||0,a.spec.color);
+    c.restore();
     if(f!==1)c.restore();
   }
+  // The freed friend who helps in the echo mission: it follows, and sits on the next stone when the child waits.
+  drawBuddy(B,dt,status){const c=this.ctx,spec=CREATURES[B.id],f=this.size||1;
+    if(f!==1){c.save();c.translate(B.x,B.y);c.scale(f,f);c.translate(-B.x,-B.y);}
+    ellipse(c,B.x,B.y+3,spec.radius*1.2,spec.radius*.4,'#182b3544');
+    if(B.on>=0){c.save();c.globalCompositeOperation='lighter';glow(c,B.x,B.y-spec.height*.9,30+5*Math.sin(this.clock*8),'#ffe27acc');c.restore();}
+    const flip=facesLeft(B.id)?B.facing>0:B.facing<0;
+    drawPuppet(c,this.buddy,B.x,B.y,spec.height*.8,{flip,clip:status==='countdown'||!B.moving?'idle':'run',dt:status==='paused'?0:dt,time:this.clock});
+    if(f!==1)c.restore();}
+  // Five singing stones. While the tune plays the singing one lights up; the friend's hint glows gold.
+  drawEchoStones(m,t){const c=this.ctx,E=m.echo,listen=E.phase==='listen',buddyOn=E.buddy?.on??-1;
+    E.stones.forEach((s,i)=>{const singing=listen&&E.note>=0&&E.song[E.note]===i,rx=s.r,ry=s.r*.66;
+      ellipse(c,s.x,s.y+5,rx+6,ry+5,'#1c2a3a44');
+      const g=c.createRadialGradient(s.x-rx*.3,s.y-ry*.4,4,s.x,s.y,rx);g.addColorStop(0,singing?'#fff7d6':'#f3e7cc');g.addColorStop(1,singing?'#ffc95a':'#a98c63');
+      ellipse(c,s.x,s.y,rx,ry,g,singing?'#fff3b0':'#5d8f9a',3);
+      c.save();c.globalAlpha=singing?.95:.55;for(let k=1;k<=3;k++){c.beginPath();c.ellipse(s.x,s.y,rx*k/4,ry*k/4,0,-2.4,.8);c.strokeStyle=singing?'#a8560a':'#3f7f8c';c.lineWidth=2.5;c.stroke();}c.restore();
+      if(singing){c.save();c.globalCompositeOperation='lighter';glow(c,s.x,s.y-10,rx*2.1,'#ffe27aaa');for(let k=0;k<3;k++){const q=((t*1.6+k/3)%1);ellipse(c,s.x,s.y-q*70,rx*(.6+q*.6),ry*(.6+q*.6),null,'#fff3b0',3*(1-q)+1);}c.restore();}
+      if(i===buddyOn&&!singing){c.save();c.globalCompositeOperation='lighter';ellipse(c,s.x,s.y,rx+6+3*Math.sin(t*7),ry+5,null,'#ffe27a',4);c.restore();}
+    });}
+  // Hide-and-seek: a ring under the child fills while they stand still. Full means: now you hear it.
+  drawListening(m){const c=this.ctx,p=m.actors[0],H=m.hide;if(p.out>0||p.hp<=0)return;const pct=Math.min(1,H.still/HIDE_LISTEN);
+    c.save();c.globalAlpha=.85;ellipse(c,p.x,p.y+3,p.radius*2.1,p.radius*.8,null,'#ffffff55',3);
+    if(pct>0){c.beginPath();c.ellipse(p.x,p.y+3,p.radius*2.1,p.radius*.8,0,-Math.PI/2,-Math.PI/2+pct*Math.PI*2);c.strokeStyle='#7ff6ff';c.lineWidth=5;c.stroke();}c.restore();}
+  // A warning before a super: the creature glows, and the silence wave shows where it will reach.
+  drawTell(a){const c=this.ctx,k=1-a.tellT/(a.spec.tell||.6),pulse=.5+.5*Math.sin(this.clock*22);c.save();
+    if(a.id==='kashevet'){const r=a.upgrades.includes('surge')?285:240;c.setLineDash([12,9]);ellipse(c,a.x,a.y,r,r*.8,'#cfe0ff'+(pulse>.5?'26':'14'),'#e7efff',3);c.setLineDash([]);ellipse(c,a.x,a.y,r*k,r*.8*k,'#cfe0ff22');}
+    c.globalCompositeOperation='lighter';const lift=a.spec.flies?(a.giant?32:24):0,cy=a.y-lift-a.spec.height*(a.id==='kashevet'?.5:.75);glow(c,a.x,cy,40+30*k,(a.id==='kashevet'?'#d6e6ff':'#ffe27a')+(pulse>.4?'ee':'99'));
+    if(a.id==='rishrush')for(let i=0;i<8;i++){const ang=i*Math.PI/4+this.clock*2;ellipse(c,a.x+Math.cos(ang)*a.radius*2.2,cy+Math.sin(ang)*a.radius*1.2,5,5,'#fff3b0');}
+    c.restore();}
+  drawHearing(a){const c=this.ctx,t=this.clock,cy=a.y-a.spec.height*.85;c.save();c.globalAlpha=.8;for(let k=0;k<3;k++){const q=(t*1.4+k/3)%1;for(const side of [-1,1]){c.beginPath();c.arc(a.x+side*a.radius*.9,cy,10+q*26,side>0?-.9:Math.PI-.9,side>0?.9:Math.PI+.9);c.strokeStyle='#bff9ff';c.lineWidth=3*(1-q)+1;c.stroke();}}c.restore();}
+  drawSilence(a){const c=this.ctx,x=a.x,y=a.y-a.spec.height-34;c.save();ellipse(c,x,y,17,17,'#24306bdd','#cfe0ff',2);c.translate(x-7,y);c.fillStyle='#ffffff';c.beginPath();c.moveTo(-5,-4);c.lineTo(-1,-4);c.lineTo(4,-8);c.lineTo(4,8);c.lineTo(-1,4);c.lineTo(-5,4);c.closePath();c.fill();line(c,[[8,-5],[16,5]],'#ff8f8f',2.5);line(c,[[16,-5],[8,5]],'#ff8f8f',2.5);c.restore();}
   // Creatures still held by the shadow trail dark smoke until they are freed.
   drawShadowAura(a){const c=this.ctx,t=this.clock,h=a.spec.height;c.save();for(let i=0;i<9;i++){const k=(t*.6+i/9)%1,ang=i*2.1+t*.7,r=a.radius*(1.1+k*1.4);c.globalAlpha=.32*(1-k);ellipse(c,a.x+Math.cos(ang)*r*.6,a.y-h*(.15+k*.8),r*.55,r*.42,i%2?'#2a1840':'#120a1f');}c.restore();}
   drawLava(m,t){const c=this.ctx,L=m.lava,s=L.scale;
@@ -274,6 +323,9 @@ export class Renderer {
     const c=this.ctx,color={water:'#36c9ed',fire:'#ff7a2c',vortex:'#4f86ff',roots:'#86d957'}[z.kind]||'#ffe56d';c.save();c.globalAlpha=Math.min(1,(z.life-z.age)*2);
     // The echo: rings gather on the spot, then the sound lands.
     if(z.kind==='echo'){if(!z.done){const pct=Math.min(1,z.age/z.delay);ellipse(c,z.x,z.y,z.r,z.r*.8,'#b7a6ff22','#d9ceff',2);for(let i=0;i<3;i++){const q=((pct+i/3)%1);ellipse(c,z.x,z.y,z.r*(1-q),z.r*.8*(1-q),null,'#b7a6ff',3*q+1);}}c.restore();return;}
+    if(z.kind==='bells'){c.restore();return;}
+    if(z.kind==='feather'){if(!z.done){const pct=Math.min(1,z.age/z.delay),h=(1-pct)*300,img=this.art.props?.feather;ellipse(c,z.x,z.y,z.r,z.r*.8,'#cfe0ff22','#e7efff',2);ellipse(c,z.x,z.y,z.r*pct,z.r*.8*pct,'#cfe0ff44');
+      if(img){const s=64/Math.max(img.width,img.height);c.save();c.translate(z.x+Math.sin(t*5+z.x)*10,z.y-h);c.rotate(Math.sin(t*4+z.y)*.5);c.drawImage(img,-img.width*s/2,-img.height*s/2,img.width*s,img.height*s);c.restore();}}c.restore();return;}
     if(z.kind==='star'){if(!z.done){const pct=Math.min(1,z.age/z.delay),h=(1-pct)*320;ellipse(c,z.x,z.y,z.r,z.r*.8,'#ffe27a22','#ffe27a',2);ellipse(c,z.x,z.y,z.r*pct,z.r*.8*pct,'#ffe27a44');c.globalCompositeOperation='lighter';glow(c,z.x,z.y-h,26,'#fff3b0cc');c.globalCompositeOperation='source-over';c.fillStyle='#fff8d8';star(c,z.x,z.y-h,14,'#fff8d8');}c.restore();return;}
     if(z.kind==='roots'){if(!z.done){const pct=Math.min(1,z.age/z.delay);ellipse(c,z.x,z.y,z.r,z.r*.8,'#86d95722','#c8ff9a',2);ellipse(c,z.x,z.y,z.r*pct,z.r*.8*pct,'#86d95744');}
       else{for(let i=0;i<9;i++){const ang=i*.7,rr=z.r*(.3+(i%3)*.25),grow=Math.min(1,(z.age-z.delay)/.2);line(c,[[z.x+Math.cos(ang)*rr,z.y+Math.sin(ang)*rr*.7],[z.x+Math.cos(ang)*rr*.8,z.y+Math.sin(ang)*rr*.6-28*grow],[z.x+Math.cos(ang+.5)*rr*.6,z.y+Math.sin(ang)*rr*.5-52*grow]],i%2?'#4f8a25':'#8fcf55',7);}}
@@ -325,6 +377,12 @@ export class Renderer {
     if(e.type==='dizzy')this.label('מהופנט!',e.x,e.y-125-p*30,22,'#6b3fbf');
     if(e.type==='rooted')this.label('נתפס!',e.x,e.y-120-p*30,22,'#2f6a1c');
     if(e.type==='burrow'){for(let i=0;i<6;i++){const q=i/5;ellipse(c,e.from.x+(e.x-e.from.x)*q,e.from.y+(e.y-e.from.y)*q,16*(1-p),7*(1-p),'#8a5a2c99');}ellipse(c,e.x,e.y,40+p*40,16+p*16,null,'#e0a96d',4);}
+    if(e.type==='silenced')this.label('שקט!',e.x,e.y-125-p*30,22,'#24306b');
+    if(e.type==='hear'||e.type==='bells'||e.type==='reveal'||e.type==='rise'){const r=(e.type==='rise'?90:50)+p*(e.type==='rise'?170:110);c.save();c.globalCompositeOperation='lighter';ellipse(c,e.x,e.y-30,r,r*.6,null,e.color||'#ffffff',5*(1-p)+1);ellipse(c,e.x,e.y-30,r*.7,r*.42,null,'#ffffff',2);c.restore();}
+    if(e.type==='featherfall'){c.save();c.globalCompositeOperation='lighter';glow(c,e.x,e.y-10,(e.r||52)*1.5*(1-p*.5),'#e7efffbb');c.restore();for(let i=0;i<8;i++){const ang=i*.785,r=10+p*60;ellipse(c,e.x+Math.cos(ang)*r,e.y-10+Math.sin(ang)*r*.5,6*(1-p),2.5*(1-p),'#ffffff');}}
+    if(e.type==='echo-step'||e.type==='echo-song'){const big=e.type==='echo-song',r=40+p*(big?160:80);c.save();c.globalCompositeOperation='lighter';ellipse(c,e.x,e.y,r,r*.66,null,e.color||'#ffffff',(big?8:5)*(1-p)+1);if(big)for(let i=0;i<12;i++){const ang=i*.52,rr=20+p*150;star(c,e.x+Math.cos(ang)*rr,e.y-30+Math.sin(ang)*rr*.6,8*(1-p),'#fff3b0');}c.restore();}
+    if(e.type==='echo-miss'){ellipse(c,e.x,e.y,50+p*30,(50+p*30)*.66,'#ff8f7a22',e.color||'#ff8f7a',4*(1-p)+1);}
+    if(e.type==='pounce'){ellipse(c,e.x,e.y,30+p*80,(30+p*80)*.4,null,e.color||'#fff',5);}
     if(e.type==='blink'||e.type==='dash'){for(let i=1;i<=5;i++){const t=i/5;ellipse(c,e.from.x+(e.x-e.from.x)*t,e.from.y+(e.y-e.from.y)*t-30,12*(1-p),22*(1-p),e.color+'77');}}
     c.restore();
   }

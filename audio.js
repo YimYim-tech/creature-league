@@ -48,6 +48,18 @@ export class Sound {
     if(event.type==='heal'||event.type==='pickup-ready'){this.tone(660,.16,'sine',.08);this.tone(880,.25,'sine',.08,0,.12);}
     if(event.type==='finish'){const notes=event.winner===0?[523,659,784,1047]:[392,349,294];notes.forEach((f,i)=>this.tone(f,.5,'triangle',.15,0,i*.15));}
     if(event.type==='go')this.tone(740,.2,'triangle',.13);
+    // The echo stones sing five notes; a step plays its stone's note, a song ends with a little tune.
+    if(event.type==='echo-note'){const f=[523,587,659,784,880][event.stone]||660;this.tone(f,.55,'triangle',.16);this.tone(f,.4,'sine',.05,0,.25);}
+    if(event.type==='echo-step'&&(event.side===0||this.versus)){const f=[523,587,659,784,880][event.stone]||660;this.tone(f,.3,'triangle',.13);}
+    if(event.type==='echo-step'&&event.side===1&&!this.versus){const f=[523,587,659,784,880][event.stone]||660;this.tone(f/2,.2,'triangle',.06);}
+    if(event.type==='echo-miss'&&event.side===0)this.tone(190,.32,'sawtooth',.06,-60);
+    if(event.type==='echo-song'){const up=event.side===0||this.versus;[523,659,784,1047].forEach((f,i)=>this.tone(up?f:f/2,.22,'triangle',.11,0,i*.08));}
+    if(event.type==='bells'){[1319,1568,1760].forEach((f,i)=>this.tone(f,.25,'sine',.07,0,i*.05));}
+    if(event.type==='tell')this.tone(event.kind==='kashevet'?330:988,.5,'sine',.08,event.kind==='kashevet'?220:0);
+    if(event.type==='silenced')this.tone(150,.4,'sine',.1,-60);
+    if(event.type==='phase2'){this.tone(220,.7,'triangle',.12,440);this.tone(660,.5,'sine',.06,0,.2);}
+    if(event.type==='reveal')this.tone(1046,.25,'sine',.07);
+    if(event.type==='buddy-hint'){this.tone(784,.18,'sine',.07);this.tone(1046,.25,'sine',.07,0,.12);}
   }
   reveal(joined=false){if(this.clips?.['sfx-card-flip'])this.play('sfx-card-flip');else [523,659,784,1047,1319].forEach((f,i)=>this.tone(f,.6,'triangle',.13,0,i*.08));
     if(joined){this.play('sfx-join-fanfare',{delay:.5,volume:.8});this.play('voice-new-creature',{delay:1.3});}else this.play('voice-new-card',{delay:.9});}

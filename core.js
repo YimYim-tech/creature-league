@@ -12,14 +12,19 @@ export const CREATURES = Object.freeze({
   retetoz: { id:'retetoz', magic:70, name:'רטטוז', element:'רעד', role:'מפתיע מתחת לאדמה', color:'#e0a96d', dark:'#7a4a22', hp:195, speed:230, damage:12, interval:.36, shotSpeed:600, armor:.05, radius:24, height:88, specialCooldown:7, special:'מחילה', specialIcon:'burrow', description:'נעלם מתחת לאדמה, צץ ממש ליד היריב ומרעיד הכל.', tip:'השתמשו במחילה כשהיריב רחוק: אתם צצים ממש לידו.', number:'08', rarity:'רגיל', aiRange:200, specialRange:900, specialMin:170 },
   tzlilon: { id:'tzlilon', magic:95, name:'צלילון', element:'היפנוט', role:'קטן ואמיץ', color:'#b88cff', dark:'#5b2ea6', hp:130, speed:300, damage:9, interval:.27, shotSpeed:640, armor:0, radius:19, height:92, specialCooldown:9, special:'היפנוט', specialIcon:'spiral', description:'גל מחשבה שמהפנט את היריב: הוא קופא במקום ולא יכול לתקוף.', tip:'התקרבו, הפנטו ותקפו בכל הכוח כשהיריב מסוחרר.', number:'01', rarity:'אגדי', aiRange:230, specialRange:230 },
   shorshu: { id:'shorshu', magic:75, name:'שורשו', element:'טבע', role:'שומר היער', color:'#86d957', dark:'#2f6a1c', hp:220, speed:195, damage:7, interval:.5, shotSpeed:520, armor:.12, radius:26, height:96, specialCooldown:7.5, special:'שורשים', specialIcon:'leaf', description:'שורשים צומחים מתחת ליריב ותופסים אותו במקום.', tip:'מקרוב זה הכי חזק: שלושה זרעים יחד פוגעים בבת אחת.', number:'15', rarity:'רגיל', facesLeft:true, spread:3, shotLife:.85, aiRange:170, specialRange:460 },
-  windguard: { id:'windguard', magic:90, name:'שומר הרוחות', element:'רוח', role:'ציפור הסערה', color:'#3cc7c9', dark:'#16626a', hp:205, speed:270, damage:13, interval:.34, shotSpeed:760, armor:.06, radius:26, height:124, specialCooldown:7, special:'משב סערה', specialIcon:'swirl', description:'טורנדו שהולך קדימה, סוחב את היריב איתו ובסוף זורק אותו.', tip:'שלחו את הטורנדו כשהיריב בדרך שלו: הוא נסחב ולא יכול לירות.', number:'41', rarity:'אגדי', facesLeft:true, aiRange:300, specialRange:560, guardian:true },
+  windguard: { id:'windguard', magic:90, name:'שומר הרוחות', element:'רוח', role:'ציפור הסערה', color:'#3cc7c9', dark:'#16626a', hp:205, speed:270, damage:13, interval:.34, shotSpeed:760, armor:.06, radius:26, height:124, specialCooldown:7, special:'משב סערה', specialIcon:'swirl', description:'טורנדו שהולך קדימה, סוחב את היריב איתו ובסוף זורק אותו.', tip:'שלחו את הטורנדו כשהיריב בדרך שלו: הוא נסחב ולא יכול לירות.', number:'41', rarity:'אגדי', facesLeft:true, flies:true, aiRange:300, specialRange:560, guardian:true },
   seaguard: { id:'seaguard', magic:85, name:'שומר הים', element:'מים', role:'הצב העתיק', color:'#2f8fd6', dark:'#10467a', hp:290, speed:150, damage:17, interval:.5, shotSpeed:470, armor:.2, radius:32, height:112, specialCooldown:8, special:'טבעת הגאות', specialIcon:'wave', description:'טבעת מי גאות סביב הצב: עוצרת את הקליעים של היריב ודוחפת מי שנוגע בה.', tip:'הפעילו את הטבעת כשהיריב יורה עליכם: הקליעים שלו נעצרים במים.', number:'42', rarity:'אגדי', facesLeft:true, shotRadius:11, aiRange:190, specialRange:320 },
   fireguard: { id:'fireguard', magic:90, name:'שומר האש', element:'אש', role:'אריה הלבה', color:'#ff8a2a', dark:'#8a2c0a', hp:235, speed:230, damage:19, interval:.48, shotSpeed:560, armor:.1, radius:28, height:118, specialCooldown:7.5, special:'שאגת להבה', specialIcon:'flame', description:'שאגת אש קדימה: שורפת מיד את מי שמולו ומשאירה רצפה בוערת.', tip:'השאגה קצרה: התקרבו ליריב לפני שאתם שואגים.', number:'43', rarity:'אגדי', facesLeft:true, shotRadius:10, aiRange:240, specialRange:260 },
   zoharon: { id:'zoharon', magic:95, name:'זוהרון', element:'אור', role:'דרקון הכוכבים', color:'#ffc23a', dark:'#8a5a0a', hp:215, speed:250, damage:15, interval:.38, shotSpeed:720, armor:.06, radius:27, height:120, specialCooldown:7, special:'מטר כוכבים', specialIcon:'star', description:'מטר כוכבים נופל סביב היריב, אחד אחרי השני. כל כוכב מסמן עיגול זהוב לפני שהוא נוחת.', tip:'הפעילו את המטר כשהיריב עומד במקום או ליד הקיר: קשה לברוח מכל הכוכבים.', number:'44', rarity:'אגדי', facesLeft:true, aiRange:300, specialRange:560, star:true },
   kokhavit: { id:'kokhavit', magic:95, name:'כוכבית', element:'אור', role:'אילת הבדולח', color:'#ffe27a', dark:'#7a6418', hp:200, speed:275, damage:12, interval:.32, shotSpeed:700, armor:.04, radius:25, height:126, specialCooldown:7, special:'לב של אור', specialIcon:'shield', description:'מחזירה לעצמה חיים ומקבלת מגן אור שבולע את שתי הפגיעות הבאות.', tip:'שמרו את הסופר לרגע שהחיים יורדים. המגן עוצר גם את הסופר של היריב.', number:'45', rarity:'אגדי', facesLeft:true, aiRange:280, specialRange:2000, star:true, female:true },
+  // Chapter 2: the Echo Valley, and the tiger of the Land of Two Tracks (Michael asked for a fast tiger and for birds that fly).
+  ozenav: { id:'ozenav', magic:80, name:'אוזנב', element:'קול', role:'שומע לפני כולם', color:'#3fc6c9', dark:'#0f5e66', hp:165, speed:282, damage:11, interval:.3, shotSpeed:680, armor:.02, radius:22, height:92, specialCooldown:7, special:'שומע לפני כולם', specialIcon:'ear', description:'האוזניים הענקיות שלו שומעות כל קליע שמתקרב. לכמה שניות הקליעים מחטיאים אותו, והוא זז מהר יותר.', tip:'הפעילו כשהיריב יורה עליכם הרבה: הקליעים יחטיאו, ובינתיים אתם תוקפים.', number:'49', rarity:'נדיר', facesLeft:true, aiRange:330, specialRange:600 },
+  rishrush: { id:'rishrush', magic:85, name:'רשרוש', element:'קול', role:'פטפטן מצלצל', color:'#d78bd8', dark:'#6b2f78', hp:175, speed:262, damage:11, interval:.32, shotSpeed:640, armor:.03, radius:23, height:96, specialCooldown:7, special:'עוד פעם!', specialIcon:'bell', description:'הפעמונים שלו מצלצלים ומאירים, ואז עיגול של צלילים עף לכל הכיוונים. רגע אחר כך: עוד פעם!', tip:'כשהפעמונים מצלצלים, הצלילים עוד רגע יוצאים. התקרבו ליריב לפני כן: מקרוב יותר צלילים פוגעים.', number:'50', rarity:'נדיר', facesLeft:true, flies:true, tell:.6, aiRange:240, specialRange:330 },
+  kashevet: { id:'kashevet', magic:95, name:'קשבת', element:'קול', role:'שומרת עמק ההדים', color:'#9fb8ff', dark:'#24306b', hp:275, speed:232, damage:15, interval:.42, shotSpeed:600, armor:.1, radius:28, height:128, specialCooldown:8, special:'שקט מוחלט', specialIcon:'muted', description:'האבן על החזה שלה מאירה, ואז יוצא גל של שקט: מי שהגל פוגע בו לא יכול לירות לרגע.', tip:'כשהאבן על החזה מאירה, התרחקו: הגל מגיע עוד רגע. מי שמחוץ לגל ממשיך לירות.', number:'51', rarity:'אגדי', facesLeft:true, female:true, flies:true, guardian:true, tell:.7, phase2:true, aiRange:280, specialRange:270 },
+  zankor: { id:'zankor', magic:85, name:'זנקור', element:'מהירות', role:'הנמר המהיר', color:'#ff9a2e', dark:'#7a3a06', hp:170, speed:330, damage:12, interval:.3, shotSpeed:720, armor:.03, radius:24, height:100, specialCooldown:6, special:'זינוק', specialIcon:'bolt', description:'הנמר הכי מהיר בליגה. בזינוק הוא חוצה את הזירה כמו ברק ופוגע בכל מי שבדרך.', tip:'זנקו ישר דרך היריב: בזמן הזינוק שום דבר לא פוגע בכם.', number:'52', rarity:'נדיר', facesLeft:true, aiRange:300, specialRange:460, specialMin:120 },
   // Box creatures: found only in a gold box, where the child chooses.
   chutal: { id:'chutal', magic:85, name:'חוטל', element:'מים', role:'לוכדת החוטים', color:'#9fd8ff', dark:'#2a5f85', hp:180, speed:272, damage:12, interval:.34, shotSpeed:640, armor:.04, radius:23, height:98, specialCooldown:7, special:'חוט חזרה', specialIcon:'spiral', description:'זורקת חוט אור שתופס את היריב ומושך אותו ממש אליה.', tip:'זרקו את החוט כשהיריב רחוק או מתחבא מאחורי אבן: הוא נמשך ישר אליכם, ואז יורים מקרוב.', number:'46', rarity:'אגדי', facesLeft:true, female:true, box:true, aiRange:260, specialRange:540 },
-  hedanon: { id:'hedanon', magic:85, name:'הדנון', element:'רוח', role:'שומע הכל', color:'#b9a2ff', dark:'#4c3a8c', hp:155, speed:292, damage:10, interval:.29, shotSpeed:700, armor:0, radius:21, height:108, specialCooldown:7, special:'הד חוזר', specialIcon:'sound', description:'גל קול שפוגע איפה שהיריב עומד, וההד שלו חוזר ופוגע שוב רגע אחר כך.', tip:'הפעילו את ההד כשהיריב בפינה או תקוע: קשה לברוח משתי פגיעות.', number:'47', rarity:'אגדי', facesLeft:true, box:true, aiRange:280, specialRange:480 },
+  hedanon: { id:'hedanon', magic:85, name:'הדנון', element:'רוח', role:'שומע הכל', color:'#b9a2ff', dark:'#4c3a8c', hp:155, speed:292, damage:10, interval:.29, shotSpeed:700, armor:0, radius:21, height:108, specialCooldown:7, special:'הד חוזר', specialIcon:'sound', description:'גל קול שפוגע איפה שהיריב עומד, וההד שלו חוזר ופוגע שוב רגע אחר כך.', tip:'הפעילו את ההד כשהיריב בפינה או תקוע: קשה לברוח משתי פגיעות.', number:'47', rarity:'אגדי', facesLeft:true, flies:true, box:true, aiRange:280, specialRange:480 },
   tlaor: { id:'tlaor', magic:90, name:'טלאור', element:'טבע', role:'תופר האור', color:'#ffaa4a', dark:'#7a3d0c', hp:205, speed:256, damage:14, interval:.4, shotSpeed:620, armor:.08, radius:24, height:104, specialCooldown:8, special:'תפר אור', specialIcon:'sparkle', description:'תופר בחוטי אור את האבנים השבורות בזירה, מתקן את עצמו ומקבל שריון לרגע.', tip:'חכו שהאבנים יישברו והחיים ירדו, ואז תפרו הכל בבת אחת.', number:'48', rarity:'אגדי', facesLeft:true, box:true, aiRange:240, specialRange:2000 },
   galgalor: { id:'galgalor', magic:65, name:'גלגל אור', element:'אנרגיה', role:'מבולגן בכוונה', color:'#7fe8ff', dark:'#1f7f9c', hp:165, speed:265, damage:11, interval:.3, shotSpeed:620, armor:0, radius:22, height:84, specialCooldown:7, special:'פיצוץ אנרגיה', specialIcon:'sparkle', description:'שחרור אנרגיה לכל הכיוונים: עשרה קליעים בבת אחת.', tip:'קפצו לאמצע הקרב ושחררו את הפיצוץ קרוב ליריב.', number:'05', rarity:'רגיל', wobble:.13, aiRange:220, specialRange:260 },
 });
@@ -107,8 +112,16 @@ export const MODES={
   wind:{name:'תפוס את הרוח',goal:'אספו 6 נוצות רוח והחזיקו אותן 10 שניות.',duration:120},
   ball:{name:'כדור הגאות',goal:'הכניסו את הפנינה לשער של היריב! מי שמגיע ראשון ל־5 גולים מנצח.',duration:90},
   trio:{name:'קרב השלישייה',goal:'שלושה יצורים מול שלושה. כשיצור נופל, הבא נכנס לזירה.',duration:150},
+  echo:{name:'אבני ההד',goal:'האבנים שרות מנגינה. מקשיבים, ואז דורכים עליהן באותו סדר. מי שמשלים 3 מנגינות ראשון מנצח.',duration:130},
 };
 export const WIND_TARGET=6,WIND_HOLD=10,MAX_POWER=5,BALL_GOALS=5;
+// Five singing stones in a ring. A tune lights some of them; then whoever steps on them in the same order sings it back.
+export const ECHO_SONGS=3,ECHO_NOTE=.75,ECHO_GAP=.28,ECHO_STONE_R=50,ECHO_FIRST=2,ECHO_LONGEST=5;
+export const ECHO_STONES=[0,1,2,3,4].map(i=>{const ang=-Math.PI/2+i*Math.PI*2/5;return {x:Math.round(640+Math.cos(ang)*275),y:Math.round(395+Math.sin(ang)*170)};});
+// How often the rival remembers the next stone right, and how long it waits before it starts.
+export const ECHO_AI={beginner:{right:.6,wait:2.4},rookie:{right:.7,wait:1.9},challenger:{right:.8,wait:1.3},veteran:{right:.88,wait:1},champion:{right:.94,wait:.8}};
+// Hide-and-seek: standing still for a moment lets you hear where the hidden creature is.
+export const HIDE_LISTEN=.6,HIDE_SEEN=2.6;
 // The goals sit at the two ends of the oval; the player defends the left one.
 export const GOALS=[{x:WORLD.cx-WORLD.rx+34,y:WORLD.cy,half:60},{x:WORLD.cx+WORLD.rx-34,y:WORLD.cy,half:60}];
 export const BALL_TUNE={kickRange:430,aiKick:260,drag:3,carry:.75,fumble:3,rockX:150,rockY:100};
@@ -125,6 +138,34 @@ function setupMode(m,mode){
     // Reef rocks guard each goal: a straight kick from far away usually hits one.
     for(const G of GOALS)for(const dy of [-1,1])m.covers.push({x:G.x+(G.x<WORLD.cx?1:-1)*BALL_TUNE.rockX,y:G.y+dy*BALL_TUNE.rockY,r:30,hp:9999,maxHp:9999,reef:true});}
   if(mode==='trio'){m.trio={teams:[m.teamIds[0],m.teamIds[1]],idx:[0,0]};}
+  if(mode==='echo'){m.covers=[];m.echo={stones:ECHO_STONES.map(s=>({...s,r:ECHO_STONE_R})),len:ECHO_FIRST,song:[],phase:'rest',t:1.2,note:-1,songs:[0,0],progress:[0,0],on:[-1,-1],misses:[0,0],aiPlan:-1,aiFor:-1,aiWait:0,buddy:null};}
+}
+export const echoStoneAt=(E,a)=>E.stones.findIndex(s=>length(a.x-s.x,a.y-s.y)<s.r+a.radius*.3);
+function newSong(m){const E=m.echo,song=[];while(song.length<E.len){const s=Math.floor(m.random()*E.stones.length);if(s!==song.at(-1))song.push(s);}
+  E.song=song;E.phase='listen';E.t=0;E.note=-1;E.progress=[0,0];E.aiPlan=-1;E.aiFor=-1;event(m,'echo-song-start',{length:song.length});}
+function stepEcho(m,dt){const E=m.echo;
+  stepRespawns(m,dt,a=>{E.progress[a.side]=0;if(a.side===1)E.aiPlan=-1;});
+  if(E.phase==='rest'){E.t-=dt;if(E.t<=0)newSong(m);return;}
+  if(E.phase==='listen'){E.t+=dt;const per=ECHO_NOTE+ECHO_GAP,i=Math.floor(E.t/per),note=i<E.song.length&&E.t-i*per<ECHO_NOTE?i:-1;
+    if(note!==E.note&&note>=0)event(m,'echo-note',{stone:E.song[note],i:note});E.note=note;
+    if(E.t>=E.song.length*per+.25){E.phase='play';E.note=-1;for(const a of m.actors)E.on[a.side]=a.out>0?-1:echoStoneAt(E,a);E.aiWait=(ECHO_AI[m.level]||ECHO_AI.challenger).wait;event(m,'echo-turn');}
+    return;}
+  E.aiWait=Math.max(0,E.aiWait-dt);
+  for(const a of m.actors){if(a.out>0||a.hp<=0)continue;const s=echoStoneAt(E,a);if(s===E.on[a.side])continue;E.on[a.side]=s;if(s<0)continue;
+    const stone=E.stones[s];
+    if(s===E.song[E.progress[a.side]]){E.progress[a.side]++;effect(m,'echo-step',stone.x,stone.y,{color:a.spec.color,side:a.side});event(m,'echo-step',{side:a.side,stone:s,n:E.progress[a.side],of:E.song.length});
+      if(E.progress[a.side]>=E.song.length){E.songs[a.side]++;effect(m,'echo-song',stone.x,stone.y,{color:a.spec.color});event(m,'echo-song',{side:a.side,songs:[...E.songs]});
+        if(E.songs[a.side]>=ECHO_SONGS){finish(m,a.side,'songs');return;}
+        E.len=Math.min(ECHO_LONGEST,E.len+1);E.phase='rest';E.t=1.5;E.progress=[0,0];return;}}
+    else{E.progress[a.side]=0;E.misses[a.side]++;if(a.side===1)E.aiPlan=-1;effect(m,'echo-miss',stone.x,stone.y,{color:'#ff8f7a'});event(m,'echo-miss',{side:a.side,stone:s});
+      // A child who missed hears the tune again; the rival keeps what it already sang.
+      if(a.side===0){E.phase='listen';E.t=0;E.note=-1;event(m,'echo-again');return;}}}
+  // A freed friend who hears first: when the child stops and waits, it walks to the next stone and sits on it.
+  const B=E.buddy,p=m.actors[0];if(!B)return;const input=m.lastInput||{},idle=Math.abs(input.moveX||0)+Math.abs(input.moveY||0)<.15;B.idle=idle?B.idle+dt:0;
+  const want=E.song[E.progress[0]],hinting=B.idle>2&&want!=null&&!(p.out>0),goal=hinting?E.stones[want]:{x:p.x-48*p.facing,y:p.y+26};
+  if(hinting&&B.hint!==E.progress[0]+':'+E.songs.join()){B.hint=E.progress[0]+':'+E.songs.join();event(m,'buddy-hint',{stone:want});}
+  const q=length(goal.x-B.x,goal.y-B.y);if(q>4){const n=norm(goal.x-B.x,goal.y-B.y),sp=Math.min(q,(hinting?320:280)*dt);B.x+=n.x*sp;B.y+=n.y*sp;B.moving=true;B.facing=n.x>0?1:-1;}else B.moving=false;
+  B.on=hinting&&q<12?want:-1;
 }
 // Respawning modes: a knocked-out creature leaves for a moment and comes back whole.
 function stepRespawns(m,dt,onKo){
@@ -167,6 +208,7 @@ const ovalDistance=(x,y)=>length((x-WORLD.cx)/WORLD.rx,(y-WORLD.cy)/WORLD.ry);
 function stepMode(m,dt){
   if(m.ball){stepBall(m,dt);return;}
   if(m.trio){stepTrio(m,dt);return;}
+  if(m.echo){stepEcho(m,dt);return;}
   if(m.lava){const L=m.lava;L.scale=lavaScale(m.time);
     if(m.time>1&&m.time<4&&!L.warned){L.warned=true;event(m,'lava-warning');}
     for(const a of m.actors){if(a.hp<=0)continue;
@@ -214,6 +256,14 @@ function modeGoal(m,a,p,d){
     if(B.carrier===0&&!(p.out>0)){const G=GOALS[1],near=length(p.x-a.x,p.y-a.y)<170,tx=near?p.x:p.x+(G.x-p.x)*.35,ty=near?p.y:p.y+(G.y-p.y)*.35,q=norm(tx-a.x,ty-a.y);return {x:q.x*2.2,y:q.y*2.2,keep:.3};}
     if(B.carrier<0){const q=norm(B.x-a.x,B.y-a.y);return {x:q.x*2.2,y:q.y*2.2,keep:.3};}
     return null;}
+  if(m.echo){const E=m.echo;
+    if(E.phase!=='play'||a.out>0||E.aiWait>0)return null;
+    const right=E.song[E.progress[1]];if(right==null)return null;
+    if(E.aiPlan<0||E.aiFor!==E.progress[1]){const others=E.stones.map((s,i)=>i).filter(i=>i!==right&&i!==E.on[1]);E.aiPlan=m.random()<(ECHO_AI[m.level]||ECHO_AI.challenger).right||!others.length?right:others[Math.floor(m.random()*others.length)];E.aiFor=E.progress[1];}
+    const s=E.stones[E.aiPlan],q=norm(s.x-a.x,s.y-a.y);
+    // Already standing on it from before: step off first, then back on.
+    if(E.on[1]===E.aiPlan)return {x:-q.x*2,y:-q.y*2,keep:.1};
+    return {x:q.x*2.2,y:q.y*2.2,keep:.12};}
   if(m.wind){const W=m.wind;
     if(W.holder===1){const q=norm(a.x-p.x||.01,a.y-p.y);return {x:q.x*1.4,y:q.y*1.4,keep:.6};}
     if(W.holder===0&&p.out<=0){const q=norm(p.x-a.x,p.y-a.y);return {x:q.x*1.5,y:q.y*1.5,keep:.5};}
@@ -230,7 +280,7 @@ function actor(id,side,ids=[]) {
 }
 // A friend battle: two people share one screen, so both sides play by the same rules and nothing is saved.
 export const HEART_BONUS=.25;
-export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0],boost=0,giantRival=false,run=null,coop=null}={}) {
+export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0],boost=0,giantRival=false,run=null,coop=null,hide=false,flee=false,buddy=null}={}) {
   if(!LEVELS[level])throw new Error('Unknown difficulty');
   if(versus){boss=false;challenge=null;wild=null;story=null;giant=false;mirror=false;upgrades=[];boost=0;if(mode==='trio')mode=null;}
   if(giantRival)giant=true;
@@ -252,6 +302,9 @@ export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date
     // Each extra heart is a quarter more life: the way a younger friend gets a fair chance.
     match.actors.forEach((a,i)=>{const extra=clamp(Math.floor(hearts?.[i]||0),0,2);if(extra){a.spec={...a.spec,hp:Math.round(a.spec.hp*(1+HEART_BONUS*extra))};a.hp=a.spec.hp;}});}
   if(MODES[mode])setupMode(match,mode);
+  if(hide&&!versus)match.hide={seen:0,still:0,x:match.actors[1].x,y:match.actors[1].y};
+  if(flee&&!versus)match.flee=true;
+  if(buddy&&match.echo&&CREATURES[buddy])match.echo.buddy={id:buddy,x:200,y:470,idle:0,on:-1,facing:1,moving:false};
   return match;
 }
 function event(m,type,data={}) {m.events.push({type,...data});}
@@ -276,16 +329,18 @@ function damage(m,a,raw,source,{pushX=0,pushY=0,special=false,hitAngle=null}={})
   effect(m,'hit',a.x,a.y,{color:a.spec.color,amount:Math.round(actual)});event(m,'hit',{side:a.side,amount:actual});
 }
 function resolveCover(m,a) {
+  // Birds fly over the stones.
+  if(a.spec.flies){confine(a);return;}
   for(let pass=0;pass<2;pass++)for(const c of m.covers){if(c.hp<=0)continue;const dx=a.x-c.x,dy=a.y-c.y,d=length(dx,dy),r=a.radius+c.r;
     if(d<r){const n=norm(dx||.01,dy);a.x=c.x+n.x*r;a.y=c.y+n.y*r;}}
   confine(a);
 }
 function move(m,a,x,y,dt,scale=1) {
-  const n=length(x,y)>1?norm(x,y):{x,y};const speed=a.spec.speed*scale*(a.slow>0?.55:1)*(a.windup>0?.2:1)*(a.root>0?0:1)*(m.ball?.carrier===a.side?BALL_TUNE.carry:1);
+  const n=length(x,y)>1?norm(x,y):{x,y};const speed=a.spec.speed*scale*(a.hear>0?1.2:1)*(a.slow>0?.55:1)*(a.windup>0?.2:1)*(a.root>0?0:1)*(m.ball?.carrier===a.side?BALL_TUNE.carry:1);
   a.moveX=n.x;a.moveY=n.y;a.x+=n.x*speed*dt;a.y+=n.y*speed*dt*.8;confine(a);resolveCover(m,a);
 }
 export function shoot(m,a,angle,scale=1) {a.calm=0;
-  if(a.fireCd>0||a.windup>0||a.hp<=0)return false;
+  if(a.fireCd>0||a.windup>0||a.hp<=0||a.silence>0||a.dash)return false;
   const s=a.spec;a.fireCd=s.interval*scale;a.attack=.16;a.aim=angle;if(Math.abs(Math.cos(angle))>.12)a.facing=Math.cos(angle)>0?1:-1;
   const scatter=a.upgrades.includes('scatter'),fan=s.spread===3;
   const offsets=fan?(scatter?[-.4,-.2,0,.2,.4]:[-.22,0,.22]):scatter?[-.19,0,.19]:[0],wobble=s.wobble?(m.random()-.5)*2*s.wobble:0;
@@ -294,7 +349,9 @@ export function shoot(m,a,angle,scale=1) {a.calm=0;
   }event(m,'shoot',{kind:a.id,side:a.side});return true;
 }
 export function useSpecial(m,a,input={}) {
-  if(a.windup>0||a.hp<=0)return false;
+  if(a.windup>0||a.hp<=0||a.silence>0||a.tellT>0||a.dash)return false;
+  // Some supers warn first: bells ring, a stone glows. Then the power comes out.
+  if(a.spec.tell&&!a.releasing){a.tellT=a.spec.tell;a.attack=.3;effect(m,'tell',a.x,a.y,{kind:a.id,color:a.spec.color,life:a.spec.tell});event(m,'tell',{kind:a.id,side:a.side});return true;}
   a.stats.specials++;a.attack=.4;const surge=a.upgrades.includes('surge');
   if(a.id==='maimi') {
     m.waves.push({kind:'wave',owner:a.side,x:a.x,y:a.y,angle:a.aim,age:0,speed:470,r:surge?105:74,damage:surge?46:34,push:surge?110:65,life:1.15,hit:[]});
@@ -362,12 +419,24 @@ function wildSpecial(m,a,surge) {
     for(const c of m.covers)if(c.hp<c.maxHp&&!c.reef&&c.collapseAt==null){c.hp=c.maxHp;effect(m,'stitch',c.x,c.y,{color:'#ffd27a'});}
     const amount=Math.min(a.spec.hp-a.hp,a.spec.hp*(surge?.32:.24));a.hp+=amount;a.stats.healed+=amount;a.guard=Math.max(a.guard,surge?2.4:1.8);
     effect(m,'stitch',a.x,a.y,{color:'#ffd27a'});effect(m,'heal',a.x,a.y,{amount,color:'#ffd27a'});event(m,'heal',{side:a.side,amount});
+  } else if(a.id==='ozenav'){
+    // Huge ears: for a moment every shot that comes is heard in time and misses, and the feet are quick.
+    a.hear=surge?4:3;effect(m,'hear',a.x,a.y,{color:a.spec.color});
+  } else if(a.id==='rishrush'){
+    // A ring of bell notes, and its echo a moment later, between the first ones.
+    const n=surge?10:8;for(const [delay,off] of [[0,0],[.55,Math.PI/n]])m.zones.push({owner:a.side,kind:'bells',x:a.x,y:a.y,age:0,life:delay+.05,delay,done:false,n,off,damage:surge?12:10});
+  } else if(a.id==='kashevet'){
+    // A wave of silence from the moonstone: whoever it reaches cannot shoot for a moment.
+    m.waves.push({kind:'silence',owner:a.side,x:a.x,y:a.y,age:0,r:surge?285:240,damage:surge?16:12,silence:surge?3:2.4,push:30,life:.7,hit:[]});
+  } else if(a.id==='zankor'){
+    // The tiger's dash: across the arena like lightning, hitting whoever is in the way.
+    const t=surge?.42:.34;a.dash={t,vx:dir.x*1150,vy:dir.y*920,hit:[],damage:surge?40:30};a.invincible=Math.max(a.invincible,t+.06);effect(m,'pounce',a.x,a.y,{color:a.spec.color});
   } else if(a.id==='galgalor'){
     const n=surge?14:10;for(let i=0;i<n;i++){const ang=a.aim+i*Math.PI*2/n;
       m.shots.push({id:++m.nextId,owner:a.side,x:a.x+Math.cos(ang)*(a.radius+8),y:a.y+Math.sin(ang)*(a.radius+8),vx:Math.cos(ang)*560,vy:Math.sin(ang)*560,r:8,damage:surge?13:12,life:1.1,color:a.spec.color,kind:'galgalor'});}
   }
 }
-const TRAIL={chutal:'water',hedanon:'electric',tlaor:'fire',zoharon:'electric',kokhavit:'electric',windguard:'electric',seaguard:'water',fireguard:'fire',maimi:'water',tehomon:'water',tzlilon:'water',havzuk:'electric',zikuk:'electric',galgalor:'electric',lohatan:'fire',slauz:'shield',retetoz:'shield',shorshu:'shield'};
+const TRAIL={ozenav:'water',rishrush:'electric',kashevet:'electric',zankor:'fire',chutal:'water',hedanon:'electric',tlaor:'fire',zoharon:'electric',kokhavit:'electric',windguard:'electric',seaguard:'water',fireguard:'fire',maimi:'water',tehomon:'water',tzlilon:'water',havzuk:'electric',zikuk:'electric',galgalor:'electric',lohatan:'fire',slauz:'shield',retetoz:'shield',shorshu:'shield'};
 export const trailKind=id=>TRAIL[id]||'shield';
 function stepBoss(m,a,dt) {
   const b=a.boss,p=m.actors[0];b.timer-=dt;a.moveX=0;a.moveY=0;
@@ -395,19 +464,21 @@ function aiInput(m,dt) {
   if(ai.strafeTime<=0){ai.strafe= m.random()>.5?1:-1;ai.strafeTime=1.5+m.random()*2;}
   const dx=p.x-a.x,dy=p.y-a.y,d=length(dx,dy),n=norm(dx,dy),wanted=a.spec.aiRange||225;
   let toward=d>wanted+45?1:d<wanted-40?-.9:.05;
+  // The tiger chase: it keeps far away and only sometimes turns to shoot.
+  if(m.flee)toward=d<430?-1.15:d>620?.35:0;
   let mx=n.x*toward-n.y*.65*ai.strafe,my=n.y*toward+n.x*.65*ai.strafe;
   if(m.pickup&&a.hp<a.spec.hp*.7){const q=norm(m.pickup.x-a.x,m.pickup.y-a.y);mx=q.x;my=q.y;}
   // React to approaching projectiles; the easier opponent only responds late.
   for(const s of m.shots)if(s.owner!==1&&length(s.x-a.x,s.y-a.y)<(m.level==='rookie'?75:150)){
     const cross=s.vx*(a.y-s.y)-s.vy*(a.x-s.x),avoid=norm(-s.vy,s.vx);mx+=avoid.x*Math.sign(cross||1)*1.4;my+=avoid.y*Math.sign(cross||1)*1.4;
   }
-  for(const c of m.covers)if(c.hp>0){const ax=a.x-c.x,ay=a.y-c.y,dist=length(ax,ay),r=c.r+a.radius+45;
+  if(!a.spec.flies)for(const c of m.covers)if(c.hp>0){const ax=a.x-c.x,ay=a.y-c.y,dist=length(ax,ay),r=c.r+a.radius+45;
     if(dist<r){const push=(r-dist)/45;mx+=ax/(dist||1)*push*2;my+=ay/(dist||1)*push*2;}}
   const goal=modeGoal(m,a,p,d);if(goal){mx=mx*goal.keep+goal.x;my=my*goal.keep+goal.y;}
   const move=norm(mx,my);ai.moveX=move.x;ai.moveY=move.y;
   const lead=m.level==='rookie'?0:d/a.spec.shotSpeed*.55;
   const angle=Math.atan2(dy+p.moveY*p.spec.speed*lead*.8,dx+p.moveX*p.spec.speed*lead)+(m.random()-.5)*level.aimError*2;
-  ai.aimX=a.x+Math.cos(angle)*500;ai.aimY=a.y+Math.sin(angle)*500;ai.fire=d<760&&!(p.out>0);
+  ai.aimX=a.x+Math.cos(angle)*500;ai.aimY=a.y+Math.sin(angle)*500;ai.fire=d<760&&!(p.out>0)&&(!m.flee||m.random()<.4);
   if(m.ball?.carrier===1){const G=GOALS[0],gd=length(G.x-a.x,G.y-a.y);ai.aimX=G.x;ai.aimY=G.y+(m.random()-.5)*G.half;ai.fire=gd<BALL_TUNE.aiKick*(m.level==='rookie'?.8:1);ai.special=gd<BALL_TUNE.aiKick*1.5&&gd>BALL_TUNE.aiKick&&a.superCharge>=1;}
   ai.special=m.time>level.specialDelay&&d<(a.spec.specialRange||300)&&d>(a.spec.specialMin||0)&&p.stun<=0&&(!['kokhavit','tlaor'].includes(a.id)||a.hp<a.spec.hp*.75);
   if(m.calm){ai.fire=false;ai.special=false;}return ai;
@@ -418,16 +489,22 @@ export const SUPER_SHARE=+(globalThis.process?.env?.SUPER_SHARE||.33),SUPER_PASS
 function chargeSuper(m,a,amount){if(!a||a.hp<=0)return;if(a.upgrades?.includes('quick'))amount*=1.35;amount*=(CREATURES[a.id]?.specialCooldown||1)/(a.spec.specialCooldown||1);const before=a.superCharge||0;a.superCharge=Math.min(1,before+amount);if(before<1&&a.superCharge>=1)event(m,'super-ready',{side:a.side});}
 function regenerate(a,dt){a.calm=(a.calm||0)+dt;a.regen=0;if(a.hp>0&&!(a.out>0)&&a.hp<a.spec.hp&&a.calm>=REGEN_DELAY){a.hp=Math.min(a.spec.hp,a.hp+a.spec.hp*REGEN_RATE*dt);a.regen=1;}}
 function stepActor(m,a,input,dt,scale=1) {
-  regenerate(a,dt);if(!(a.out>0)&&m.status==='playing')chargeSuper(m,a,dt/SUPER_PASSIVE);
+  regenerate(a,dt);if(!(a.out>0)&&m.status==='playing')chargeSuper(m,a,dt/SUPER_PASSIVE*(a.phase2?2:1));
   for(const key of ['fireCd','specialCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);
+  for(const key of ['hear','silence'])if(a[key]>0)a[key]=Math.max(0,a[key]-dt);
+  if(a.tellT>0){a.tellT-=dt;if(a.tellT<=0){a.tellT=0;if(a.hp>0&&!(a.out>0)){a.releasing=true;useSpecial(m,a,input);a.releasing=false;}}}
   if(a.lightShieldTime>0){a.lightShieldTime-=dt;if(a.lightShieldTime<=0)a.lightShield=0;}
   if(a.out>0){a.moveX=0;a.moveY=0;return;}
   if(a.stun>0){a.moveX=0;a.moveY=0;return;}
   if(a.boss){stepBoss(m,a,dt);return;}
   if(a.windup>0){a.windup-=dt;if(a.windup<=0){const surge=a.upgrades.includes('surge');m.waves.push({kind:'quake',owner:a.side,x:a.x,y:a.y,age:0,r:surge?235:182,damage:surge?65:46,life:.7,hit:[]});event(m,'quake',{side:a.side});}}
   if(a.stun>0)return;
+  if(a.dash){const d=a.dash,old={x:a.x,y:a.y};d.t-=dt;a.x+=d.vx*dt;a.y+=d.vy*dt;confine(a);resolveCover(m,a);const n=norm(d.vx,d.vy);a.moveX=n.x;a.moveY=n.y;
+    for(const t of foesOf(m,a))if(!(t.out>0)&&t.hp>0&&!d.hit.includes(t.side)&&segmentCircle(old.x,old.y,a.x,a.y,t.x,t.y,t.radius+a.radius)!=null){d.hit.push(t.side);damage(m,t,d.damage,a,{special:true,pushX:n.x*70,pushY:n.y*55});}
+    if(d.t<=0)a.dash=null;return;}
   move(m,a,input.moveX||0,input.moveY||0,dt,scale);
   if(input.aimX!=null)a.aim=Math.atan2(input.aimY-a.y,input.aimX-a.x);
+  else if(m.hide&&a.side===0&&m.hide.seen<=0)a.aim=Math.atan2(m.hide.y-a.y,m.hide.x-a.x);
   else {const target=foeOf(m,a),distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*(human(m,a)?.45:.72),speed=target.spec.speed*(target.side&&!m.versus?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
   if(Math.abs(Math.cos(a.aim))>.15)a.facing=Math.cos(a.aim)>0?1:-1;
   if(m.ball&&m.ball.carrier===a.side){
@@ -450,7 +527,9 @@ function updateProjectiles(m,dt) {
     const x=s.x+s.vx*dt,y=s.y+s.vy*dt;s.life-=dt;
     let hit=null,t=2;
     const helped=s.owner!==1||!!m.versus;
-    for(const target of foesOf(m,m.actors[s.owner])){if(target.out>0)continue;const tt=segmentCircle(s.x,s.y,x,y,target.x,target.y,(s.r+target.radius)*(helped?AIM_HELP:1));if(tt!=null&&tt<t){hit=target;t=tt;}}
+    for(const target of foesOf(m,m.actors[s.owner])){if(target.out>0)continue;
+      if(target.hear>0){if(!s.missed&&segmentCircle(s.x,s.y,x,y,target.x,target.y,s.r+target.radius)!=null){s.missed=true;target.stats.dodges++;effect(m,'evade',target.x,target.y,{color:'#c9fbff'});}continue;}
+      const tt=segmentCircle(s.x,s.y,x,y,target.x,target.y,(s.r+target.radius)*(helped?AIM_HELP:1));if(tt!=null&&tt<t){hit=target;t=tt;}}
     if(m.ball&&m.ball.carrier<0){const bt=segmentCircle(s.x,s.y,x,y,m.ball.x,m.ball.y,s.r+16);if(bt!=null&&bt<t){s.life=0;m.ball.vx+=s.vx*.4;m.ball.vy+=s.vy*.4;effect(m,'stone',m.ball.x,m.ball.y,{color:'#d6f1ff'});continue;}}
     for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){if(helped){s.chipped??=[];if(!s.chipped.includes(c)){s.chipped.push(c);c.hp=Math.max(0,c.hp-s.damage*.5);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});event(m,'cover',{broken:c.hp===0});}continue;}hit=c;t=ct;}}
     if(hit){s.x+=(x-s.x)*t;s.y+=(y-s.y)*t;s.life=0;if(s.explode)burst(m,s);
@@ -468,6 +547,7 @@ function updateProjectiles(m,dt) {
       w.hit.push(target.side);const n=norm(target.x-w.x,target.y-w.y),push=w.push??(w.kind==='wave'?65:32);
       if(w.slow&&target.invincible<=0)target.slow=Math.max(target.slow,w.slow);
       if(w.stun&&target.invincible<=0){target.stun=Math.max(target.stun,w.stun);effect(m,'dizzy',target.x,target.y,{color:'#d7b8ff'});}
+      if(w.silence&&target.invincible<=0){target.silence=Math.max(target.silence||0,w.silence);effect(m,'silenced',target.x,target.y,{color:'#cfe0ff'});event(m,'silenced',{side:target.side});}
       damage(m,target,w.damage??(w.kind==='wave'?34:w.kind==='electric'?32:46),a,{pushX:n.x*push,pushY:n.y*push,special:true});if(w.kind==='wave')target.slow=1;
     }
     for(let i=0;i<m.covers.length;i++){const c=m.covers[i];if(c.hp>0&&!w.hit.includes('c'+i)&&length(c.x-w.x,c.y-w.y)<r+c.r){w.hit.push('c'+i);c.hp=Math.max(0,c.hp-42);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});}}
@@ -475,7 +555,8 @@ function updateProjectiles(m,dt) {
   m.waves=m.waves.filter(w=>w.age<w.life);
   for(const z of m.zones){z.age+=dt;z.pulse-=dt;const a=m.actors[z.owner],targets=foesOf(m,a),isIn=t=>length(t.x-z.x,t.y-z.y)<z.r+t.radius;let pulsed=false;
     if(z.kind==='echo'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'echo',z.x,z.y,{color:a.spec.color,r:z.r});for(const target of targets)if(isIn(target)&&target.invincible<=0&&!(target.out>0))damage(m,target,z.damage,a,{special:true});}continue;}
-    if(z.kind==='star'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'starfall',z.x,z.y,{color:'#ffe27a',r:z.r});for(const target of targets)if(isIn(target)&&target.invincible<=0&&!(target.out>0)){const n=norm(target.x-z.x||.01,target.y-z.y);damage(m,target,z.damage,a,{special:true,pushX:n.x*30,pushY:n.y*24});}}continue;}
+    if(z.kind==='bells'){if(!z.done&&z.age>=z.delay){z.done=true;const o=m.actors[z.owner];if(o.hp>0&&!(o.out>0)){for(let i=0;i<z.n;i++){const ang=z.off+i*Math.PI*2/z.n;m.shots.push({id:++m.nextId,owner:z.owner,x:o.x+Math.cos(ang)*(o.radius+8),y:o.y+Math.sin(ang)*(o.radius+8)*.8,vx:Math.cos(ang)*520,vy:Math.sin(ang)*420,r:9,damage:z.damage,life:1.05,color:o.spec.color,kind:'bell'});}effect(m,'bells',o.x,o.y,{color:o.spec.color});event(m,'bells',{side:z.owner});}}continue;}
+    if(z.kind==='star'||z.kind==='feather'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,z.kind==='feather'?'featherfall':'starfall',z.x,z.y,{color:z.kind==='feather'?'#cfe0ff':'#ffe27a',r:z.r});for(const target of targets)if(isIn(target)&&target.invincible<=0&&!(target.out>0)){const n=norm(target.x-z.x||.01,target.y-z.y);damage(m,target,z.damage,a,{special:true,pushX:n.x*30,pushY:n.y*24});}}continue;}
     if(z.kind==='roots'){if(!z.done&&z.age>=z.delay){z.done=true;for(const target of targets)if(isIn(target)&&target.invincible<=0){target.root=Math.max(target.root,z.root);damage(m,target,z.damage,a,{special:true});effect(m,'rooted',target.x,target.y,{color:'#9be06a'});}}continue;}
     if(z.kind==='tornado'){z.x+=z.vx*dt;z.y+=z.vy*dt;if(length((z.x-WORLD.cx)/WORLD.rx,(z.y-WORLD.cy)/WORLD.ry)>.93){z.vx*=-.6;z.vy*=-.6;}
       for(const target of targets)if(isIn(target)&&target.invincible<=0&&!target.boss&&!(target.out>0)){z.caught=true;(z.caughtSides??=[]).includes(target.side)||z.caughtSides.push(target.side);target.x+=(z.x-target.x)*Math.min(1,dt*7);target.y+=(z.y-target.y)*Math.min(1,dt*7);confine(target);if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});pulsed=true;}}
@@ -506,12 +587,19 @@ export function step(m,input={},dt=1/60,rivalInput=null) {
   for(const c of m.covers)if(c.hp>0&&c.collapseAt!=null&&m.time>=c.collapseAt){
     c.hp=0;effect(m,'stone',c.x,c.y,{color:'#ffd586'});event(m,'collapse');
   }
+  m.lastInput=input;
+  if(m.hide){const H=m.hide,r=m.actors[1],moving=Math.abs(input.moveX||0)+Math.abs(input.moveY||0)>.15;H.still=moving?0:H.still+dt;
+    if(H.still>=HIDE_LISTEN&&H.seen<=0){H.seen=HIDE_SEEN;effect(m,'reveal',r.x,r.y,{color:r.spec.color});event(m,'reveal');}
+    H.seen=Math.max(0,H.seen-dt);if(H.seen>0){H.x=r.x;H.y=r.y;}}
   const ai=m.versus?rivalInput||{}:aiInput(m,dt);stepActor(m,m.actors[0],input,dt);stepActor(m,m.actors[1],ai,dt,m.versus?1:LEVELS[m.level].speedScale);
   if(m.coop)stepActor(m,m.actors[2],rivalInput||{},dt);
   // Fighters cannot occupy the same physical space.
   const [a,b]=m.actors;
   for(let i=0;i<m.actors.length;i++)for(let j=i+1;j<m.actors.length;j++){const p=m.actors[i],q=m.actors[j];if(p.out>0||q.out>0)continue;const d=length(p.x-q.x,p.y-q.y),r=p.radius+q.radius;
     if(d<r){const n=norm(p.x-q.x||.01,p.y-q.y),shift=(r-d)/2;p.x+=n.x*shift;p.y+=n.y*shift;q.x-=n.x*shift;q.y-=n.y*shift;resolveCover(m,p);resolveCover(m,q);}}
+  // A guardian with a second stage rises at half life: feathers start falling around the child.
+  for(const x of m.actors){if(x.giant&&x.spec.phase2&&!x.phase2&&x.hp>0&&x.hp<x.spec.hp*.5){x.phase2=true;x.invincible=Math.max(x.invincible,1.2);x.featherAt=m.time+1.6;effect(m,'rise',x.x,x.y,{color:x.spec.color});event(m,'phase2',{side:x.side,kind:x.id});}
+    if(x.phase2&&x.hp>0&&!(x.out>0)&&m.time>=x.featherAt){x.featherAt=m.time+3.4;const t=foeOf(m,x);for(let i=0;i<3;i++){const ang=m.random()*Math.PI*2,rr=i?70+m.random()*60:0,delay=1.05+i*.25;m.zones.push({owner:x.side,kind:'feather',x:t.x+Math.cos(ang)*rr,y:t.y+Math.sin(ang)*rr*.8,r:52,age:0,life:delay+.35,delay,done:false,damage:12});}event(m,'feathers-fall',{side:x.side});}}
   updateProjectiles(m,dt);
   if(m.mode)stepMode(m,dt);
   if(m.status==='finished')return;
@@ -522,6 +610,7 @@ export function step(m,input={},dt=1/60,rivalInput=null) {
   if(m.coop){stepCoop(m,dt);return;}
   if(m.ball){if(m.time>=m.duration){const B=m.ball;if(B.score[0]!==B.score[1])finish(m,B.score[0]>B.score[1]?0:1,'time');else if(!B.overtime){B.overtime=true;m.duration+=40;event(m,'overtime');}else{const difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,Math.abs(difference)<.002?-1:difference>0?0:1,'time');}}return;}
   if(m.trio){if(m.time>=m.duration){const l0=trioLeft(m,0),l1=trioLeft(m,1),x=m.actors[0],y=m.actors[1],difference=x.hp/x.spec.hp-y.hp/y.spec.hp;finish(m,l0!==l1?(l0>l1?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
+  if(m.echo){if(m.time>=m.duration){const E=m.echo,lead=E.songs[0]-E.songs[1]||E.progress[0]-E.progress[1],difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,lead?(lead>0?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
   if(m.wind){if(m.time>=m.duration){const lead=a.feathers-b.feathers,difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,lead?(lead>0?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
   if(a.hp<=0||b.hp<=0)finish(m,a.hp<=0&&b.hp<=0?-1:a.hp<=0?1:0);
   else if(m.time>=m.duration){const difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,Math.abs(difference)<.002?-1:difference>0?0:1,'time');}

@@ -15,7 +15,7 @@
     <symbol id="i-mountain" viewBox="0 0 24 24"><path d="m2 20 6-12 4 5 4-10 6 17ZM8 8l2 8m6-13 1 12M4 20h16"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M20 12H4m7-7-7 7 7 7"/></symbol>
     <symbol id="i-sound" viewBox="0 0 24 24"><path d="M3 9h4l5-5v16l-5-5H3Zm13-2a7 7 0 0 1 0 10m3-13a11 11 0 0 1 0 16"/></symbol>
-    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M3 9h4l5-5v16l-5-5H3Zm13 0 6 6m0-6-6 6"/></symbol>
+    <symbol id="i-ear" viewBox="0 0 24 24"><path d="M6.5 9a6 6 0 0 1 12 0c0 4-3.5 5-3.5 8.5a3.5 3.5 0 0 1-6.5 1.6M15 9a2.5 2.5 0 0 0-5 0v1.5a2 2 0 0 1 0 4"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4Zm4 3a2 2 0 0 0 4 0"/></symbol><symbol id="i-pair" viewBox="0 0 24 24"><path d="M4 8h14m-4-4 4 4-4 4M4 16h14m-4-4 4 4-4 4"/></symbol><symbol id="i-patch" viewBox="0 0 24 24"><path d="M4 4h7v3a2 2 0 0 0 0 4v2H4Zm9 7h7v9h-7v-3a2 2 0 0 0 0-4Z"/></symbol><symbol id="i-arch" viewBox="0 0 24 24"><path d="M3 20v-6a9 9 0 0 1 18 0v6M7 20v-6a5 5 0 0 1 10 0v6"/></symbol><symbol id="i-muted" viewBox="0 0 24 24"><path d="M3 9h4l5-5v16l-5-5H3Zm13 0 6 6m0-6-6 6"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
     <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5m0 3v.1"/></symbol>
     <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6Zm-4 9 3 3 5-6"/></symbol>
@@ -102,8 +102,8 @@
 
       <section id="story" class="view story-view" hidden>
         <button class="back-link" data-home>→ חזרה לנבחרת</button>
-        <div class="story-head"><div><span class="eyebrow">מסע השרשרת</span><h1>ארבעה איים. <em>חמישה אורות.</em></h1></div><div class="story-head-side"><div class="necklace big" id="story-necklace"></div><span class="story-stars" id="story-stars"></span></div></div>
-        <div class="map-frame"><img src="./art/gen/story-map.jpg" alt="מפת האיים: אי הרוחות, אי הים, אי האש, אי המראה והטירה הזהובה"><div id="map-spots" class="map-spots"></div></div>
+        <div class="story-head"><div><span class="eyebrow" id="story-eyebrow">מסע השרשרת</span><h1 id="story-title">ארבעה איים. <em>חמישה אורות.</em></h1></div><div class="story-head-side"><div class="map-tabs" id="map-tabs" role="group" aria-label="בחירת פרק" hidden><button data-map-ch="1">פרק 1</button><button data-map-ch="2">פרק 2</button></div><div class="necklace big" id="story-necklace"></div><span class="story-stars" id="story-stars"></span></div></div>
+        <div class="map-frame"><img id="story-map-img" src="./art/gen/story-map.jpg" alt="מפת המסע"><div id="map-spots" class="map-spots"></div></div>
         <div class="guide" id="story-guide"><img class="guide-face" src="./art/gen/story-little-shadow.png" alt=""><div class="guide-bubble"><b class="guide-name">הצל הקטן</b><p class="guide-line"></p></div></div>
         <div class="story-actions"><button id="story-go" class="button primary"></button></div>
       </section>
@@ -119,6 +119,16 @@
         <div class="necklace big tappable" id="castle-gems" role="group" aria-label="אורות השרשרת"></div>
         <div class="guide" id="castle-guide"><img class="guide-face" src="./art/gen/story-little-shadow.png" alt=""><div class="guide-bubble"><b class="guide-name">הצל הקטן</b><p class="guide-line"></p></div></div>
         <div class="story-actions"><button id="castle-next" class="button primary" hidden></button></div>
+      </section>
+
+      <section id="bridge" class="view castle-view bridge-view" hidden>
+        <button class="back-link" id="bridge-back">→ חזרה למפה</button>
+        <div class="castle-head"><span class="eyebrow" id="bridge-eyebrow"></span><h1 id="bridge-title"></h1><p id="bridge-hint" class="muted"></p></div>
+        <div class="bridge-stage" id="bridge-stage"><img src="./art/gen/arena-echo.jpg" alt=""><svg class="bridge-arc" id="bridge-arc" viewBox="0 0 400 110" aria-hidden="true"></svg></div>
+        <div class="bridge-pads" id="bridge-pads" role="group" aria-label="אבני ההד"></div>
+        <div class="necklace big bridge-row" id="bridge-symbol" aria-label="הגשר החי"></div>
+        <div class="guide" id="bridge-guide"><img class="guide-face" src="./art/gen/story-little-shadow.png" alt=""><div class="guide-bubble"><b class="guide-name">הצל הקטן</b><p class="guide-line"></p></div></div>
+        <div class="story-actions"><button id="bridge-play" class="button secondary"></button><button id="bridge-next" class="button primary" hidden></button></div>
       </section>
 
       <section id="cards" class="view cards-view" hidden>
