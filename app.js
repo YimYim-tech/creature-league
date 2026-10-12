@@ -452,8 +452,8 @@ function onlineReset(text=''){if(online?.link)try{online.link.close();}catch{}on
 function onlineHandlers(){return {
   onOpen:()=>{if(!online)return;online.connected=true;online.heard=performance.now();onlineHello();renderOnline();sound.reveal?.(false);},
   onMessage:data=>{if(!online||!data||typeof data!=='object')return;online.heard=performance.now();onlineMessage(data);},
-  onClose:()=>{if(!online)return;const name=online.friend?.name||'החבר';if(screen==='battle'&&match?.online){match=null;document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('online');}onlineReset(name+' יצא מהחדר.');},
-  onError:kind=>{if(!online)return;onlineReset(kind==='no-room'?'לא מצאנו חדר עם הקוד הזה. בודקים את התמונות ומנסים שוב.':kind==='network'?'אין חיבור לאינטרנט כרגע. אפשר לשחק על מסך אחד.':'החיבור לא הצליח. אפשר לנסות שוב, או לשחק על מסך אחד.');},
+  onClose:()=>{if(!online)return;if(!online.connected){onlineHandlers().onError('no-line');return;}const name=online.friend?.name||'החבר';if(screen==='battle'&&match?.online){match=null;document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('online');}onlineReset(name+' יצא מהחדר.');},
+  onError:kind=>{if(!online)return;onlineReset(kind==='no-room'?'לא מצאנו חדר עם הקוד הזה. בודקים את התמונות ומנסים שוב.':kind==='network'?'אין חיבור לאינטרנט כרגע. אפשר לשחק על מסך אחד.':kind==='no-line'?'הטלפונים לא הצליחו לדבר. כדאי ששניהם יתחברו ל-Wi-Fi ולנסות שוב.':'החיבור לא הצליח. אפשר לנסות שוב, או לשחק על מסך אחד.');},
 };}
 function onlineMessage(msg){
   if(msg.type==='hello'){if(msg.v!==PROTOCOL){onlineReset('לחבר יש גרסה אחרת של המשחק. מרעננים את הדף בשני הטלפונים.');return;}

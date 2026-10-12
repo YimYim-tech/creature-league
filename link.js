@@ -39,6 +39,8 @@ export async function openGuest(code,h){
     const link={send:data=>{if(conn?.open)conn.send(data);},close:()=>{done=true;try{conn?.close();}catch{}peer.destroy();}};
     // The link comes back at once; whether the room answers arrives through the handlers.
     resolve(link);
+    // Some networks let the phones find each other but not talk; then the friend hears why instead of waiting.
+    setTimeout(()=>{if(!done&&!conn?.open){done=true;h.onError('no-line');}},15000);
     peer.on('open',()=>{conn=peer.connect(peerId(code),{reliable:true,serialization:'json'});conn.on('open',()=>h.onOpen());conn.on('data',d=>h.onMessage(d));conn.on('close',()=>{if(!done)h.onClose();});});
     peer.on('error',e=>{if(done)return;h.onError(e.type==='peer-unavailable'?'no-room':e.type==='network'||e.type==='server-error'||e.type==='socket-error'?'network':'other');});
   });
