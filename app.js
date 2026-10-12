@@ -3,6 +3,7 @@ import {upgradeOptions,cleanUpgrades} from './upgrades.js';
 import {MODES,WIND_TARGET,WIND_HOLD,MAX_POWER,BALL_GOALS,trioLeft,GOALS} from './core.js';
 import {SPARKS_PER_BOX,BOX_TIERS,FRAMES,boxTier,boxesWaiting,roadAhead,addSparks,openBox,chooseBoxPrize} from './core.js';
 import {GOAL_SPARKS,dayKey,refreshDaily,progressDaily} from './core.js';
+import {COOP_GIANTS,COOP_LEVELS} from './core.js';
 import {BLESSINGS,TOWER_GUARD_EVERY,TOWER_PICK_EVERY,towerFloor,towerStats,startTowerRun,makeTowerMatch,recordTower,chooseTowerPick,endTowerRun} from './core.js';
 import {creatureLevel,levelProgress,levelBoost,MAX_LEVEL,LEVEL_BONUS,RANKS,PRIZE_EVERY,LEAGUE_SAFE,rankOf,nextRank,leagueLevel,nextPrizeAt,makeLeagueMatch,recordLeague} from './core.js';
 import {trioTeam,missionEased,missionLevel,ISLANDS,STEPS,STORY_CARDS,STORY_CARD_IDS,currentStep,storyComplete,litIslands,starLit,islandOf,homeIsland,makeStoryMatch,recordStory,completeCastle,storyCardOwned,BATTLE_STEPS,starsOf,totalStars,islandStars,canReplay,friendlyStep,stepIndex} from './story.js';
@@ -359,6 +360,8 @@ function renderHUD(){if(!match)return;const [a,b]=match.actors;
   {const ch=a.superCharge||0,full=ch>=1;$('special-button').classList.toggle('cooling',!full);$('special-button').classList.toggle('super-ready',full);$('special-button').style.setProperty('--cooldown',(1-ch)*100+'%');$('special-button').style.setProperty('--charge',ch);$('special-cooldown').textContent=full?'מוכן!':Math.floor(ch*100)+'%';$('special-button').setAttribute('aria-label',a.spec.special+(full?', מוכן':', נטען '+Math.floor(ch*100)+' אחוז'));}
   if(match.time>8)$('arena-tip').style.opacity='0';
   if(b.boss){const phase=b.boss.phase;$('boss-banner').dataset.phase=phase;$('boss-banner').textContent={guard:'מגן קדמי · נסו מהצד',windup:'הסתערות בדרך · זוזו הצדה!',charge:'הסתערות!',recover:'עכשיו! פגיעות חזקות ב־50%'}[phase];}
+  if(match.coop){const q=match.actors[2],ch=q.superCharge||0,full=ch>=1;$('special-button-2').classList.toggle('cooling',!full);$('special-button-2').classList.toggle('super-ready',full);$('special-button-2').style.setProperty('--charge',ch);
+    $('mode-banner').innerHTML=`<span class="mb-you">${esc(vsName(0))} + ${esc(vsName(1))}</span><span class="mb-goal">ביחד נגד הענק</span><span class="mb-foe">${Math.max(0,Math.ceil(b.hp/b.spec.hp*100))}%</span>`;}
   if(match.versus){const ch=b.superCharge||0,full=ch>=1;$('special-button-2').classList.toggle('cooling',!full);$('special-button-2').classList.toggle('super-ready',full);$('special-button-2').style.setProperty('--charge',ch);
     if(!match.mode)$('mode-banner').innerHTML=`<span class="mb-you">${esc(vsName(0))} <b class="mb-score">${versus.wins[0]}</b></span><span class="mb-goal">${match.roundLabel}</span><span class="mb-foe"><b class="mb-score">${versus.wins[1]}</b> ${esc(vsName(1))}</span>`;}
   const [youLabel,foeLabel]=match.versus?[esc(vsName(0)),esc(vsName(1))]:['אתם','היריב'];
@@ -373,9 +376,10 @@ function renderHUD(){if(!match)return;const [a,b]=match.actors;
 function toast(text,seconds=2){$('match-toast').textContent=text;$('match-toast').classList.add('visible');toastUntil=clock+seconds;}
 function pauseBattle(){if(!match||screen!=='battle'||match.status==='finished'||match.status==='paused')return;previousStatus=match.status;match.status='paused';clearInput();sound.pause();if(!$('pause-dialog').open)$('pause-dialog').showModal();}
 function resumeBattle(){if(!match||match.status!=='paused')return;$('pause-dialog').close();match.status=previousStatus;clearInput();accumulator=0;sound.resume();$('arena').focus({preventScroll:true});}
-function leaveBattle(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());match=null;showView(mode==='versus'?'versus':mode==='tower'?'tower':mode==='league'?'league':mode==='story'?'story':mode==='quick'?'lobby':mode==='wild'?(wildTarget&&!isUnlocked(profile,wildTarget)?'wild':'lobby'):journeyView(profile));}
+function leaveBattle(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());match=null;showView(mode==='versus'||mode==='coop'?'versus':mode==='tower'?'tower':mode==='league'?'league':mode==='story'?'story':mode==='quick'?'lobby':mode==='wild'?(wildTarget&&!isUnlocked(profile,wildTarget)?'wild':'lobby'):journeyView(profile));}
 function onFinish(){
   if(match.versus){finishVersusRound();return;}
+  if(match.coop){finishCoop();return;}
   const boxStart=profile.box.earned;
   const finalWin=mode==='cup'&&cupFinal&&match.winner===0;
   const storyResult=mode==='story'?recordStory(profile,match):null;if(storyResult&&!storyResult.replay)storyEvent=storyResult;
@@ -435,7 +439,7 @@ function levelResultHTML(id,before){
 }
 // ------------------------------------------------------------------ goals of the day
 function refreshTodayGoals(){if(refreshDaily(profile,dayKey(),{seed:players.active,friends:players.players.length>1,storyLeft:!!currentStep(profile)}))persist();}
-function goalText(g){const c=CREATURES[g.param];return {winElement:'נצחו קרב עם יצור '+g.param,winWith:'נצחו קרב עם '+(c?.name||''),wins:'נצחו '+g.need+' קרבות',league:'שחקו '+g.need+' קרבות ליגה',tower:'טפסו '+g.need+' קומות במגדל',supers:'השתמשו '+g.need+' פעמים בכוח־העל',story:'התקדמו שלב אחד במסע',replayStars:'שלושה כוכבים בקרב חוזר במפה',friend:'קרב חבר נגד חבר'}[g.type]||'';}
+function goalText(g){const c=CREATURES[g.param];return {winElement:'נצחו קרב עם יצור '+g.param,winWith:'נצחו קרב עם '+(c?.name||''),wins:'נצחו '+g.need+' קרבות',league:'שחקו '+g.need+' קרבות ליגה',tower:'טפסו '+g.need+' קומות במגדל',supers:'השתמשו '+g.need+' פעמים בכוח־העל',story:'התקדמו שלב אחד במסע',replayStars:'שלושה כוכבים בקרב חוזר במפה',friend:'משחק עם חבר'}[g.type]||'';}
 const ELEMENT_ICON={'מים':'wave','חשמל':'bolt','עוצמה':'mountain','אש':'flame','אור':'sun','רעד':'burrow','היפנוט':'spiral','טבע':'leaf','רוח':'swirl','אנרגיה':'sparkle'};
 function goalPicture(g,i){
   if(g.type==='winWith')return `<canvas id="goal-art-${i}" aria-hidden="true"></canvas>`;
@@ -589,7 +593,7 @@ function savePlayerForm(e){
 // Best of three. Whoever loses a round gets an extra heart in the next one, so nobody falls far behind.
 const VS_MODES=[{id:'',name:'קרב',icon:'bolt',text:'מי שמפיל את השני'},{id:'ball',name:'כדור הגאות',icon:'spiral',text:'ראשון ל־'+BALL_GOALS+' גולים'},{id:'wind',name:'תפוס את הרוח',icon:'swirl',text:WIND_TARGET+' נוצות, '+WIND_HOLD+' שניות'},{id:'lava',name:'טבעת הלבה',icon:'flame',text:'שורדים בלבה'}];
 const VS_ARENAS=['wind','sea','fire','mirror','castle'],VS_WINS=2;
-let versus={players:[null,null],ids:['maimi','havzuk'],hearts:[0,0],mode:'',wins:[0,0],round:1,catchup:[0,0]},touchVersus=false;
+let versus={kind:'vs',giant:'fireguard',coopLevel:'normal',players:[null,null],ids:['maimi','havzuk'],hearts:[0,0],mode:'',wins:[0,0],round:1,catchup:[0,0]},touchVersus=false;
 // Each side plays as a player on this device, with that player's creatures and looks, or as a guest with the three first creatures.
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
 const vsProfile=i=>versus.players[i]==='guest'?null:profileOf(versus.players[i]);
@@ -609,11 +613,21 @@ function renderVersus(){
     $('versus-hearts-'+k).innerHTML=[0,1,2].map(i=>`<button class="vs-heart${i<=h?' on':''}" data-vs-heart="${n}:${i}" aria-label="${i+1} לבבות" aria-pressed="${i===h}">♥</button>`).join('')+`<small>${h?'עוד '+h*25+'% חיים':'חיים רגילים'}</small>`;
     $('versus-fighters-'+k).innerHTML=ids.map(f=>`<button class="fighter-chip${f===id?' chosen':''}" data-vs-fighter="${n}:${f}" aria-pressed="${f===id}" style="--c:${CREATURES[f].color}"><canvas id="vs-chip-${k}-${f}" aria-hidden="true"></canvas><b>${CREATURES[f].name}</b></button>`).join('');
     for(const f of ids)livePortrait(`vs-chip-${k}-${f}`,f,{skin:vsSkin(n,f)});}
-  $('versus-modes').innerHTML=VS_MODES.map(m=>`<button class="vs-mode${m.id===versus.mode?' chosen':''}" data-vs-mode="${m.id}" aria-pressed="${m.id===versus.mode}">${icon(m.icon)}<b>${m.name}</b><small>${m.text}</small></button>`).join('');
+  const coop=versus.kind==='coop';
+  $('vs-kind').innerHTML=[['vs','נגד','bolt'],['coop','ביחד נגד ענק','duo']].map(([k,t,i])=>`<button class="vs-kind-btn${versus.kind===k?' chosen':''}" data-vs-kind="${k}" aria-pressed="${versus.kind===k}">${icon(i)}${t}</button>`).join('');
+  $('versus-title').innerHTML=coop?'ביחד <em>נגד</em> ענק':'חבר <em>נגד</em> חבר';document.querySelector('.versus-vs').textContent=coop?'+':'VS';
+  $('coop-levels').hidden=!coop;$('coop-levels').innerHTML=Object.entries(COOP_LEVELS).map(([k,L])=>`<button class="vs-player${versus.coopLevel===k?' chosen':''}" data-coop-level="${k}" aria-pressed="${versus.coopLevel===k}">${L.name}</button>`).join('');
+  $('versus-modes').classList.toggle('giants',coop);
+  $('versus-modes').innerHTML=coop?COOP_GIANTS.map(g=>`<button class="vs-mode giant${g===versus.giant?' chosen':''}" data-coop-giant="${g}" aria-pressed="${g===versus.giant}"><canvas id="giant-${g}" aria-hidden="true"></canvas><b>${CREATURES[g].name}</b><small>${CREATURES[g].role}</small></button>`).join(''):VS_MODES.map(m=>`<button class="vs-mode${m.id===versus.mode?' chosen':''}" data-vs-mode="${m.id}" aria-pressed="${m.id===versus.mode}">${icon(m.icon)}<b>${m.name}</b><small>${m.text}</small></button>`).join('');
   document.querySelectorAll('[data-vs-player]').forEach(el=>el.onclick=()=>{const [n,pid]=el.dataset.vsPlayer.split(':');versus.players[+n]=pid;sound.click();renderVersus();});
   document.querySelectorAll('[data-vs-fighter]').forEach(el=>el.onclick=()=>{const [n,f]=el.dataset.vsFighter.split(':');versus.ids[+n]=f;sound.click();renderVersus();});
   document.querySelectorAll('[data-vs-heart]').forEach(el=>el.onclick=()=>{const [n,i]=el.dataset.vsHeart.split(':').map(Number);versus.hearts[n]=i;sound.click();renderVersus();});
   document.querySelectorAll('[data-vs-mode]').forEach(el=>el.onclick=()=>{versus.mode=el.dataset.vsMode;sound.click();renderVersus();});
+  if(coop)for(const g of COOP_GIANTS)livePortrait('giant-'+g,g);
+  document.querySelectorAll('[data-vs-kind]').forEach(el=>el.onclick=()=>{versus.kind=el.dataset.vsKind;sound.click();renderVersus();});
+  document.querySelectorAll('[data-coop-giant]').forEach(el=>el.onclick=()=>{versus.giant=el.dataset.coopGiant;sound.click();renderVersus();});
+  document.querySelectorAll('[data-coop-level]').forEach(el=>el.onclick=()=>{versus.coopLevel=el.dataset.coopLevel;sound.click();renderVersus();});
+  $('versus-start').innerHTML=(coop?'יוצאים ביחד!':'יאללה, לקרב!')+' '+icon('play');
 }
 const versusRoundLabel=()=>versus.wins.every(n=>n===VS_WINS-1)?'סיבוב ההכרעה':'סיבוב '+versus.round;
 function startVersus(fresh=false){
@@ -638,6 +652,36 @@ function startVersus(fresh=false){
   $('goal-card').hidden=!match.mode;if(match.mode){$('goal-icon').innerHTML=icon(MISSION_ICON[match.mode]);$('goal-name').textContent=MODES[match.mode].name;$('goal-text').textContent=MODES[match.mode].goal;goalUntil=clock+3;}
   $('leave-button').textContent='הפסקה · חזרה לבחירה';
   renderHUD();$('arena').focus({preventScroll:true});
+}
+function startCoop(){
+  if(!art)return;mode='coop';cupFinal=false;touchVersus=matchMedia('(pointer:coarse)').matches;
+  const L=COOP_LEVELS[versus.coopLevel]||COOP_LEVELS.normal,g=versus.giant,arena=({fireguard:'fire',seaguard:'sea',windguard:'wind',tehomon:'sea'})[g]||'castle';
+  match=makeMatch({player:versus.ids[0],rival:g,level:L.level,giantRival:true,arena,seed:Date.now()+Math.floor(Math.random()*1e5),coop:{partner:versus.ids[1],hpMul:L.hp,hearts:versus.hearts}});
+  const [a,b,c]=match.actors,skinA=vsSkin(0,a.id);let skinC=vsSkin(1,c.id);if(a.id===c.id&&skinA===skinC)skinC=skinA==='night'?'ice':'night';
+  match.names=[vsName(0),'',vsName(1)];renderer.setMatch(match,[skinA,null,skinC]);clearInput();accumulator=0;sound.versus=true;
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');document.body.classList.add('versus-play');sound.unlock();sound.setScene('battle');sound.resume();
+  $('player-name').textContent=a.spec.name;document.querySelector('.player-info .fighter-lines span').textContent=vsName(0);$('rival-name').textContent=b.spec.name;$('rival-level').textContent='ענק · '+L.name;
+  $('player-symbol').innerHTML=icon(a.spec.specialIcon);$('rival-symbol').innerHTML=icon(b.spec.specialIcon);
+  $('match-label').textContent='ביחד נגד ענק';$('round-label').textContent=vsName(0)+' ו'+vsName(1)+' נגד '+b.spec.name;
+  $('special-action-icon').innerHTML=icon(a.spec.specialIcon);$('special-action-name').textContent=a.spec.special;$('special-button').style.setProperty('--c',a.spec.color);
+  $('special-action-icon-2').innerHTML=icon(c.spec.specialIcon);$('special-button-2').style.setProperty('--c',c.spec.color);
+  $('arena-tip').textContent=rivalAdvice[g]||'תקפו את הענק משני הצדדים!';$('arena-tip').style.opacity='1';$('match-toast').classList.remove('visible');toastUntil=0;
+  $('battle-build').hidden=true;$('boss-banner').hidden=true;$('challenge-banner').hidden=true;$('mode-banner').hidden=false;$('hold-count').hidden=true;$('goal-card').hidden=true;
+  tutorial=null;$('tutorial').hidden=true;document.querySelectorAll('.tut-glow').forEach(e=>e.classList.remove('tut-glow'));
+  renderer.cinematic(b.x,b.y-90,1.5,2.4);$('leave-button').textContent='הפסקה · חזרה לבחירה';
+  renderHUD();$('arena').focus({preventScroll:true});
+}
+// Nobody loses to a friend here: the giant wins or loses against both together.
+function finishCoop(){
+  const won=match.winner===0;clearInput();sound.setScene('lobby');if(won)sound.play('voice-victory',{delay:.7});
+  versus.players.forEach((pid,i)=>{if(pid==='guest'||(i===1&&versus.players[0]===pid))return;const pp=pid===players.active?profile:readProfile(playerStorage(pid));addSparks(pp,won?2:1);refreshDaily(pp,dayKey(),{seed:pid,friends:true,storyLeft:!!currentStep(pp)});progressDaily(pp,{friend:true});if(pid===players.active)persist();else saveProfile(playerStorage(pid),pp);});
+  const b=match.actors[1],left=Math.max(0,Math.ceil(b.hp/b.spec.hp*100));
+  $('result-content').innerHTML=`${won?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${won?'gold':'loss'}">${icon(won?'trophy':'shield')}</div><span class="result-kicker">ביחד נגד ענק</span><h2 class="result-title"></h2><p></p>${versus.players.some(p=>p!=='guest')?'<p class="result-tip">כל שחקן קיבל ניצוצות לתיבת הכוכב.</p>':''}`;
+  document.querySelector('#result-content .result-title').textContent=won?'ניצחתם ביחד!':'הענק ניצח הפעם';
+  document.querySelector('#result-content > p').textContent=won?vsName(0)+' ו'+vsName(1)+' הפילו את '+b.spec.name+' ב־'+Math.round(match.time)+' שניות.':'נשארו לו עוד '+left+'% חיים. עוד ניסיון ביחד? אפשר גם לבחור ענק קל יותר.';
+  $('result-primary').textContent='עוד פעם ביחד!';$('result-primary').onclick=()=>{$('result-dialog').close();startCoop();};
+  $('result-secondary').textContent='חזרה לבחירה';$('result-secondary').onclick=leaveBattle;
+  const shown=match;setTimeout(()=>{if(match===shown&&!$('result-dialog').open)$('result-dialog').showModal();},1500);
 }
 // Player one: W A S D, Space, E. Player two: arrows, Enter, right Shift. On a touch screen each player has half the screen and fires on their own.
 function versusInputs(){
@@ -674,12 +718,13 @@ function frameBody(timestamp){
     if(match.status!=='paused'&&match.status!=='finished'){
       if(hitStop>0){hitStop-=dt;}else accumulator+=dt;
       while(accumulator>=1/60){
-        if(match.versus){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,currentInput(),1/60);input.special=false;accumulator-=1/60;
+        if(match.versus||match.coop){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,currentInput(),1/60);input.special=false;accumulator-=1/60;
         for(const e of match.events){sound.effect(e);if(e.type==='hit')renderer.shake=Math.max(renderer.shake,e.side===0?2.2:.8);if(e.type==='ko')hitStop=Math.max(hitStop,.12);if(e.type==='quake')renderer.shake=5;if(e.type==='go')toast('קדימה!',.8);
           if(e.type==='lava-warning')toast('הלבה מתעוררת!',1.4);
           const vs=match.versus;
           if(e.type==='hold-start')toast(vs?'הרוח אצל '+vsName(e.side)+'!':e.side===0?'החזיקו מעמד!':'תפילו אותו!',1.4);
-          if(e.type==='ko')toast(vs?vsName(e.side)+' בחוץ לרגע!':e.side===1?'הפלתם אותו!':'חוזרים בעוד רגע',1.4);
+          if(e.type==='ko'&&match.coop)toast(e.side===1?'הענק נפל!':vsName(e.side===2?1:0)+' חוזר עוד רגע',1.4);
+          else if(e.type==='ko')toast(vs?vsName(e.side)+' בחוץ לרגע!':e.side===1?'הפלתם אותו!':'חוזרים בעוד רגע',1.4);
           if(e.type==='goal'){const G=GOALS[1-e.side];renderer.cinematic(G.x,G.y-50,1.45,1.5);}
           if(e.type==='goal')toast(vs?'גול של '+vsName(e.side)+'!':e.side===0?'גול!!!':'היריב הבקיע',1.6);
           if(e.type==='ball-loose'&&match.status==='playing'&&(e.side===0||vs))toast('הפנינה נפלה!',1.1);if(e.type==='kick-far'&&(e.side===0||vs))toast('התקרבו לשער ואז בעטו',1.6);
@@ -722,7 +767,7 @@ function bindControls(){
       e.preventDefault();keys.add(e.code);if(!e.repeat&&e.code==='KeyE')input.special=true;
     }
     // Player two's keys sit on the right of the keyboard.
-    else if(match.versus&&['Enter','NumpadEnter','Numpad0','Slash','KeyF','KeyQ','ShiftRight','Period'].includes(e.code)){
+    else if((match.versus||match.coop)&&['Enter','NumpadEnter','Numpad0','Slash','KeyF','KeyQ','ShiftRight','Period'].includes(e.code)){
       e.preventDefault();keys.add(e.code);if(!e.repeat&&e.code==='KeyQ')input.special=true;if(!e.repeat&&['ShiftRight','Period'].includes(e.code))input2.special=true;
     }
   });
@@ -741,7 +786,7 @@ function bindControls(){
   $('special-button-2').addEventListener('pointerdown',e=>{e.preventDefault();if(match?.status!=='playing')return;sound.unlock();try{$('special-button-2').setPointerCapture(e.pointerId);}catch{}$('special-button-2').classList.add('held');input2.special=true;});
   for(const event of ['pointerup','pointercancel','lostpointercapture'])$('special-button-2').addEventListener(event,()=>$('special-button-2').classList.remove('held'));
   $('home-versus').onclick=()=>{sound.click();showView('versus');};$('home-box').onclick=()=>{sound.click();showView('boxes');};$('box-chest').onclick=tapChest;
-  $('player-chip').onclick=()=>handleNavigation('players');$('player-form').addEventListener('submit',savePlayerForm);$('player-cancel').onclick=()=>{sound.click();closePlayerForm();};$('versus-start').onclick=()=>{sound.click();startVersus(true);};
+  $('player-chip').onclick=()=>handleNavigation('players');$('player-form').addEventListener('submit',savePlayerForm);$('player-cancel').onclick=()=>{sound.click();closePlayerForm();};$('versus-start').onclick=()=>{sound.click();if(versus.kind==='coop')startCoop();else startVersus(true);};
   for(const type of ['pointerdown','touchend','click','keydown'])document.addEventListener(type,()=>{if(sound.ctx?.state!=='running')sound.unlock();},{passive:true});
   document.addEventListener('click',()=>{if(matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});},{once:true});
 }
@@ -759,7 +804,7 @@ function bindStick(zone,joystick,knob,state){
 // Read-only diagnostics. Browser journeys still operate the real controls.
 // Verification only: advance a battle by simulated time and draw one frame, even in a hidden tab.
 // With live=true the battle reads the real controls (sticks, buttons, keys), the way the frame loop does.
-const advance=(seconds,input={},live=false)=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match.status!=='finished';i++){if(live&&match.versus){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,live?currentInput():{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish')onFinish();}updateTutorial(seconds);renderer.render(match,1/60,clock+=seconds);renderHUD();return match.status;};
+const advance=(seconds,input={},live=false)=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match.status!=='finished';i++){if(live&&(match.versus||match.coop)){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,live?currentInput():{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish')onFinish();}updateTutorial(seconds);renderer.render(match,1/60,clock+=seconds);renderHUD();return match.status;};
 window.__LEAGUE__=Object.freeze({advance,stick:()=>({x:+input.stickX.toFixed(2),y:+input.stickY.toFixed(2)}),audio:()=>({ctx:sound.ctx?.state||'none',scene:sound.scene,music:Object.fromEntries(Object.entries(sound.music||{}).map(([k,t])=>[k,{paused:t.el.paused,time:+t.el.currentTime.toFixed(1),ready:t.el.readyState,gain:+t.g.gain.value.toFixed(2)}]))}),skip:()=>{if(!match||match.status==='finished')return false;finish(match,0,'test');onFinish();return true;},camera:()=>({scale:+renderer.scale.toFixed(3),offsetX:Math.round(renderer.offsetX),offsetY:Math.round(renderer.offsetY),close:!!renderer.cam,cinematic:!!renderer.punch,size:renderer.size}),snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,mode:match.mode||null,ball:match.ball?{x:match.ball.x,y:match.ball.y,carrier:match.ball.carrier,score:[...match.ball.score]}:null,wind:match.wind?{holder:match.wind.holder,feathers:match.wind.feathers.map(f=>({x:f.x,y:f.y}))}:null,lava:match.lava?{scale:match.lava.scale,embers:match.lava.embers.map(e=>({x:e.x,y:e.y}))}:null,trio:match.trio?[trioLeft(match,0),trioLeft(match,1)]:null,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,out:a.out||0,feathers:a.feathers||0,power:a.power||0,maxHp:a.spec.hp,specialCd:a.specialCd,superCharge:a.superCharge,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
 async function boot(){
   $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);refreshTodayGoals();buildRoster();renderStoryPanel();bindControls();updateHeader();showView(players.players.length>1?'players':'lobby');$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);

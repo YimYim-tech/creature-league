@@ -82,7 +82,7 @@ export class Renderer {
     else{k=Math.min(this.w/WORLD.width,this.h/WORLD.height);cx=WORLD.width/2;cy=WORLD.height/2;}
     // Close camera (chosen in the pause menu, phones only): a little closer, and it moves only when the player nears the edge.
     // A friend battle always shows the whole arena: a camera that follows one player is unfair to the other.
-    if(this.wide&&this.closeCam&&!m.versus){
+    if(this.wide&&this.closeCam&&!m.versus&&!m.coop){
       k*=1.3;const p=m.actors[0],hw=this.w/2/k,hh=this.h/2/k,px=p.x,py=p.y-40;
       if(!this.cam)this.cam={x:px,y:py};
       const dzx=hw*.3,dzy=hh*.25;let tx=this.cam.x,ty=this.cam.y;
@@ -125,7 +125,7 @@ export class Renderer {
     for(const w of m.waves)this.drawWave(w,m,clock);
     for(const a of m.actors){
       ellipse(c,a.x,a.y+3,a.radius*1.45,a.radius*.48,'#182b3555');
-      ellipse(c,a.x,a.y+3,a.radius*1.5,a.radius*.58,null,a.side===0?'#11bcca':'#d24f63',3);
+      ellipse(c,a.x,a.y+3,a.radius*1.5,a.radius*.58,null,a.side===0?'#11bcca':a.side===2?'#f2c14e':'#d24f63',3);
       if(a.windup>0){const surge=a.upgrades.includes('surge'),r=surge?235:182,pct=1-a.windup/(surge?.85:.6);ellipse(c,a.x,a.y,r,r*.8,'#fc713027','#fa9858',2);ellipse(c,a.x,a.y,r*pct,r*.8*pct,'#ffbc6544');}
     }
     const things=[...m.covers.filter(c=>c.hp>0).map(c=>({y:c.y,cover:c})),...m.actors.filter(a=>!(a.out>0)).map(a=>({y:a.y,actor:a}))].sort((a,b)=>a.y-b.y);
@@ -143,6 +143,7 @@ export class Renderer {
       const label=m.countdown>.3?String(Math.ceil(m.countdown-.3)):'קדימה!';c.save();if(!this.zoomed){c.fillStyle='#072c3b40';c.fillRect(0,0,1280,720);}this.label(label,640,372,84,'#fff','center');this.label(m.roundLabel||'קרב על הזירה',640,428,22,'#ffffff','center');c.restore();
     }
     if(m.versus&&(m.status==='countdown'||m.time<5))m.actors.forEach((a,i)=>this.label(m.names?.[i]||'שחקן '+(i+1),a.x,a.y+42,18,i?'#8a1d2e':'#08424b','center'));
+    else if(m.coop&&(m.status==='countdown'||m.time<5))m.actors.forEach(a=>{if(a.side!==1&&!(a.out>0))this.label(m.names?.[a.side]||'',a.x,a.y+42,18,a.side?'#7a5200':'#08424b','center');});
     else if(m.status==='playing'&&m.time<5){this.label('אתם',m.actors[0].x,m.actors[0].y+42,18,'#08424b','center');}
   }
   label(text,x,y,size,color='#fff',align='center') {const c=this.ctx;c.font=`900 ${size}px 'Frank Ruhl Libre', Heebo, Arial`;c.textAlign=align;c.textBaseline='middle';c.fillStyle=color;c.fillText(text,x,y);}
@@ -177,8 +178,8 @@ export class Renderer {
     if(a.regen){c.save();for(let i=0;i<5;i++){const k=(this.clock*.9+i/5)%1,px=a.x+Math.sin(i*2.4+this.clock*2)*a.radius*.9,py=a.y-10-k*a.spec.height*.9;c.globalAlpha=(1-k)*.9;c.fillStyle='#5dff9e';c.fillRect(px-2,py-7,4,14);c.fillRect(px-7,py-2,14,4);}c.restore();}
     if(a.guard>0){c.save();c.globalAlpha=.35;ellipse(c,a.x,a.y-a.spec.height*.45,a.radius*1.6,a.spec.height*.65,'#92e9ff33','#cffbff',3);c.restore();}
     // Near the top edge the bar stops at the screen edge, so health never leaves the screen.
-    const barW=70,topWorld=-this.offsetY/this.scale+6,barY=Math.max(a.y-a.spec.height-17,a.y+(topWorld-a.y)/f);c.fillStyle='#092432bb';c.beginPath();c.roundRect(a.x-barW/2,barY,barW,7,4);c.fill();c.fillStyle=a.side===0?'#39dccc':'#fc7a7f';c.beginPath();c.roundRect(a.x-barW/2+1,barY+1,Math.max(0,(barW-2)*a.hp/a.spec.hp),5,3);c.fill();
-    if((a.side===0||this.versus)&&a.hp>0&&!(a.out>0))this.drawLightGem(a.x-barW/2-13,barY+3,a.superCharge||0,a.spec.color);
+    const barW=70,topWorld=-this.offsetY/this.scale+6,barY=Math.max(a.y-a.spec.height-17,a.y+(topWorld-a.y)/f);c.fillStyle='#092432bb';c.beginPath();c.roundRect(a.x-barW/2,barY,barW,7,4);c.fill();c.fillStyle=a.side===0?'#39dccc':a.side===2?'#f2c14e':'#fc7a7f';c.beginPath();c.roundRect(a.x-barW/2+1,barY+1,Math.max(0,(barW-2)*a.hp/a.spec.hp),5,3);c.fill();
+    if((a.side!==1||this.versus)&&a.hp>0&&!(a.out>0))this.drawLightGem(a.x-barW/2-13,barY+3,a.superCharge||0,a.spec.color);
     if(f!==1)c.restore();
   }
   // Creatures still held by the shadow trail dark smoke until they are freed.

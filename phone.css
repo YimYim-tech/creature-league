@@ -475,3 +475,23 @@ body.versus-play #rival-level{color:#ff9aa8}
   .home-strips .goals-badge{width:24px;height:24px}.home-strips .goals-dots{display:none}
   .result-goals{margin-top:4px;font-size:11px}
 }
+
+/* ------------------------------------------------------------------ co-op against a giant */
+.vs-kind{display:flex;gap:8px;justify-content:center;margin-top:6px}
+.vs-kind-btn{display:flex;align-items:center;gap:6px;padding:6px 16px;border-radius:999px;border:2px solid #c9a35d;background:#fff6e0;color:var(--ink);font:inherit;font-weight:900;font-size:15px;cursor:pointer}
+.vs-kind-btn svg{width:18px;height:18px}
+.vs-kind-btn.chosen{background:var(--brick);border-color:var(--brick);color:#fff}
+.coop-levels{display:flex;gap:8px;justify-content:center;margin:10px 0 0}
+.coop-levels .vs-player.chosen{--p:#b5402a}
+.versus-modes.giants .vs-mode{padding:4px 6px 8px}
+.versus-modes.giants canvas{width:84px;height:70px}
+@media (max-height:600px) and (orientation:landscape){
+  .vs-kind{margin-top:2px}.vs-kind-btn{padding:2px 12px;font-size:12px}.vs-kind-btn svg{width:14px;height:14px}
+  .coop-levels{margin:4px 0 0}.versus-modes.giants canvas{width:54px;height:40px}.versus-modes.giants .vs-mode small{display:none}
+}
+/* A sideways phone: title, kind and difficulty share one row, and the giants are small, so the setup fits one screen. */
+@media (max-height:600px) and (orientation:landscape){
+  .versus-heading{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+  .versus-heading .vs-kind,.versus-heading .coop-levels{margin:0}
+  .versus-modes.giants .vs-mode{padding:2px 4px 4px;gap:0}.versus-modes.giants canvas{width:46px;height:32px}.versus-modes.giants .vs-mode b{font-size:11px}
+}

@@ -230,7 +230,7 @@ function actor(id,side,ids=[]) {
 }
 // A friend battle: two people share one screen, so both sides play by the same rules and nothing is saved.
 export const HEART_BONUS=.25;
-export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0],boost=0,giantRival=false,run=null}={}) {
+export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0],boost=0,giantRival=false,run=null,coop=null}={}) {
   if(!LEVELS[level])throw new Error('Unknown difficulty');
   if(versus){boss=false;challenge=null;wild=null;story=null;giant=false;mirror=false;upgrades=[];boost=0;if(mode==='trio')mode=null;}
   if(giantRival)giant=true;
@@ -246,6 +246,7 @@ export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date
     covers:[{x:449,y:350,r:35,hp:80,maxHp:80},{x:831,y:440,r:35,hp:80,maxHp:80},{x:650,y:237,r:28,hp:65,maxHp:65},{x:630,y:555,r:28,hp:65,maxHp:65}].map((c,i)=>({...c,...(challenge===CHALLENGE.id?{collapseAt:5+i*4}:{})}))};
   match.teamIds=teamIds;
   if(run&&!versus)applyRun(match,run);
+  if(coop&&!versus)setupCoop(match,coop);
   {const k=clamp(+boost||0,0,.5);if(k){const a=match.actors[0];a.spec={...a.spec,hp:Math.round(a.spec.hp*(1+k)),damage:Math.round(a.spec.damage*(1+k))};a.hp=a.spec.hp;match.boost=k;}}
   if(versus){match.versus=true;
     // Each extra heart is a quarter more life: the way a younger friend gets a fair chance.
@@ -309,9 +310,9 @@ export function useSpecial(m,a,input={}) {
   event(m,'special',{kind:a.id,side:a.side});return true;
 }
 // Where a placed power lands: on the opponent, but never further than its reach.
-function landing(m,a,reach){const t=m.actors[1-a.side],d=Math.min(reach,length(t.x-a.x,t.y-a.y));return {x:a.x+Math.cos(a.aim)*d,y:a.y+Math.sin(a.aim)*d*.8};}
+function landing(m,a,reach){const t=foeOf(m,a),d=Math.min(reach,length(t.x-a.x,t.y-a.y));return {x:a.x+Math.cos(a.aim)*d,y:a.y+Math.sin(a.aim)*d*.8};}
 function wildSpecial(m,a,surge) {
-  const t=m.actors[1-a.side],dir={x:Math.cos(a.aim),y:Math.sin(a.aim)};
+  const t=foeOf(m,a),dir={x:Math.cos(a.aim),y:Math.sin(a.aim)};
   if(a.id==='lohatan'){
     m.shots.push({id:++m.nextId,owner:a.side,x:a.x+dir.x*(a.radius+12),y:a.y+dir.y*(a.radius+12),vx:dir.x*430,vy:dir.y*430,r:17,damage:20,life:1.3,color:a.spec.color,kind:'fireball',explode:{r:surge?140:105,damage:surge?42:30}});
   } else if(a.id==='tehomon'){
@@ -388,7 +389,7 @@ function stepBoss(m,a,dt) {
   a.aim=b.angle;a.facing=Math.cos(b.angle)>0?1:-1;
 }
 function aiInput(m,dt) {
-  const ai=m.ai,a=m.actors[1],p=m.actors[0],level=LEVELS[m.level];ai.timer-=dt;ai.strafeTime-=dt;
+  const ai=m.ai,a=m.actors[1],p=foeOf(m,a),level=LEVELS[m.level];ai.timer-=dt;ai.strafeTime-=dt;
   if(ai.timer>0)return m.calm?{...ai,fire:false,special:false}:ai;
   ai.timer=level.reaction;
   if(ai.strafeTime<=0){ai.strafe= m.random()>.5?1:-1;ai.strafeTime=1.5+m.random()*2;}
@@ -397,7 +398,7 @@ function aiInput(m,dt) {
   let mx=n.x*toward-n.y*.65*ai.strafe,my=n.y*toward+n.x*.65*ai.strafe;
   if(m.pickup&&a.hp<a.spec.hp*.7){const q=norm(m.pickup.x-a.x,m.pickup.y-a.y);mx=q.x;my=q.y;}
   // React to approaching projectiles; the easier opponent only responds late.
-  for(const s of m.shots)if(s.owner===0&&length(s.x-a.x,s.y-a.y)<(m.level==='rookie'?75:150)){
+  for(const s of m.shots)if(s.owner!==1&&length(s.x-a.x,s.y-a.y)<(m.level==='rookie'?75:150)){
     const cross=s.vx*(a.y-s.y)-s.vy*(a.x-s.x),avoid=norm(-s.vy,s.vx);mx+=avoid.x*Math.sign(cross||1)*1.4;my+=avoid.y*Math.sign(cross||1)*1.4;
   }
   for(const c of m.covers)if(c.hp>0){const ax=a.x-c.x,ay=a.y-c.y,dist=length(ax,ay),r=c.r+a.radius+45;
@@ -427,7 +428,7 @@ function stepActor(m,a,input,dt,scale=1) {
   if(a.stun>0)return;
   move(m,a,input.moveX||0,input.moveY||0,dt,scale);
   if(input.aimX!=null)a.aim=Math.atan2(input.aimY-a.y,input.aimX-a.x);
-  else {const target=m.actors[1-a.side],distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*(human(m,a)?.45:.72),speed=target.spec.speed*(target.side&&!m.versus?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
+  else {const target=foeOf(m,a),distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*(human(m,a)?.45:.72),speed=target.spec.speed*(target.side&&!m.versus?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
   if(Math.abs(Math.cos(a.aim))>.15)a.facing=Math.cos(a.aim)>0?1:-1;
   if(m.ball&&m.ball.carrier===a.side){
     if(input.aimX==null){const G=GOALS[1-a.side];a.aim=Math.atan2(G.y-a.y,G.x-a.x);a.facing=Math.cos(a.aim)>0?1:-1;}
@@ -438,14 +439,18 @@ function stepActor(m,a,input,dt,scale=1) {
   if(input.fire)shoot(m,a,a.aim,human(m,a)?1:LEVELS[m.level].fireScale);
 }
 // The child always plays side 0; in a friend battle side 1 is a person too and gets the same help.
-const human=(m,a)=>a.side===0||!!m.versus;
+// In a co-op battle a second child plays side 2, on the same team as side 0.
+const human=(m,a)=>a.side!==1||!!m.versus;
+export const foesOf=(m,a)=>m.coop?(a.side===1?m.actors.filter(x=>x.side!==1):[m.actors[1]]):[m.actors[1-a.side]];
+// The rival to aim at: the only one, or the nearest one still in the fight.
+export function foeOf(m,a){const list=foesOf(m,a);if(list.length===1)return list[0];let best=null,bd=Infinity;for(const f of list){if(f.out>0||f.hp<=0)continue;const d=length(f.x-a.x,f.y-a.y);if(d<bd){bd=d;best=f;}}return best||list[0];}
 function updateProjectiles(m,dt) {
   for(const s of m.shots){
     if(m.zones.length){const sw=m.zones.find(z=>z.owner!==s.owner&&(z.kind==='vortex'||z.kind==='tidering')&&length(s.x-z.x,s.y-z.y)<z.r);if(sw){s.life=0;effect(m,'stone',s.x,s.y,{color:sw.kind==='vortex'?'#9fc4ff':'#d6f1ff'});continue;}}
     const x=s.x+s.vx*dt,y=s.y+s.vy*dt;s.life-=dt;
     let hit=null,t=2;
-    const target=m.actors[1-s.owner],helped=s.owner===0||!!m.versus,enemyT=target.out>0?null:segmentCircle(s.x,s.y,x,y,target.x,target.y,(s.r+target.radius)*(helped?AIM_HELP:1));
-    if(enemyT!=null){hit=target;t=enemyT;}
+    const helped=s.owner!==1||!!m.versus;
+    for(const target of foesOf(m,m.actors[s.owner])){if(target.out>0)continue;const tt=segmentCircle(s.x,s.y,x,y,target.x,target.y,(s.r+target.radius)*(helped?AIM_HELP:1));if(tt!=null&&tt<t){hit=target;t=tt;}}
     if(m.ball&&m.ball.carrier<0){const bt=segmentCircle(s.x,s.y,x,y,m.ball.x,m.ball.y,s.r+16);if(bt!=null&&bt<t){s.life=0;m.ball.vx+=s.vx*.4;m.ball.vy+=s.vy*.4;effect(m,'stone',m.ball.x,m.ball.y,{color:'#d6f1ff'});continue;}}
     for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){if(helped){s.chipped??=[];if(!s.chipped.includes(c)){s.chipped.push(c);c.hp=Math.max(0,c.hp-s.damage*.5);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});event(m,'cover',{broken:c.hp===0});}continue;}hit=c;t=ct;}}
     if(hit){s.x+=(x-s.x)*t;s.y+=(y-s.y)*t;s.life=0;if(s.explode)burst(m,s);
@@ -458,8 +463,8 @@ function updateProjectiles(m,dt) {
   for(const s of m.shots)if(s.explode&&!s.burst&&(s.life<=0||s.x<=40||s.x>=1240||s.y<=85||s.y>=710))burst(m,s);
   m.shots=m.shots.filter(s=>s.life>0&&s.x>40&&s.x<1240&&s.y>85&&s.y<710);
   for(const w of m.waves){w.age+=dt;if(w.visual)continue;if(w.kind==='wave'){w.x+=Math.cos(w.angle)*w.speed*dt;w.y+=Math.sin(w.angle)*w.speed*dt;}
-    const a=m.actors[w.owner],target=m.actors[1-w.owner],r=w.kind==='wave'?w.r:w.r*Math.min(1,w.age/.22);
-    if(!w.hit.includes(target.side)&&length(target.x-w.x,target.y-w.y)<r+target.radius){
+    const a=m.actors[w.owner],r=w.kind==='wave'?w.r:w.r*Math.min(1,w.age/.22);
+    for(const target of foesOf(m,a))if(!(target.out>0)&&!w.hit.includes(target.side)&&length(target.x-w.x,target.y-w.y)<r+target.radius){
       w.hit.push(target.side);const n=norm(target.x-w.x,target.y-w.y),push=w.push??(w.kind==='wave'?65:32);
       if(w.slow&&target.invincible<=0)target.slow=Math.max(target.slow,w.slow);
       if(w.stun&&target.invincible<=0){target.stun=Math.max(target.stun,w.stun);effect(m,'dizzy',target.x,target.y,{color:'#d7b8ff'});}
@@ -468,18 +473,21 @@ function updateProjectiles(m,dt) {
     for(let i=0;i<m.covers.length;i++){const c=m.covers[i];if(c.hp>0&&!w.hit.includes('c'+i)&&length(c.x-w.x,c.y-w.y)<r+c.r){w.hit.push('c'+i);c.hp=Math.max(0,c.hp-42);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});}}
   }
   m.waves=m.waves.filter(w=>w.age<w.life);
-  for(const z of m.zones){z.age+=dt;z.pulse-=dt;const a=m.actors[z.owner],target=m.actors[1-z.owner];
-    const inside=length(target.x-z.x,target.y-z.y)<z.r+target.radius;
-    if(z.kind==='echo'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'echo',z.x,z.y,{color:a.spec.color,r:z.r});if(inside&&target.invincible<=0&&!(target.out>0))damage(m,target,z.damage,a,{special:true});}continue;}
-    if(z.kind==='star'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'starfall',z.x,z.y,{color:'#ffe27a',r:z.r});if(inside&&target.invincible<=0&&!(target.out>0)){const n=norm(target.x-z.x||.01,target.y-z.y);damage(m,target,z.damage,a,{special:true,pushX:n.x*30,pushY:n.y*24});}}continue;}
-    if(z.kind==='roots'){if(!z.done&&z.age>=z.delay){z.done=true;if(inside&&target.invincible<=0){target.root=Math.max(target.root,z.root);damage(m,target,z.damage,a,{special:true});effect(m,'rooted',target.x,target.y,{color:'#9be06a'});}}continue;}
+  for(const z of m.zones){z.age+=dt;z.pulse-=dt;const a=m.actors[z.owner],targets=foesOf(m,a),isIn=t=>length(t.x-z.x,t.y-z.y)<z.r+t.radius;let pulsed=false;
+    if(z.kind==='echo'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'echo',z.x,z.y,{color:a.spec.color,r:z.r});for(const target of targets)if(isIn(target)&&target.invincible<=0&&!(target.out>0))damage(m,target,z.damage,a,{special:true});}continue;}
+    if(z.kind==='star'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'starfall',z.x,z.y,{color:'#ffe27a',r:z.r});for(const target of targets)if(isIn(target)&&target.invincible<=0&&!(target.out>0)){const n=norm(target.x-z.x||.01,target.y-z.y);damage(m,target,z.damage,a,{special:true,pushX:n.x*30,pushY:n.y*24});}}continue;}
+    if(z.kind==='roots'){if(!z.done&&z.age>=z.delay){z.done=true;for(const target of targets)if(isIn(target)&&target.invincible<=0){target.root=Math.max(target.root,z.root);damage(m,target,z.damage,a,{special:true});effect(m,'rooted',target.x,target.y,{color:'#9be06a'});}}continue;}
     if(z.kind==='tornado'){z.x+=z.vx*dt;z.y+=z.vy*dt;if(length((z.x-WORLD.cx)/WORLD.rx,(z.y-WORLD.cy)/WORLD.ry)>.93){z.vx*=-.6;z.vy*=-.6;}
-      if(inside&&target.invincible<=0&&!target.boss&&!(target.out>0)){z.caught=true;target.x+=(z.x-target.x)*Math.min(1,dt*7);target.y+=(z.y-target.y)*Math.min(1,dt*7);confine(target);if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});z.pulse=.3;}}
-      if(z.age+dt>=z.life&&z.caught&&!z.thrown){z.thrown=true;const n=norm(z.vx||1,z.vy);damage(m,target,z.finale,a,{special:true,pushX:n.x*140,pushY:n.y*110});target.stun=Math.max(target.stun,.35);}continue;}
+      for(const target of targets)if(isIn(target)&&target.invincible<=0&&!target.boss&&!(target.out>0)){z.caught=true;(z.caughtSides??=[]).includes(target.side)||z.caughtSides.push(target.side);target.x+=(z.x-target.x)*Math.min(1,dt*7);target.y+=(z.y-target.y)*Math.min(1,dt*7);confine(target);if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});pulsed=true;}}
+      if(pulsed)z.pulse=.3;
+      if(z.age+dt>=z.life&&z.caught&&!z.thrown){z.thrown=true;const n=norm(z.vx||1,z.vy);for(const target of targets)if(z.caughtSides.includes(target.side)){damage(m,target,z.finale,a,{special:true,pushX:n.x*140,pushY:n.y*110});target.stun=Math.max(target.stun,.35);}}continue;}
     if(z.kind==='tidering'){z.x=a.x;z.y=a.y;if(a.hp<=0||a.out>0)z.age=z.life;
-      if(inside&&target.invincible<=0&&!(target.out>0)){const n=norm(target.x-z.x||.01,target.y-z.y);target.x=z.x+n.x*(z.r+target.radius+2);target.y=z.y+n.y*(z.r+target.radius+2);confine(target);resolveCover(m,target);if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});z.pulse=.5;}}continue;}
-    if(z.kind==='vortex'&&inside){target.slow=Math.max(target.slow,.25);const n=norm(z.x-target.x,z.y-target.y);if(target.invincible<=0&&!target.boss){target.x+=n.x*110*dt;target.y+=n.y*90*dt;confine(target);resolveCover(m,target);}if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});z.pulse=.5;}continue;}
-    if(inside){if(z.kind==='water')target.slow=Math.max(target.slow,.2);else if(z.pulse<=0){damage(m,target,6,a,{special:true});z.pulse=.5;}}
+      for(const target of targets)if(isIn(target)&&target.invincible<=0&&!(target.out>0)){const n=norm(target.x-z.x||.01,target.y-z.y);target.x=z.x+n.x*(z.r+target.radius+2);target.y=z.y+n.y*(z.r+target.radius+2);confine(target);resolveCover(m,target);if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});pulsed=true;}}
+      if(pulsed)z.pulse=.5;continue;}
+    if(z.kind==='vortex'){for(const target of targets)if(isIn(target)){target.slow=Math.max(target.slow,.25);const n=norm(z.x-target.x,z.y-target.y);if(target.invincible<=0&&!target.boss){target.x+=n.x*110*dt;target.y+=n.y*90*dt;confine(target);resolveCover(m,target);}if(z.pulse<=0){damage(m,target,z.damage,a,{special:true});pulsed=true;}}
+      if(pulsed)z.pulse=.5;continue;}
+    for(const target of targets)if(isIn(target)){if(z.kind==='water')target.slow=Math.max(target.slow,.2);else if(z.pulse<=0){damage(m,target,6,a,{special:true});pulsed=true;}}
+    if(pulsed)z.pulse=.5;
   }m.zones=m.zones.filter(z=>z.age<z.life);
 }
 function burst(m,s){s.burst=true;const p={x:s.x,y:s.y};
@@ -499,9 +507,11 @@ export function step(m,input={},dt=1/60,rivalInput=null) {
     c.hp=0;effect(m,'stone',c.x,c.y,{color:'#ffd586'});event(m,'collapse');
   }
   const ai=m.versus?rivalInput||{}:aiInput(m,dt);stepActor(m,m.actors[0],input,dt);stepActor(m,m.actors[1],ai,dt,m.versus?1:LEVELS[m.level].speedScale);
+  if(m.coop)stepActor(m,m.actors[2],rivalInput||{},dt);
   // Fighters cannot occupy the same physical space.
-  const [a,b]=m.actors,d=length(a.x-b.x,a.y-b.y),r=a.radius+b.radius;
-  if(d<r){const n=norm(a.x-b.x||.01,a.y-b.y),shift=(r-d)/2;a.x+=n.x*shift;a.y+=n.y*shift;b.x-=n.x*shift;b.y-=n.y*shift;resolveCover(m,a);resolveCover(m,b);}
+  const [a,b]=m.actors;
+  for(let i=0;i<m.actors.length;i++)for(let j=i+1;j<m.actors.length;j++){const p=m.actors[i],q=m.actors[j];if(p.out>0||q.out>0)continue;const d=length(p.x-q.x,p.y-q.y),r=p.radius+q.radius;
+    if(d<r){const n=norm(p.x-q.x||.01,p.y-q.y),shift=(r-d)/2;p.x+=n.x*shift;p.y+=n.y*shift;q.x-=n.x*shift;q.y-=n.y*shift;resolveCover(m,p);resolveCover(m,q);}}
   updateProjectiles(m,dt);
   if(m.mode)stepMode(m,dt);
   if(m.status==='finished')return;
@@ -509,6 +519,7 @@ export function step(m,input={},dt=1/60,rivalInput=null) {
   if(m.pickup){m.pickup.life-=dt;for(const actor of m.actors)if(m.pickup&&actor.hp>0&&actor.hp<actor.spec.hp&&length(actor.x-m.pickup.x,actor.y-m.pickup.y)<actor.radius+22){
     const amount=Math.min(30,actor.spec.hp-actor.hp);actor.hp+=amount;actor.stats.healed+=amount;effect(m,'heal',actor.x,actor.y,{amount,color:'#91f5be'});event(m,'heal',{side:actor.side,amount});m.pickup=null;
   }if(m.pickup?.life<=0)m.pickup=null;}
+  if(m.coop){stepCoop(m,dt);return;}
   if(m.ball){if(m.time>=m.duration){const B=m.ball;if(B.score[0]!==B.score[1])finish(m,B.score[0]>B.score[1]?0:1,'time');else if(!B.overtime){B.overtime=true;m.duration+=40;event(m,'overtime');}else{const difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,Math.abs(difference)<.002?-1:difference>0?0:1,'time');}}return;}
   if(m.trio){if(m.time>=m.duration){const l0=trioLeft(m,0),l1=trioLeft(m,1),x=m.actors[0],y=m.actors[1],difference=x.hp/x.spec.hp-y.hp/y.spec.hp;finish(m,l0!==l1?(l0>l1?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
   if(m.wind){if(m.time>=m.duration){const lead=a.feathers-b.feathers,difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,lead?(lead>0?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
@@ -796,4 +807,27 @@ export function progressDaily(profile,ev,today=dayKey()){
     if(!add)continue;g.have=Math.min(g.need,g.have+add);if(g.have>=g.need){g.done=true;boxes+=addSparks(profile,GOAL_SPARKS);}moved.push(g);}
   let bonus=false;if(D.goals.length&&D.goals.every(g=>g.done)&&D.bonusDay!==today){D.bonusDay=today;profile.box.earned++;bonus=true;}
   return {moved,boxes,bonus};
+}
+
+// ------------------------------------------------------------------ co-op: two children against a giant
+// Nobody loses to a friend here. A child who falls comes back after a few seconds; the giant has to be beaten
+// before the clock runs out. Each extra heart gives that child a quarter more life, as in a friend battle.
+export const COOP_RESPAWN=4,COOP_DURATION=150;
+export const COOP_GIANTS=['fireguard','seaguard','windguard','tehomon'];
+// How tough each giant already is: the turtle's tide ring blocks shots, the lion and the bird fall fast.
+export const COOP_GIANT_HP={fireguard:2.2,windguard:2.4,tehomon:1.1,seaguard:.5};
+export const COOP_LEVELS={easy:{level:'rookie',hp:2.2,name:'קל'},normal:{level:'challenger',hp:2.8,name:'רגיל'},hard:{level:'veteran',hp:3.4,name:'קשה'}};
+const COOP_SPAWN=[{x:250,y:330},null,{x:250,y:500}];
+function setupCoop(m,{partner='havzuk',hpMul=2.8,hearts=[0,0]}={}){
+  if(!CREATURES[partner])partner='havzuk';
+  m.coop=true;m.duration=COOP_DURATION;const p1=m.actors[0],boss=m.actors[1],p2=actor(partner,2);
+  Object.assign(p1,COOP_SPAWN[0]);Object.assign(p2,COOP_SPAWN[2]);p2.facing=1;p2.aim=0;m.actors.push(p2);
+  boss.spec={...boss.spec,hp:Math.round(boss.spec.hp*hpMul*(COOP_GIANT_HP[boss.id]||1))};boss.hp=boss.spec.hp;boss.x=1000;boss.y=410;
+  [p1,p2].forEach((a,i)=>{const extra=clamp(Math.floor(hearts?.[i]||0),0,2);if(extra){a.spec={...a.spec,hp:Math.round(a.spec.hp*(1+HEART_BONUS*extra))};a.hp=a.spec.hp;}});
+}
+function stepCoop(m,dt){
+  for(const p of m.actors){if(p.side===1)continue;
+    if(p.out>0){p.out-=dt;if(p.out<=0){p.out=0;p.hp=p.spec.hp;Object.assign(p,COOP_SPAWN[p.side]);p.invincible=1.5;event(m,'respawn',{side:p.side});}continue;}
+    if(p.hp<=0){p.out=COOP_RESPAWN;p.hp=0;event(m,'ko',{side:p.side});}}
+  if(m.actors[1].hp<=0)finish(m,0,'giant');else if(m.time>=m.duration)finish(m,1,'time');
 }
