@@ -4,6 +4,8 @@ import {MODES,WIND_TARGET,WIND_HOLD,MAX_POWER,BALL_GOALS,trioLeft,GOALS} from '.
 import {SPARKS_PER_BOX,BOX_TIERS,FRAMES,boxTier,boxesWaiting,roadAhead,addSparks,openBox,chooseBoxPrize} from './core.js';
 import {GOAL_SPARKS,dayKey,refreshDaily,progressDaily} from './core.js';
 import {COOP_GIANTS,COOP_LEVELS} from './core.js';
+import {PROTOCOL,SNAPSHOT_EVERY,INPUT_HZ,CODE_CREATURES,randomCode,codeFromText,snapshot,applySnapshot,coast,packInput,unpackInput} from './net.js';
+import {openHost,openGuest} from './link.js';
 import {BLESSINGS,TOWER_GUARD_EVERY,TOWER_PICK_EVERY,towerFloor,towerStats,startTowerRun,makeTowerMatch,recordTower,chooseTowerPick,endTowerRun} from './core.js';
 import {creatureLevel,levelProgress,levelBoost,MAX_LEVEL,LEVEL_BONUS,RANKS,PRIZE_EVERY,LEAGUE_SAFE,rankOf,nextRank,leagueLevel,nextPrizeAt,makeLeagueMatch,recordLeague} from './core.js';
 import {trioTeam,missionEased,missionLevel,ISLANDS,STEPS,STORY_CARDS,STORY_CARD_IDS,currentStep,storyComplete,litIslands,starLit,islandOf,homeIsland,makeStoryMatch,recordStory,completeCastle,storyCardOwned,BATTLE_STEPS,starsOf,totalStars,islandStars,canReplay,friendlyStep,stepIndex} from './story.js';
@@ -136,10 +138,10 @@ function showView(name){
   // On a touch screen a battle goes full screen and asks for landscape.
   if(name==='battle'&&matchMedia('(pointer:coarse)').matches&&!document.fullscreenElement&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});
   if(name==='battle')window.scrollTo(0,0);
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle','versus','boxes','league','tower','goals'].includes(name)));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle','versus','boxes','league','tower','goals','online'].includes(name)));
   if(name!=='battle'){clearInput();sound.setScene('lobby');sound.resume();document.body.classList.remove('versus-play');}
   if(name!=='wild')storyIntro=storyIntro&&name==='battle';
-  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();if(name==='versus')renderVersus();if(name==='players'){$('player-form').hidden=true;renderPlayers();}if(name==='boxes')renderBoxes();if(name==='league')renderLeague();if(name==='tower')renderTower();if(name==='goals'){refreshTodayGoals();renderGoals();}
+  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();if(name==='versus')renderVersus();if(name==='players'){$('player-form').hidden=true;renderPlayers();}if(name==='boxes')renderBoxes();if(name==='league')renderLeague();if(name==='tower')renderTower();if(name==='goals'){refreshTodayGoals();renderGoals();}if(name==='online')renderOnline();
   window.scrollTo({top:0,behavior:'instant'});requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'instant'}));
 }
 function buildRoster(){
@@ -357,7 +359,7 @@ function renderHUD(){if(!match)return;const [a,b]=match.actors;
   $('fire-button').setAttribute('aria-pressed',String(input.toggleFire));$('fire-button').classList.toggle('latched',input.toggleFire);
   $('player-health').style.width=100*a.hp/a.spec.hp+'%';$('rival-health').style.width=100*b.hp/b.spec.hp+'%';$('player-hp').textContent=Math.ceil(a.hp)+' / '+a.spec.hp;$('rival-hp').textContent=Math.ceil(b.hp)+' / '+b.spec.hp;
   const seconds=Math.max(0,Math.ceil(match.duration-match.time));$('timer').textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');document.querySelector('.match-clock').classList.toggle('urgent',seconds<=15);
-  {const ch=a.superCharge||0,full=ch>=1;$('special-button').classList.toggle('cooling',!full);$('special-button').classList.toggle('super-ready',full);$('special-button').style.setProperty('--cooldown',(1-ch)*100+'%');$('special-button').style.setProperty('--charge',ch);$('special-cooldown').textContent=full?'מוכן!':Math.floor(ch*100)+'%';$('special-button').setAttribute('aria-label',a.spec.special+(full?', מוכן':', נטען '+Math.floor(ch*100)+' אחוז'));}
+  {const me=match.online&&online?.role==='guest'?b:a,ch=me.superCharge||0,full=ch>=1;$('special-button').classList.toggle('cooling',!full);$('special-button').classList.toggle('super-ready',full);$('special-button').style.setProperty('--cooldown',(1-ch)*100+'%');$('special-button').style.setProperty('--charge',ch);$('special-cooldown').textContent=full?'מוכן!':Math.floor(ch*100)+'%';$('special-button').setAttribute('aria-label',me.spec.special+(full?', מוכן':', נטען '+Math.floor(ch*100)+' אחוז'));}
   if(match.time>8)$('arena-tip').style.opacity='0';
   if(b.boss){const phase=b.boss.phase;$('boss-banner').dataset.phase=phase;$('boss-banner').textContent={guard:'מגן קדמי · נסו מהצד',windup:'הסתערות בדרך · זוזו הצדה!',charge:'הסתערות!',recover:'עכשיו! פגיעות חזקות ב־50%'}[phase];}
   if(match.coop){const q=match.actors[2],ch=q.superCharge||0,full=ch>=1;$('special-button-2').classList.toggle('cooling',!full);$('special-button-2').classList.toggle('super-ready',full);$('special-button-2').style.setProperty('--charge',ch);
@@ -374,10 +376,11 @@ function renderHUD(){if(!match)return;const [a,b]=match.actors;
   if(clock>toastUntil)$('match-toast').classList.remove('visible');
 }
 function toast(text,seconds=2){$('match-toast').textContent=text;$('match-toast').classList.add('visible');toastUntil=clock+seconds;}
-function pauseBattle(){if(!match||screen!=='battle'||match.status==='finished'||match.status==='paused')return;previousStatus=match.status;match.status='paused';clearInput();sound.pause();if(!$('pause-dialog').open)$('pause-dialog').showModal();}
-function resumeBattle(){if(!match||match.status!=='paused')return;$('pause-dialog').close();match.status=previousStatus;clearInput();accumulator=0;sound.resume();$('arena').focus({preventScroll:true});}
-function leaveBattle(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());match=null;showView(mode==='versus'||mode==='coop'?'versus':mode==='tower'?'tower':mode==='league'?'league':mode==='story'?'story':mode==='quick'?'lobby':mode==='wild'?(wildTarget&&!isUnlocked(profile,wildTarget)?'wild':'lobby'):journeyView(profile));}
+function pauseBattle(e){if(match?.online&&online?.role==='guest'){if(e?.type==='click'){if(!$('pause-dialog').open)$('pause-dialog').showModal();}else{clearInput();onlineSend({type:'in',...packInput({},online.supers)});}return;}if(!match||screen!=='battle'||match.status==='finished'||match.status==='paused')return;previousStatus=match.status;match.status='paused';clearInput();sound.pause();if(match.online)onlineSend({type:'snap',snap:snapshot(match)});if(!$('pause-dialog').open)$('pause-dialog').showModal();}
+function resumeBattle(){if(match?.online&&online?.role==='guest'){$('pause-dialog').close();return;}if(!match||match.status!=='paused')return;$('pause-dialog').close();match.status=previousStatus;clearInput();accumulator=0;sound.resume();$('arena').focus({preventScroll:true});}
+function leaveBattle(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());if(match?.online){onlineSend({type:'abort'});match=null;showView('online');return;}match=null;showView(mode==='versus'||mode==='coop'?'versus':mode==='tower'?'tower':mode==='league'?'league':mode==='story'?'story':mode==='quick'?'lobby':mode==='wild'?(wildTarget&&!isUnlocked(profile,wildTarget)?'wild':'lobby'):journeyView(profile));}
 function onFinish(){
+  if(match.online){finishOnline();return;}
   if(match.versus){finishVersusRound();return;}
   if(match.coop){finishCoop();return;}
   const boxStart=profile.box.earned;
@@ -436,6 +439,130 @@ function leagueResultHTML(r){
 function levelResultHTML(id,before){
   const c=CREATURES[id];if(!c||!profile.creatures[id])return '';const lp=levelProgress(profile,id),up=lp.level>before;
   return `<div class="result-level${up?' up':''}"><b>${up?esc(c.name)+(c.female?' עלתה':' עלה')+' לרמה '+lp.level+'!':esc(c.name)+' · רמה '+lp.level}</b><span class="level-bar"><i style="width:${Math.round(lp.pct*100)}%"></i></span></div>`;
+}
+// ------------------------------------------------------------------ friend battles across two phones
+// The host runs the battle and sends a picture of it twenty times a second; the guest draws it and sends its moves.
+// Only a name, a creature and its look travel between the phones.
+let online=null,onlineTimer=null;
+const myName=()=>playerName(activePlayer());
+const onlineSend=msg=>online?.link?.send(msg);
+function onlineSay(text){$('online-status').textContent=text;}
+function onlineHello(){const id=isUnlocked(profile,profile.selected)?profile.selected:'maimi';onlineSend({type:'hello',v:PROTOCOL,name:myName(),creature:id,skin:skinOf(profile,id)});}
+function onlineReset(text=''){if(online?.link)try{online.link.close();}catch{}online=null;clearInterval(onlineTimer);onlineTimer=null;if(text)notify(text);if(screen==='online')renderOnline();}
+function onlineHandlers(){return {
+  onOpen:()=>{if(!online)return;online.connected=true;online.heard=performance.now();onlineHello();renderOnline();sound.reveal?.(false);},
+  onMessage:data=>{if(!online||!data||typeof data!=='object')return;online.heard=performance.now();onlineMessage(data);},
+  onClose:()=>{if(!online)return;const name=online.friend?.name||'החבר';if(screen==='battle'&&match?.online){match=null;document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('online');}onlineReset(name+' יצא מהחדר.');},
+  onError:kind=>{if(!online)return;onlineReset(kind==='no-room'?'לא מצאנו חדר עם הקוד הזה. בודקים את התמונות ומנסים שוב.':kind==='network'?'אין חיבור לאינטרנט כרגע. אפשר לשחק על מסך אחד.':'החיבור לא הצליח. אפשר לנסות שוב, או לשחק על מסך אחד.');},
+};}
+function onlineMessage(msg){
+  if(msg.type==='hello'){if(msg.v!==PROTOCOL){onlineReset('לחבר יש גרסה אחרת של המשחק. מרעננים את הדף בשני הטלפונים.');return;}
+    online.friend={name:String(msg.name||'חבר').replace(/[<>]/g,'').slice(0,12),creature:CREATURES[msg.creature]?msg.creature:'maimi',skin:SKINS.some(k=>k.id===msg.skin)?msg.skin:'base'};if(screen==='online')renderOnline();return;}
+  if(msg.type==='start'&&online.role==='guest'){startOnline(msg);return;}
+  if(msg.type==='snap'&&online.role==='guest'&&match?.online){const events=applySnapshot(match,msg.snap);for(const e of events)battleEvent(e);
+    if(match.status==='finished'&&!online.finished){online.finished=true;const w=match.actors[match.winner>=0?match.winner:0];renderer.cinematic(w.x,w.y-70,1.5,1.9);onFinish();}return;}
+  if(msg.type==='in'&&online.role==='host'){const next=unpackInput(msg,online.inState);next.special=next.special||online.remote.special;online.remote=next;return;}
+  if(msg.type==='abort'&&screen==='battle'&&match?.online){match=null;document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('online');notify((online.friend?.name||'החבר')+' עצר את הקרב.');return;}
+  if(msg.type==='bye')onlineHandlers().onClose();
+}
+// Once a second: a ping, and a look at whether the friend is still there.
+function onlineBeat(){
+  if(!online?.connected)return;onlineSend({type:'ping'});const quiet=performance.now()-online.heard;
+  if(quiet>20000){onlineHandlers().onClose();return;}
+  if(screen==='battle'&&match?.online){const wait='מחכים ל'+(online.friend?.name||'חבר')+'…';
+    if(quiet>3000){toast(wait,1.2);if(online.role==='host'&&match.status==='playing'){match.status='paused';online.netPaused=true;}}
+    else if(online.netPaused&&match.status==='paused'){match.status='playing';online.netPaused=false;}
+    else if(online.role==='guest'&&match.status==='paused')toast(wait,1.2);}
+}
+async function openRoom(){
+  sound.click();online={role:'host',code:randomCode(),connected:false,friend:null,wins:[0,0],mode:'',remote:{},inState:{},supers:0,pending:{ev:[],fx:[]},steps:0};onlineSay('פותחים חדר…');renderOnline();
+  for(let tries=0;tries<4&&online;tries++){
+    try{const link=await openHost(online.code,onlineHandlers());if(!online){link.close();return;}online.link=link;break;}
+    catch(e){if(!online)return;if(e.message==='taken'){online.code=randomCode();continue;}onlineReset('אין חיבור לאינטרנט כרגע. אפשר לשחק על מסך אחד.');return;}}
+  if(!online?.link)return;onlineTimer=setInterval(onlineBeat,1000);renderOnline();
+}
+async function joinRoom(code){
+  online={role:'guest',code,connected:false,friend:null,wins:[0,0],remote:{},inState:{},supers:0,sendClock:0};onlineSay('מתחברים לחדר…');renderOnline();
+  try{const link=await openGuest(code,onlineHandlers());if(!online){link.close();return;}online.link=link;onlineTimer=setInterval(onlineBeat,1000);}
+  catch{onlineReset('אין חיבור לאינטרנט כרגע. אפשר לשחק על מסך אחד.');}
+}
+const joinUrl=code=>{const u=new URL(location.href);u.searchParams.set('join',code.join('-'));return u.toString();};
+let qrLoading=null;
+const loadQr=()=>window.qrcode?Promise.resolve():qrLoading??=new Promise((ok,fail)=>{const s=document.createElement('script');s.src='./vendor/qrcode.js';s.onload=ok;s.onerror=()=>{qrLoading=null;fail();};document.head.appendChild(s);});
+async function drawRoomQr(code){
+  try{await loadQr();}catch{return;}const qr=window.qrcode(0,'M');qr.addData(joinUrl(code));qr.make();
+  const n=qr.getModuleCount(),cv=$('room-qr'),cell=4,pad=3;cv.width=cv.height=(n+pad*2)*cell;const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,cv.width,cv.height);c.fillStyle='#1b120a';
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(qr.isDark(y,x))c.fillRect((x+pad)*cell,(y+pad)*cell,cell,cell);
+}
+const codePics=(code,prefix)=>code.map((id,i)=>`<span class="code-pic" style="--c:${CREATURES[id].color}"><canvas id="${prefix}-${i}" aria-hidden="true"></canvas><b>${CREATURES[id].name}</b></span>`).join('');
+function renderOnline(){
+  const o=online,ids=Object.keys(CREATURES).filter(id=>isUnlocked(profile,id));if(!ids.includes(profile.selected))profile.selected='maimi';
+  $('online-start').hidden=!!o;$('online-room').hidden=!(o?.role==='host'&&!o.connected);$('online-pad').hidden=!(o?.role==='guest'&&!o.code);
+  if(!o)onlineSay('כל חבר משחק בטלפון שלו, גם מבית אחר. פותחים חדר ושולחים לחבר את הקוד.');
+  else if(o.role==='host'&&!o.connected)onlineSay(o.link?'מחכים לחבר… שלחו לו את הקישור, או שיקיש את שלוש התמונות.':'פותחים חדר…');
+  else if(o.role==='guest'&&!o.code)onlineSay('מקישים את שלוש התמונות שמופיעות בטלפון של החבר. טעיתם? נוגעים בתמונה כדי למחוק.');
+  else if(o.role==='guest'&&!o.connected)onlineSay('מתחברים לחדר…');
+  else if(o.connected)onlineSay(o.friend?'מחוברים! '+(o.role==='host'?'בוחרים סוג קרב ומתחילים.':'מחכים ש'+o.friend.name+' יבחר ויתחיל.'):'מחוברים…');
+  if(o?.role==='host'&&!o.connected){$('room-code').innerHTML=codePics(o.code,'rc');o.code.forEach((id,i)=>livePortrait('rc-'+i,id));drawRoomQr(o.code);}
+  if(o?.role==='guest'&&!o.code){const typed=o.typed||[];$('pad-code').innerHTML=[0,1,2].map(i=>typed[i]?`<button class="code-pic" data-unpad="${i}" aria-label="מוחקים את ${CREATURES[typed[i]].name}" style="--c:${CREATURES[typed[i]].color}"><canvas id="pc-${i}" aria-hidden="true"></canvas><b>${CREATURES[typed[i]].name}</b></button>`:'<span class="code-pic empty">?</span>').join('');typed.forEach((id,i)=>livePortrait('pc-'+i,id));
+    $('pad-keys').innerHTML=CODE_CREATURES.map(id=>`<button class="fighter-chip" data-pad="${id}" style="--c:${CREATURES[id].color}"><canvas id="pk-${id}" aria-hidden="true"></canvas><b>${CREATURES[id].name}</b></button>`).join('');CODE_CREATURES.forEach(id=>livePortrait('pk-'+id,id));
+    document.querySelectorAll('[data-pad]').forEach(el=>el.onclick=()=>{sound.click();o.typed=[...(o.typed||[]),el.dataset.pad];if(o.typed.length>=3){joinRoom(o.typed.slice(0,3));}else renderOnline();});
+    document.querySelectorAll('[data-unpad]').forEach(el=>el.onclick=()=>{sound.click();o.typed=o.typed.slice(0,+el.dataset.unpad);renderOnline();});}
+  $('online-friends').hidden=!o?.connected;
+  if(o?.connected){const me=isUnlocked(profile,profile.selected)?profile.selected:'maimi',f=o.friend;
+    $('online-friends').innerHTML=`<div class="online-who" style="--c:${CREATURES[me].color}"><canvas id="of-me" aria-hidden="true"></canvas><b></b><small>${CREATURES[me].name}</small></div><span class="versus-vs">VS</span><div class="online-who" style="--c:${f?CREATURES[f.creature].color:'#8fa9b3'}">${f?'<canvas id="of-friend" aria-hidden="true"></canvas>':''}<b></b><small>${f?CREATURES[f.creature].name:'…'}</small></div>`;
+    const names=document.querySelectorAll('#online-friends .online-who b');names[0].textContent=myName();names[1].textContent=f?.name||'…';
+    livePortrait('of-me',me,{skin:skinOf(profile,me)});if(f)livePortrait('of-friend',f.creature,{skin:f.skin});}
+  $('online-modes').hidden=!(o?.connected&&o.role==='host');
+  if(o?.connected&&o.role==='host'){$('online-modes').innerHTML=VS_MODES.map(m=>`<button class="vs-mode${m.id===o.mode?' chosen':''}" data-online-mode="${m.id}" aria-pressed="${m.id===o.mode}">${icon(m.icon)}<b>${m.name}</b><small>${m.text}</small></button>`).join('');
+    document.querySelectorAll('[data-online-mode]').forEach(el=>el.onclick=()=>{o.mode=el.dataset.onlineMode;sound.click();renderOnline();});}
+  $('online-go').hidden=!(o?.connected&&o.role==='host'&&o.friend);
+  $('online-fighters').innerHTML=ids.map(f=>`<button class="fighter-chip${f===profile.selected?' chosen':''}" data-online-fighter="${f}" aria-pressed="${f===profile.selected}" style="--c:${CREATURES[f].color}"><canvas id="ochip-${f}" aria-hidden="true"></canvas><b>${CREATURES[f].name}</b></button>`).join('');
+  for(const f of ids)livePortrait('ochip-'+f,f,{skin:skinOf(profile,f)});
+  document.querySelectorAll('[data-online-fighter]').forEach(el=>el.onclick=()=>{profile.selected=el.dataset.onlineFighter;persist();sound.click();if(online?.connected)onlineHello();renderOnline();});
+}
+// The host starts each battle; both phones build the same match from the same numbers.
+function hostStartOnline(){
+  const o=online;if(!o?.connected||!o.friend||o.role!=='host')return;const me=isUnlocked(profile,profile.selected)?profile.selected:'maimi';
+  const cfg={type:'start',seed:Date.now()%2147483647,mode:o.mode||null,arena:({lava:'fire',wind:'wind',ball:'sea'})[o.mode]||VS_ARENAS[Math.floor(Math.random()*VS_ARENAS.length)],ids:[me,o.friend.creature],names:[myName(),o.friend.name],skins:[skinOf(profile,me),o.friend.skin],wins:o.wins};
+  onlineSend(cfg);startOnline(cfg);
+}
+function startOnline(cfg){
+  if(!art||!online)return;const o=online;mode='online';cupFinal=false;o.finished=false;o.netPaused=false;o.remote={};o.inState={};o.supers=0;o.pending={ev:[],fx:[]};o.steps=0;o.sendClock=0;if(Array.isArray(cfg.wins))o.wins=[...cfg.wins];
+  match=makeMatch({player:cfg.ids[0],rival:cfg.ids[1],level:'champion',seed:cfg.seed,mode:cfg.mode,arena:cfg.arena,versus:true});match.online=true;match.names=cfg.names;
+  let skins=[...cfg.skins];if(cfg.ids[0]===cfg.ids[1]&&skins[0]===skins[1])skins[1]=skins[0]==='night'?'ice':'night';
+  renderer.setMatch(match,skins);clearInput();accumulator=0;sound.versus=true;
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');sound.unlock();sound.setScene('battle');sound.resume();
+  const [a,b]=match.actors,me=o.role==='host'?a:b;
+  $('player-name').textContent=a.spec.name;document.querySelector('.player-info .fighter-lines span').textContent=cfg.names[0];$('rival-name').textContent=b.spec.name;$('rival-level').textContent=cfg.names[1];
+  $('player-symbol').innerHTML=icon(a.spec.specialIcon);$('rival-symbol').innerHTML=icon(b.spec.specialIcon);
+  $('match-label').textContent='חבר משני טלפונים';$('round-label').textContent=cfg.names[0]+' '+o.wins[0]+' : '+o.wins[1]+' '+cfg.names[1];
+  $('special-action-icon').innerHTML=icon(me.spec.specialIcon);$('special-action-name').textContent=me.spec.special;$('special-button').style.setProperty('--c',me.spec.color);
+  $('arena-tip').textContent=o.role==='host'?'אתם בצד שמאל.':'אתם בצד ימין.';$('arena-tip').style.opacity='1';$('match-toast').classList.remove('visible');toastUntil=0;
+  $('battle-build').hidden=true;$('boss-banner').hidden=true;$('challenge-banner').hidden=true;$('mode-banner').hidden=!match.mode;$('hold-count').hidden=true;
+  tutorial=null;$('tutorial').hidden=true;document.querySelectorAll('.tut-glow').forEach(e=>e.classList.remove('tut-glow'));
+  $('goal-card').hidden=!match.mode;if(match.mode){$('goal-icon').innerHTML=icon(MISSION_ICON[match.mode]);$('goal-name').textContent=MODES[match.mode].name;$('goal-text').textContent=MODES[match.mode].goal;goalUntil=clock+3;}
+  setTimeout(()=>{if(match?.online)toast(o.role==='host'?'אתם בצד שמאל':'אתם בצד ימין',1.6);},300);
+  $('leave-button').textContent='עוצרים · חזרה לחדר';renderHUD();$('arena').focus({preventScroll:true});
+}
+// The host: after each step, gather what happened; every third step send the picture.
+function hostAfterStep(){const o=online;if(!o)return;o.pending.ev.push(...match.events);o.pending.fx.push(...match.effects.filter(e=>e.age===0));
+  if(++o.steps%SNAPSHOT_EVERY===0||match.status==='finished'){onlineSend({type:'snap',snap:snapshot(match,o.pending.ev,o.pending.fx)});o.pending={ev:[],fx:[]};}}
+// The guest: send its moves about thirty times a second.
+function guestTick(dt){const o=online;if(!o?.connected)return;if(input.special){o.supers++;input.special=false;}o.sendClock+=dt;
+  if(o.sendClock>=1/INPUT_HZ){o.sendClock=0;onlineSend({type:'in',...packInput(currentInput(),o.supers)});}}
+function finishOnline(){
+  const o=online,w=match.winner,meSide=o?.role==='guest'?1:0;if(o&&w>=0)o.wins[w]++;clearInput();sound.setScene('lobby');
+  const won=w===meSide;if(won)sound.play('voice-victory',{delay:.7});
+  addSparks(profile,won?2:1);refreshTodayGoals();progressDaily(profile,{friend:true});persist();
+  const names=match.names||['',''];
+  $('result-content').innerHTML=`${won?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${won?'gold':w<0?'':'loss'}">${icon(won?'trophy':w<0?'shield':'star')}</div><span class="result-kicker">חבר משני טלפונים</span><h2 class="result-title"></h2><div class="result-score versus-score"><div><strong>${o?.wins[0]??0}</strong><span></span></div><span>:</span><div><strong>${o?.wins[1]??0}</strong><span></span></div></div><p class="result-tip">${won?'קיבלתם 2 ניצוצות לתיבת הכוכב.':w<0?'קיבלתם ניצוץ לתיבת הכוכב.':'קיבלתם ניצוץ לתיבת הכוכב, גם על הפסד.'}</p>`;
+  document.querySelector('#result-content .result-title').textContent=w<0?'תיקו!':'ניצחון ל'+names[w]+'!';
+  document.querySelectorAll('#result-content .versus-score div span').forEach((el,i)=>{el.textContent=names[i];});
+  const host=o?.role==='host';
+  $('result-primary').textContent=host?'עוד קרב!':'חזרה לחדר';$('result-primary').onclick=()=>{$('result-dialog').close();if(host&&online?.connected)hostStartOnline();else{match=null;showView('online');}};
+  $('result-secondary').textContent=host?'חזרה לחדר':'יוצאים מהחדר';$('result-secondary').onclick=()=>{$('result-dialog').close();match=null;if(host)showView('online');else{onlineSend({type:'bye'});onlineReset();showView('versus');}};
+  const shown=match;setTimeout(()=>{if(match===shown&&!$('result-dialog').open)$('result-dialog').showModal();},1500);
 }
 // ------------------------------------------------------------------ goals of the day
 function refreshTodayGoals(){if(refreshDaily(profile,dayKey(),{seed:players.active,friends:players.players.length>1,storyLeft:!!currentStep(profile)}))persist();}
@@ -614,7 +741,7 @@ function renderVersus(){
     $('versus-fighters-'+k).innerHTML=ids.map(f=>`<button class="fighter-chip${f===id?' chosen':''}" data-vs-fighter="${n}:${f}" aria-pressed="${f===id}" style="--c:${CREATURES[f].color}"><canvas id="vs-chip-${k}-${f}" aria-hidden="true"></canvas><b>${CREATURES[f].name}</b></button>`).join('');
     for(const f of ids)livePortrait(`vs-chip-${k}-${f}`,f,{skin:vsSkin(n,f)});}
   const coop=versus.kind==='coop';
-  $('vs-kind').innerHTML=[['vs','נגד','bolt'],['coop','ביחד נגד ענק','duo']].map(([k,t,i])=>`<button class="vs-kind-btn${versus.kind===k?' chosen':''}" data-vs-kind="${k}" aria-pressed="${versus.kind===k}">${icon(i)}${t}</button>`).join('');
+  $('vs-kind').innerHTML=[['vs','נגד','bolt'],['coop','ביחד נגד ענק','duo'],['online','משני טלפונים','target']].map(([k,t,i])=>`<button class="vs-kind-btn${versus.kind===k?' chosen':''}" data-vs-kind="${k}" aria-pressed="${versus.kind===k}">${icon(i)}${t}</button>`).join('');
   $('versus-title').innerHTML=coop?'ביחד <em>נגד</em> ענק':'חבר <em>נגד</em> חבר';document.querySelector('.versus-vs').textContent=coop?'+':'VS';
   $('coop-levels').hidden=!coop;$('coop-levels').innerHTML=Object.entries(COOP_LEVELS).map(([k,L])=>`<button class="vs-player${versus.coopLevel===k?' chosen':''}" data-coop-level="${k}" aria-pressed="${versus.coopLevel===k}">${L.name}</button>`).join('');
   $('versus-modes').classList.toggle('giants',coop);
@@ -624,7 +751,7 @@ function renderVersus(){
   document.querySelectorAll('[data-vs-heart]').forEach(el=>el.onclick=()=>{const [n,i]=el.dataset.vsHeart.split(':').map(Number);versus.hearts[n]=i;sound.click();renderVersus();});
   document.querySelectorAll('[data-vs-mode]').forEach(el=>el.onclick=()=>{versus.mode=el.dataset.vsMode;sound.click();renderVersus();});
   if(coop)for(const g of COOP_GIANTS)livePortrait('giant-'+g,g);
-  document.querySelectorAll('[data-vs-kind]').forEach(el=>el.onclick=()=>{versus.kind=el.dataset.vsKind;sound.click();renderVersus();});
+  document.querySelectorAll('[data-vs-kind]').forEach(el=>el.onclick=()=>{sound.click();if(el.dataset.vsKind==='online'){showView('online');return;}versus.kind=el.dataset.vsKind;renderVersus();});
   document.querySelectorAll('[data-coop-giant]').forEach(el=>el.onclick=()=>{versus.giant=el.dataset.coopGiant;sound.click();renderVersus();});
   document.querySelectorAll('[data-coop-level]').forEach(el=>el.onclick=()=>{versus.coopLevel=el.dataset.coopLevel;sound.click();renderVersus();});
   $('versus-start').innerHTML=(coop?'יוצאים ביחד!':'יאללה, לקרב!')+' '+icon('play');
@@ -710,26 +837,29 @@ function frame(timestamp){
   try{frameBody(timestamp);}catch(error){if(frameErrors++<5)console.error('frame',error);window.__LEAGUE_LAST_ERROR__=String(error?.stack||error);}
   requestAnimationFrame(frame);
 }
+function battleEvent(e){sound.effect(e);if(e.type==='hit')renderer.shake=Math.max(renderer.shake,e.side===0?2.2:.8);if(e.type==='ko')hitStop=Math.max(hitStop,.12);if(e.type==='quake')renderer.shake=5;if(e.type==='go')toast('קדימה!',.8);
+          if(e.type==='lava-warning')toast('הלבה מתעוררת!',1.4);
+          const vs=match.versus,nm=side=>match.online?(match.names?.[side]||''):vsName(side);
+          if(e.type==='hold-start')toast(vs?'הרוח אצל '+nm(e.side)+'!':e.side===0?'החזיקו מעמד!':'תפילו אותו!',1.4);
+          if(e.type==='ko'&&match.coop)toast(e.side===1?'הענק נפל!':vsName(e.side===2?1:0)+' חוזר עוד רגע',1.4);
+          else if(e.type==='ko')toast(vs?nm(e.side)+' בחוץ לרגע!':e.side===1?'הפלתם אותו!':'חוזרים בעוד רגע',1.4);
+          if(e.type==='goal'){const G=GOALS[1-e.side];renderer.cinematic(G.x,G.y-50,1.45,1.5);}
+          if(e.type==='goal')toast(vs?'גול של '+nm(e.side)+'!':e.side===0?'גול!!!':'היריב הבקיע',1.6);
+          if(e.type==='ball-loose'&&match.status==='playing'&&(e.side===0||vs))toast('הפנינה נפלה!',1.1);if(e.type==='kick-far'&&(e.side===0||vs))toast('התקרבו לשער ואז בעטו',1.6);
+          if(e.type==='overtime')toast('גול זהב!',1.6);
+          if(e.type==='swap'){const c=CREATURES[e.id];renderer.swap(e.side,e.id,e.side===0?skinOf(profile,e.id):null);if(e.side===0){$('player-name').textContent=c.name;$('player-symbol').innerHTML=icon(c.specialIcon);$('special-action-icon').innerHTML=icon(c.specialIcon);$('special-action-name').textContent=c.special;$('special-button').style.setProperty('--c',c.color);}else{$('rival-name').textContent=c.name;$('rival-symbol').innerHTML=icon(c.specialIcon);}toast(c.name+' נכנס!',1.4);}}
 function frameBody(timestamp){
   if(!frameTime)frameTime=timestamp;const dt=Math.min(.1,(timestamp-frameTime)/1000);frameTime=timestamp;clock+=dt;
   if(screen!=='battle')for(const [canvasId,entry] of portraits){const el=$(canvasId);if(!el){portraits.delete(canvasId);continue;}if(!el.offsetParent&&!el.closest('dialog[open]'))continue;
     const locked=!isUnlocked(profile,entry.id);drawPortrait(el,entry.puppet,entry.id,clock,dt,{active:entry.opts.roster?entry.id===profile.selected:true,locked:entry.opts.roster&&locked,skin:entry.opts.roster?(locked?null:skinOf(profile,entry.id)):entry.opts.skin});}
   if(screen==='battle'&&match){
-    if(match.status!=='paused'&&match.status!=='finished'){
+    if(match.online&&online?.role==='guest'){coast(match,dt);guestTick(dt);}
+    else if(match.status!=='paused'&&match.status!=='finished'){
       if(hitStop>0){hitStop-=dt;}else accumulator+=dt;
       while(accumulator>=1/60){
-        if(match.versus||match.coop){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,currentInput(),1/60);input.special=false;accumulator-=1/60;
-        for(const e of match.events){sound.effect(e);if(e.type==='hit')renderer.shake=Math.max(renderer.shake,e.side===0?2.2:.8);if(e.type==='ko')hitStop=Math.max(hitStop,.12);if(e.type==='quake')renderer.shake=5;if(e.type==='go')toast('קדימה!',.8);
-          if(e.type==='lava-warning')toast('הלבה מתעוררת!',1.4);
-          const vs=match.versus;
-          if(e.type==='hold-start')toast(vs?'הרוח אצל '+vsName(e.side)+'!':e.side===0?'החזיקו מעמד!':'תפילו אותו!',1.4);
-          if(e.type==='ko'&&match.coop)toast(e.side===1?'הענק נפל!':vsName(e.side===2?1:0)+' חוזר עוד רגע',1.4);
-          else if(e.type==='ko')toast(vs?vsName(e.side)+' בחוץ לרגע!':e.side===1?'הפלתם אותו!':'חוזרים בעוד רגע',1.4);
-          if(e.type==='goal'){const G=GOALS[1-e.side];renderer.cinematic(G.x,G.y-50,1.45,1.5);}
-          if(e.type==='goal')toast(vs?'גול של '+vsName(e.side)+'!':e.side===0?'גול!!!':'היריב הבקיע',1.6);
-          if(e.type==='ball-loose'&&match.status==='playing'&&(e.side===0||vs))toast('הפנינה נפלה!',1.1);if(e.type==='kick-far'&&(e.side===0||vs))toast('התקרבו לשער ואז בעטו',1.6);
-          if(e.type==='overtime')toast('גול זהב!',1.6);
-          if(e.type==='swap'){const c=CREATURES[e.id];renderer.swap(e.side,e.id,e.side===0?skinOf(profile,e.id):null);if(e.side===0){$('player-name').textContent=c.name;$('player-symbol').innerHTML=icon(c.specialIcon);$('special-action-icon').innerHTML=icon(c.specialIcon);$('special-action-name').textContent=c.special;$('special-button').style.setProperty('--c',c.color);}else{$('rival-name').textContent=c.name;$('rival-symbol').innerHTML=icon(c.specialIcon);}toast(c.name+' נכנס!',1.4);}}
+        if(match.online){step(match,currentInput(),1/60,online?.remote||{});if(online)online.remote.special=false;}else if(match.versus||match.coop){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,currentInput(),1/60);input.special=false;accumulator-=1/60;
+        if(match.online)hostAfterStep();
+        for(const e of match.events)battleEvent(e);
         if(match.status==='finished'){const w=match.actors[match.winner>=0?match.winner:0];renderer.cinematic(w.x,w.y-70,1.5,1.9);onFinish();break;}
       }
     }
@@ -740,7 +870,10 @@ function frameBody(timestamp){
 function openHelp(){pauseBattle();if(!$('help-dialog').open)$('help-dialog').showModal();}
 function handleNavigation(view){sound.click();if(screen==='battle'&&match?.status!=='finished'){pauseBattle();return;}match=null;showView(view);}
 function bindControls(){
-  $('quick-start').onclick=()=>startBattle('quick');$('home-play').onclick=()=>{sound.click();if(currentStep(profile))goStory();else startBattle('league');};$('home-goals').onclick=()=>{sound.click();showView('goals');};$('home-tower').onclick=()=>{sound.click();showView('tower');};$('tower-start').onclick=()=>{sound.click();if(!profile.tower.run){startTowerRun(profile,profile.selected);persist();}startBattle('tower');};$('tower-quit').onclick=()=>{sound.click();endTowerRun(profile);persist();renderTower();renderTowerStrip();};$('home-league').onclick=()=>{sound.click();showView('league');};$('league-start').onclick=()=>{sound.click();startBattle('league');};$('home-map').onclick=()=>{sound.click();showView('story');};$('home-change').onclick=()=>{sound.click();$('roster').scrollIntoView({behavior:'smooth',block:'start'});};
+  $('quick-start').onclick=()=>startBattle('quick');$('home-play').onclick=()=>{sound.click();if(currentStep(profile))goStory();else startBattle('league');};$('online-host').onclick=openRoom;$('online-join').onclick=()=>{sound.click();online={role:'guest',code:null,typed:[],connected:false,friend:null,wins:[0,0],remote:{},inState:{},supers:0,sendClock:0};renderOnline();};
+  $('online-back').onclick=()=>{sound.click();onlineSend({type:'bye'});onlineReset();showView('versus');};$('online-go').onclick=()=>{sound.click();hostStartOnline();};
+  $('room-share').onclick=async()=>{sound.click();const url=joinUrl(online?.code||[]);try{if(navigator.share){await navigator.share({title:'ליגת היצורים',text:'בוא לקרב איתי בליגת היצורים!',url});return;}await navigator.clipboard.writeText(url);notify('הקישור הועתק. שולחים אותו לחבר.');}catch{}};
+  $('home-goals').onclick=()=>{sound.click();showView('goals');};$('home-tower').onclick=()=>{sound.click();showView('tower');};$('tower-start').onclick=()=>{sound.click();if(!profile.tower.run){startTowerRun(profile,profile.selected);persist();}startBattle('tower');};$('tower-quit').onclick=()=>{sound.click();endTowerRun(profile);persist();renderTower();renderTowerStrip();};$('home-league').onclick=()=>{sound.click();showView('league');};$('league-start').onclick=()=>{sound.click();startBattle('league');};$('home-map').onclick=()=>{sound.click();showView('story');};$('home-change').onclick=()=>{sound.click();$('roster').scrollIntoView({behavior:'smooth',block:'start'});};
   $('story-continue').onclick=()=>{sound.click();showView('story');};$('story-mini').onclick=()=>{sound.click();showView('story');};$('story-go').onclick=()=>{sound.click();goStory();};$('castle-egg').onclick=tapEgg;$('castle-back').onclick=()=>showView('story');$('castle-next').onclick=revealCastle;$('cup-start').onclick=()=>startBattle('cup');$('cup-teaser').onclick=()=>showView('cup');$('journey-start').onclick=continueJourney;$('challenge-start').onclick=()=>startBattle('challenge');$('upgrade-confirm').onclick=confirmUpgrade;$('workshop-back').onclick=()=>showView('cup');
   $('difficulty').onchange=()=>{profile.level=$('difficulty').value;persist();};
   $('brand-home').onclick=()=>handleNavigation('lobby');document.querySelectorAll('[data-view]').forEach(el=>el.onclick=()=>handleNavigation(el.dataset.view));document.querySelectorAll('[data-home]').forEach(el=>el.onclick=()=>showView('lobby'));
@@ -804,10 +937,11 @@ function bindStick(zone,joystick,knob,state){
 // Read-only diagnostics. Browser journeys still operate the real controls.
 // Verification only: advance a battle by simulated time and draw one frame, even in a hidden tab.
 // With live=true the battle reads the real controls (sticks, buttons, keys), the way the frame loop does.
-const advance=(seconds,input={},live=false)=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match.status!=='finished';i++){if(live&&(match.versus||match.coop)){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,live?currentInput():{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish')onFinish();}updateTutorial(seconds);renderer.render(match,1/60,clock+=seconds);renderHUD();return match.status;};
-window.__LEAGUE__=Object.freeze({advance,stick:()=>({x:+input.stickX.toFixed(2),y:+input.stickY.toFixed(2)}),audio:()=>({ctx:sound.ctx?.state||'none',scene:sound.scene,music:Object.fromEntries(Object.entries(sound.music||{}).map(([k,t])=>[k,{paused:t.el.paused,time:+t.el.currentTime.toFixed(1),ready:t.el.readyState,gain:+t.g.gain.value.toFixed(2)}]))}),skip:()=>{if(!match||match.status==='finished')return false;finish(match,0,'test');onFinish();return true;},camera:()=>({scale:+renderer.scale.toFixed(3),offsetX:Math.round(renderer.offsetX),offsetY:Math.round(renderer.offsetY),close:!!renderer.cam,cinematic:!!renderer.punch,size:renderer.size}),snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,mode:match.mode||null,ball:match.ball?{x:match.ball.x,y:match.ball.y,carrier:match.ball.carrier,score:[...match.ball.score]}:null,wind:match.wind?{holder:match.wind.holder,feathers:match.wind.feathers.map(f=>({x:f.x,y:f.y}))}:null,lava:match.lava?{scale:match.lava.scale,embers:match.lava.embers.map(e=>({x:e.x,y:e.y}))}:null,trio:match.trio?[trioLeft(match,0),trioLeft(match,1)]:null,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,out:a.out||0,feathers:a.feathers||0,power:a.power||0,maxHp:a.spec.hp,specialCd:a.specialCd,superCharge:a.superCharge,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
+const advance=(seconds,input={},live=false)=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match&&match.status!=='finished';i++){if(match.online&&online?.role==='guest'){coast(match,1/60);guestTick(1/60);continue;}if(match.online){step(match,live?currentInput():{fire:true,...input},1/60,online?.remote||{});if(online)online.remote.special=false;hostAfterStep();for(const e of match.events)if(e.type==='finish')onFinish();continue;}if(live&&(match.versus||match.coop)){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,live?currentInput():{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish')onFinish();}updateTutorial(seconds);renderer.render(match,1/60,clock+=seconds);renderHUD();return match.status;};
+window.__LEAGUE__=Object.freeze({advance,online:()=>online?{role:online.role,code:online.code,connected:online.connected,friend:online.friend,wins:online.wins}:null,stick:()=>({x:+input.stickX.toFixed(2),y:+input.stickY.toFixed(2)}),audio:()=>({ctx:sound.ctx?.state||'none',scene:sound.scene,music:Object.fromEntries(Object.entries(sound.music||{}).map(([k,t])=>[k,{paused:t.el.paused,time:+t.el.currentTime.toFixed(1),ready:t.el.readyState,gain:+t.g.gain.value.toFixed(2)}]))}),skip:()=>{if(!match||match.status==='finished')return false;finish(match,0,'test');onFinish();return true;},camera:()=>({scale:+renderer.scale.toFixed(3),offsetX:Math.round(renderer.offsetX),offsetY:Math.round(renderer.offsetY),close:!!renderer.cam,cinematic:!!renderer.punch,size:renderer.size}),snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,mode:match.mode||null,ball:match.ball?{x:match.ball.x,y:match.ball.y,carrier:match.ball.carrier,score:[...match.ball.score]}:null,wind:match.wind?{holder:match.wind.holder,feathers:match.wind.feathers.map(f=>({x:f.x,y:f.y}))}:null,lava:match.lava?{scale:match.lava.scale,embers:match.lava.embers.map(e=>({x:e.x,y:e.y}))}:null,trio:match.trio?[trioLeft(match,0),trioLeft(match,1)]:null,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,out:a.out||0,feathers:a.feathers||0,power:a.power||0,maxHp:a.spec.hp,specialCd:a.specialCd,superCharge:a.superCharge,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
 async function boot(){
-  $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);refreshTodayGoals();buildRoster();renderStoryPanel();bindControls();updateHeader();showView(players.players.length>1?'players':'lobby');$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);
+  $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);refreshTodayGoals();buildRoster();renderStoryPanel();bindControls();updateHeader();
+    {const q=new URLSearchParams(location.search),code=codeFromText(q.get('join'));if(code){q.delete('join');history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:''));showView('online');joinRoom(code);}else showView(players.players.length>1?'players':'lobby');}$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);
     if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
   }catch(error){console.error(error);$('loading-text').textContent='חלק מהציורים לא נטענו. בדקו שהמשחק נפתח דרך קובץ ההפעלה ונסו שוב.';$('load-retry').hidden=false;}
 }

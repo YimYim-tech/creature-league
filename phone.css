@@ -495,3 +495,34 @@ body.versus-play #rival-level{color:#ff9aa8}
   .versus-heading .vs-kind,.versus-heading .coop-levels{margin:0}
   .versus-modes.giants .vs-mode{padding:2px 4px 4px;gap:0}.versus-modes.giants canvas{width:46px;height:32px}.versus-modes.giants .vs-mode b{font-size:11px}
 }
+
+/* ------------------------------------------------------------------ friend battles across two phones */
+.online-view{padding:14px 22px 26px;max-width:980px;margin-inline:auto;text-align:center}
+.online-heading h1{margin:0;font-family:var(--display);font-weight:900;font-size:38px;color:var(--parchment);text-shadow:0 2px 0 #0009}
+.online-heading h1 em{font-style:normal;color:var(--gold-hi)}
+.online-heading p{margin:4px 0 12px;color:#dccfb0;font-size:15px}
+.online-start{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+.online-start .button{min-height:52px;font-size:18px;padding:8px 22px}.online-start svg{width:22px;height:22px}
+.online-room{display:flex;gap:22px;align-items:center;justify-content:center;flex-wrap:wrap;margin:8px 0}
+.room-code{display:flex;gap:10px;justify-content:center;margin:6px 0 10px;direction:rtl}
+.code-pic{display:grid;justify-items:center;width:92px;padding:6px 4px;border-radius:14px;background:var(--grain),var(--parchment);color:var(--ink);box-shadow:0 0 0 3px var(--c,#c9a35d),0 6px 12px #0006}
+.code-pic canvas{width:76px;height:62px}.code-pic b{font-size:13px}
+.code-pic.empty{place-items:center;height:86px;font:900 36px var(--display);color:#9b8a68;box-shadow:0 0 0 3px #c9a35d66 inset}
+button.code-pic{border:0;font:inherit;cursor:pointer}
+.room-qr{display:grid;justify-items:center;gap:4px;color:#dccfb0;font-size:12px}
+.room-qr canvas{width:150px;height:150px;image-rendering:pixelated;border-radius:10px;box-shadow:0 0 0 4px #fff}
+.pad-keys{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:4px}
+.pad-keys .fighter-chip{width:74px}.pad-keys .fighter-chip canvas{width:58px;height:50px}
+.online-friends{display:flex;align-items:center;justify-content:center;gap:16px;margin:6px 0 10px}
+.online-who{display:grid;justify-items:center;padding:8px 16px;border-radius:16px;background:var(--grain),var(--parchment);color:var(--ink);box-shadow:0 0 0 3px var(--c),0 8px 16px #0006;min-width:120px}
+.online-who canvas{width:96px;height:84px}.online-who b{font-size:18px}.online-who small{font-size:12px;opacity:.75}
+#online-modes{margin:6px 0 10px}
+#online-go{display:flex;margin:10px auto 0;position:sticky;bottom:10px;z-index:5;box-shadow:0 10px 26px #000b}
+#online-go[hidden]{display:none}
+@media (max-height:600px) and (orientation:landscape){
+  .online-view{padding:6px 12px 12px}.online-heading h1{font-size:24px}.online-heading p{font-size:12px;margin:2px 0 6px}
+  .online-room{gap:14px;margin:2px 0}.code-pic{width:72px}.code-pic canvas{width:58px;height:44px}.room-qr canvas{width:116px;height:116px}
+  .pad-keys .fighter-chip{width:62px}.pad-keys .fighter-chip canvas{width:46px;height:38px}
+  .online-who canvas{width:70px;height:58px}.online-who b{font-size:14px}
+  #online-fighters{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start}#online-fighters .fighter-chip{flex:none;width:66px}#online-fighters .fighter-chip canvas{width:50px;height:50px}
+}

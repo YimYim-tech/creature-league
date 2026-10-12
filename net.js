@@ -1,0 +1,56 @@
+// Friend battles across two phones. The host's phone runs the battle; the guest's phone draws what the host sends
+// and sends back its own moves. Everything here is plain data, so the browser and the tests share it.
+export const PROTOCOL=1,SNAPSHOT_EVERY=3,INPUT_HZ=30;
+// A room code is three creature pictures out of nine: 729 rooms, easy to tap and to say out loud.
+export const CODE_CREATURES=['maimi','havzuk','slauz','lohatan','tehomon','zikuk','shorshu','tzlilon','galgalor'];
+export const peerId=code=>'creature-league-v'+PROTOCOL+'-'+code.map(id=>CODE_CREATURES.indexOf(id)).join('');
+export const randomCode=(random=Math.random)=>Array.from({length:3},()=>CODE_CREATURES[Math.floor(random()*CODE_CREATURES.length)]);
+export function codeFromText(text){const ids=String(text||'').split(/[-,\s]+/).filter(id=>CODE_CREATURES.includes(id));return ids.length===3?ids:null;}
+const r1=v=>Math.round(v*10)/10,r2=v=>Math.round(v*100)/100;
+const ACTOR_KEYS=['hit','attack','stun','out','invincible','windup','guard','root','slow','lightShield','power','feathers','regen'];
+// One picture of the battle: where everyone is, what flies, what lies on the floor, and what just happened.
+export function snapshot(m,events=[],effects=[]){
+  return {
+    t:r2(m.time),st:m.status,cd:r2(m.countdown),w:m.winner,rs:m.reason||null,
+    a:m.actors.map(a=>[r1(a.x),r1(a.y),r1(a.hp),a.spec.hp,r2(a.superCharge||0),a.facing,r2(a.aim),r2(a.moveX||0),r2(a.moveY||0),...ACTOR_KEYS.map(k=>r2(a[k]||0))]),
+    s:m.shots.map(s=>[s.id,r1(s.x),r1(s.y),r1(s.vx),r1(s.vy),s.r,s.owner,s.kind,s.color,s.life>0?1:0]),
+    wv:m.waves.map(w=>({kind:w.kind,owner:w.owner,x:r1(w.x),y:r1(w.y),angle:r2(w.angle||0),age:r2(w.age),r:w.r,life:w.life,speed:w.speed||0,visual:!!w.visual})),
+    z:m.zones.map(z=>({kind:z.kind,owner:z.owner,x:r1(z.x),y:r1(z.y),r:z.r,age:r2(z.age),life:z.life,delay:z.delay||0,done:!!z.done})),
+    cv:m.covers.map(c=>[r1(c.hp),c.collapseAt??null]),
+    pk:m.pickup?[m.pickup.x,m.pickup.y]:null,
+    b:m.ball?{x:r1(m.ball.x),y:r1(m.ball.y),c:m.ball.carrier,sc:m.ball.score,o:m.ball.overtime}:null,
+    wd:m.wind?{f:m.wind.feathers.map(f=>[r1(f.x),r1(f.y)]),h:m.wind.holder,hd:r2(m.wind.hold)}:null,
+    lv:m.lava?{s:r2(m.lava.scale),e:m.lava.embers.map(e=>[r1(e.x),r1(e.y)]),er:m.lava.eruptions.map(e=>[r1(e.x),r1(e.y),e.r,e.delay,r2(e.age),e.done?1:0])}:null,
+    ev:events.map(e=>({...e})),fx:effects.map(e=>({...e,age:0})),
+  };
+}
+// On the guest: lay the picture over the guest's own copy of the match. Positions are kept as targets, so the
+// creatures glide there instead of jumping twenty times a second.
+export function applySnapshot(m,snap){
+  m.time=snap.t;m.status=snap.st;m.countdown=snap.cd;m.winner=snap.w;m.reason=snap.rs;
+  snap.a.forEach((v,i)=>{const a=m.actors[i];if(!a)return;const [x,y,hp,maxHp,charge,facing,aim,mx,my,...rest]=v;
+    if(a.netX==null||Math.hypot(x-a.x,y-a.y)>120){a.x=x;a.y=y;}a.netX=x;a.netY=y;
+    a.hp=hp;if(a.spec.hp!==maxHp)a.spec={...a.spec,hp:maxHp};a.superCharge=charge;a.facing=facing;a.aim=aim;a.moveX=mx;a.moveY=my;
+    ACTOR_KEYS.forEach((k,j)=>{a[k]=rest[j];});});
+  m.shots=snap.s.map(([id,x,y,vx,vy,r,owner,kind,color,alive])=>({id,x,y,vx,vy,r,owner,kind,color,life:alive?1:0}));
+  m.waves=snap.wv.map(w=>({...w,hit:[]}));m.zones=snap.z.map(z=>({...z,pulse:1}));
+  snap.cv.forEach(([hp,collapseAt],i)=>{const c=m.covers[i];if(c){c.hp=hp;if(collapseAt!=null)c.collapseAt=collapseAt;}});
+  m.pickup=snap.pk?{x:snap.pk[0],y:snap.pk[1],life:1}:null;
+  if(snap.b&&m.ball)Object.assign(m.ball,{x:snap.b.x,y:snap.b.y,carrier:snap.b.c,score:snap.b.sc,overtime:snap.b.o});
+  if(snap.wd&&m.wind)Object.assign(m.wind,{feathers:snap.wd.f.map(([x,y])=>({x,y,age:1})),holder:snap.wd.h,hold:snap.wd.hd});
+  if(snap.lv&&m.lava)Object.assign(m.lava,{scale:snap.lv.s,embers:snap.lv.e.map(([x,y])=>({x,y,age:1})),eruptions:snap.lv.er.map(([x,y,r,delay,age,done])=>({x,y,r,delay,age,done:!!done}))});
+  m.effects.push(...snap.fx);
+  return snap.ev;
+}
+// Between pictures the guest moves things on by itself: shots fly on, creatures glide, timers tick for drawing.
+export function coast(m,dt){
+  for(const e of m.effects)e.age+=dt;m.effects=m.effects.filter(e=>e.age<1);
+  if(m.status!=='playing')return;
+  for(const a of m.actors)if(a.netX!=null){const k=Math.min(1,dt*14);a.x+=(a.netX-a.x)*k;a.y+=(a.netY-a.y)*k;}
+  for(const s of m.shots){s.x+=s.vx*dt;s.y+=s.vy*dt;}
+  for(const w of m.waves){w.age+=dt;if(w.kind==='wave'&&w.speed){w.x+=Math.cos(w.angle)*w.speed*dt;w.y+=Math.sin(w.angle)*w.speed*dt;}}
+  for(const z of m.zones)z.age+=dt;
+}
+// The guest's moves. A tap on the super is a counter, so a tap is never lost or counted twice.
+export const packInput=(input,supers)=>({mx:r2(input.moveX||0),my:r2(input.moveY||0),f:input.fire?1:0,sp:supers});
+export function unpackInput(msg,state){const special=msg.sp>(state.sp??0);state.sp=Math.max(state.sp??0,msg.sp);return {moveX:+msg.mx||0,moveY:+msg.my||0,fire:!!msg.f,special};}
