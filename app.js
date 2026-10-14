@@ -13,7 +13,8 @@ import {creatureLevel,levelProgress,levelBoost,MAX_LEVEL,LEVEL_BONUS,RANKS,PRIZE
 import {WORLDS,CHAPTER2_START,inChapter2,bridgePieces,completeBridge,chapterOf,chapterSteps,chapterStars,worldReady} from './story.js';
 import {trioTeam,missionEased,missionLevel,ISLANDS,STEPS,STORY_CARDS,STORY_CARD_IDS,currentStep,storyComplete,litIslands,starLit,islandOf,homeIsland,makeStoryMatch,recordStory,completeCastle,storyCardOwned,BATTLE_STEPS,starsOf,totalStars,islandStars,canReplay,friendlyStep,stepIndex} from './story.js';
 import * as rules from './core.js';
-import {RITUAL_HOLD,sessionAfterBattle,sessionRested,campfireReady,sparkWord,sparkTotal,sparkSteps,formCard,formBars,formDots,wonderPage,mostPlayed,historyLabel,arenaPicture,holdStep,pressWakes,byGender} from './meta.js';
+import {RITUAL_HOLD,sessionAfterBattle,sessionRested,campfireReady,sparkWord,sparkTotal,sparkSteps,formCard,formBars,formDots,wonderPage,mostPlayed,historyLabel,arenaPicture,holdStep,pressWakes,byGender,arenaFallback,freshSession,labFileName,labDraft,labReady,labPick,mixPages,beatJudge,beatWindow} from './meta.js';
+import * as tale from './story.js';
 import {loadArt,createPuppet,drawPortrait,Renderer} from './art.js';
 import {Sound} from './audio.js';
 const $=id=>document.getElementById(id);
@@ -41,7 +42,7 @@ let replayStep=null,pendingReveal=false,wildTarget=null,cardTarget=null,storyInt
 // Where each island sits on the painted map, in percent.
 const MAP_SPOTS={wind:[17,30],sea:[24,66],fire:[78,70],mirror:[84,30],castle:[50,17]};
 // Chapter 2: the mask shard in the middle, and a piece from every world whose bridge is mended.
-const MAP2_SPOTS={echo:[19,27],tracks:[22,64],patch:[78,67],distance:[80,27],tower:[50,21]},PIECE_ICON={echo:'ear',tracks:'pair',patch:'patch',distance:'arch'},BRIDGE_NAME={echo:'גשר הקול'};
+const MAP2_SPOTS={echo:[19,27],tracks:[22,64],patch:[78,67],distance:[80,27],tower:[50,21]},PIECE_ICON={echo:'ear',tracks:'pair',patch:'patch',distance:'arch'},BRIDGE_NAME={echo:'גשר הקול',tracks:'גשר הקצב'};
 function bridgeHTML(){const have=bridgePieces(profile);return WORLDS.slice(0,2).map((w,i)=>piece(w,have)).join('')+'<img class="bridge-shard" src="./art/gen/story-mask-shard.png" alt="שבר המסכה">'+WORLDS.slice(2).map(w=>piece(w,have)).join('');}
 const piece=(w,have)=>`<span class="gem piece${have.includes(w.id)?' lit':''}" data-piece="${w.id}" style="--g:${w.gem}" title="${w.piece}">${icon(PIECE_ICON[w.id])}</span>`;
 const progressHTML=()=>inChapter2(profile)?bridgeHTML():necklaceHTML();
@@ -58,7 +59,9 @@ function renderHome(){
   $('home-name').textContent=c.name;$('home-gems').innerHTML=progressHTML();$('home-gems').classList.toggle('bridge-row',inChapter2(profile));
   $('home-where').textContent=!step?journeyEnd():step.kind==='castle'?'הטירה הזהובה':islandOf(step.island).name+(step.kind==='castle'?'':' · שלב '+(STEPS.filter(s=>s.island===step.island).indexOf(step)+1)+' מתוך '+STEPS.filter(s=>s.island===step.island).length);
   $('home-title').textContent=!step?'קרב ליגה · דרגת '+rankOf(profile.league.trophies).name:stepTitle(step);
-  livePortrait('home-portrait',c.id,{skin:skinOf(profile,c.id)});renderBoxStrip();renderLeagueStrip();renderTowerStrip();renderGoalsStrip();
+  livePortrait('home-portrait',c.id,{skin:skinOf(profile,c.id),hats:hatsFor(c.id)});renderBoxStrip();renderLeagueStrip();renderTowerStrip();renderGoalsStrip();renderWonderStrip();
+  // In chapter 2 the line under the heading speaks of the bridges between the worlds.
+  $('roster-prompt').textContent=inChapter2(profile)?'מחברים גשרים בין העולמות, משחררים יצורים ואוספים קלפים.':'משחררים יצורים מהצל, מדליקים את השרשרת ואוספים קלפים.';
   $('home-name').innerHTML=esc(c.name)+' · רמה '+creatureLevel(profile,c.id)+(formOn(c.id)?`<span class="home-crown" title="צורת־עוצמה">${crownArt()}</span>`:'');
   // A new player sees one road; the cup and training open after the first island.
   $('lobby').classList.toggle('early',profile.story.done<4);
@@ -99,18 +102,19 @@ function renderStory2(){
     return `<button class="map-spot ${done?'done':here?'here':'locked'}" data-spot="${id}" style="right:${100-x}%;top:${y}%;--g:${gem}"><span class="spot-dot">${done?icon('check'):here?icon('star'):icon('lock')}</span><b>${name}</b>${progress}</button>`;}).join('');
   document.querySelectorAll('[data-spot]').forEach(el=>el.onclick=()=>{sound.click();const id=el.dataset.spot;
     if(el.classList.contains('here'))(BATTLE_STEPS.some(s=>s.island===id&&canReplay(profile,s.id))?openIsland(id):step?goStory():openIsland(id));else if(el.classList.contains('done'))openIsland(id);else say('story-guide','עוד לא. קודם מסיימים את '+stepLabel(step)+'.');});
-  document.querySelectorAll('[data-soon]').forEach(el=>el.onclick=()=>{sound.click();say('story-guide','העולם הזה עוד מנותק. נגיע אליו אחרי ארץ שני המסלולים.');});
+  const tracksDone=worldReady('tracks')&&bridgePieces(profile).includes('tracks');
+  document.querySelectorAll('[data-soon]').forEach(el=>el.onclick=()=>{sound.click();say('story-guide',tracksDone?'העולם הזה עוד מנותק. הגשר אליו נבנה עכשיו.':'העולם הזה עוד מנותק. נגיע אליו אחרי ארץ שני המסלולים.');});
   const first=profile.story.done===CHAPTER2_START&&!storyEvent,holdLine=pendingReveal||$('reveal-dialog').open;
-  const line=storyEvent?.step?.after||(first?'שבר המסכה... הסמל עליו מתחיל לזהור! ארבעה גשרים נותקו. אם לא נחבר אותם, הבא עלול להיות שלנו. מתחילים בעמק ההדים. רון!':!step?'זנקור הצטרף אלינו! ההמשך של ארץ שני המסלולים עוד בדרך. בינתיים אפשר לשחק שוב ולאסוף כוכבים.':'הבא בתור: '+stepLabel(step)+'.');
+  const line=storyEvent?.step?.after||(first?'שבר המסכה... הסמל עליו מתחיל לזהור! ארבעה גשרים נותקו. אם לא נחבר אותם, הבא עלול להיות שלנו. מתחילים בעמק ההדים. רון!':!step?(tracksDone?'גשר הקצב חזר, וזנקור וצעדון רצים עליו ביחד! יער הטלאים עוד בדרך. בינתיים אפשר לשחק שוב ולאסוף כוכבים.':'זנקור הצטרף אלינו! ההמשך של ארץ שני המסלולים עוד בדרך. בינתיים אפשר לשחק שוב ולאסוף כוכבים.'):'הבא בתור: '+stepLabel(step)+'.');
   if(!holdLine){say('story-guide',line,{who:first?'ron':'shadow'});if(storyEvent?.bridge){const id=storyEvent.bridge;setTimeout(()=>document.querySelector(`#story-necklace [data-piece="${id}"]`)?.classList.add('just-lit'),300);}storyEvent=null;}
   $('story-go').innerHTML=(!step?'לאלבום הקלפים':step.kind==='bridge'?'ל'+(BRIDGE_NAME[step.island]||'גשר'):'לקרב: '+stepLabel(step))+' '+icon('arrow');$('story-go').onclick=()=>{sound.click();goStory();};
 }
 function goStory(){replayStep=null;const step=currentStep(profile);if(!step){showView('cards');return;}if(step.kind==='castle'){castle={phase:'mend',filled:0,taps:0};showView('castle');return;}
-  if(step.kind==='bridge'){bridge={phase:'intro',got:0,step};showView('bridge');return;}storyIntro=true;wildTarget=step.rival||null;showView('wild');}
+  if(step.kind==='bridge'){bridge={phase:'intro',got:0,step,used:[]};showView('bridge');sound.line?.('voice-shadow-'+step.id);return;}storyIntro=true;wildTarget=step.rival||null;showView('wild');}
 function openIsland(id){
   const isl=islandOf(id),steps=BATTLE_STEPS.filter(s=>s.island===id),st=islandStars(profile,id);
   $('island-title').textContent=isl.name;$('island-stars').textContent='★ '+st.got+' מתוך '+st.max;
-  $('island-steps').innerHTML=steps.map(s=>{const n=starsOf(profile,s.id),open=canReplay(profile,s.id),next=currentStep(profile)?.id===s.id;return `<div class="island-step"><div><b>${s.kind==='mission'?MODES[s.mode].name:s.kind==='free'?CREATURES[s.rival].name:s.kind==='mirror'?'הבבואה שלך':s.title}</b><small>${s.kind==='mission'?'משימה':s.kind==='free'?'שחרור מהצל':s.kind==='mirror'?'האומץ שלך':'שומר האי'}</small></div><span class="island-step-stars" aria-label="${n} כוכבים">${stars(n)}</span>${open?`<button class="button ${n<3?'primary':'secondary'}" data-replay="${s.id}">${n<3?'לשלושה כוכבים':'שוב'}</button>`:next?'<button class="button primary" data-next-step>לשלב הבא!</button>':'<span class="island-step-lock">'+icon('lock')+'</span>'}</div>`;}).join('');
+  $('island-steps').innerHTML=steps.map(s=>{const n=starsOf(profile,s.id),open=canReplay(profile,s.id),next=currentStep(profile)?.id===s.id;return `<div class="island-step"><div><b>${s.kind==='mission'?MODES[s.mode].name:s.kind==='free'?CREATURES[s.rival].name:s.kind==='mirror'?'הבבואה שלך':s.title}</b><small>${s.kind==='mission'?'משימה':s.kind==='free'?'שחרור מהצל':s.kind==='mirror'?'האומץ שלך':chapterOf(s)===2?byGender(CREATURES[s.rival],'שומר העולם','שומרת העולם'):'שומר האי'}</small></div><span class="island-step-stars" aria-label="${n} כוכבים">${stars(n)}</span>${open?`<button class="button ${n<3?'primary':'secondary'}" data-replay="${s.id}">${n<3?'לשלושה כוכבים':'שוב'}</button>`:next?'<button class="button primary" data-next-step>לשלב הבא!</button>':'<span class="island-step-lock">'+icon('lock')+'</span>'}</div>`;}).join('');
   {const cur=currentStep(profile);if(cur&&cur.island===id&&!steps.includes(cur))$('island-steps').insertAdjacentHTML('beforeend',`<div class="island-step"><div><b>${stepLabel(cur)}</b><small>השלב הבא</small></div><span></span><button class="button primary" data-next-step>לשלב הבא!</button></div>`);}
   document.querySelector('[data-next-step]')?.addEventListener('click',()=>{sound.click();$('island-dialog').close();goStory();});
   document.querySelectorAll('[data-replay]').forEach(el=>el.onclick=()=>{sound.click();$('island-dialog').close();replayStep=STEPS[stepIndex(el.dataset.replay)];storyIntro=true;wildTarget=null;showView('wild');});
@@ -133,19 +137,41 @@ function renderCastle(){
 }
 function tapEgg(){if(castle.phase!=='egg')return;castle.taps++;sound.tone?.(300+castle.taps*90,.2,'triangle',.12);const egg=$('castle-egg');egg.classList.remove('wobble');void egg.offsetWidth;egg.classList.add('wobble');
   if(castle.taps>=3){castle.phase='hatched';completeCastle(profile);persist();sound.reveal(true);}renderCastle();}
-const NOTE_FREQ=[523,659,784];let bridge={phase:'intro',got:0,step:null},bridgeTimers=[];
-function playBridgeTune(){bridgeTimers.forEach(clearTimeout);bridgeTimers=[];bridge.phase='listen';bridge.got=0;renderBridge();
+const NOTE_FREQ=[523,659,784];let bridge={phase:'intro',got:0,step:null,used:[]},bridgeTimers=[];
+function playBridgeTune(){if(bridge.step?.beats){startBeats();return;}bridgeTimers.forEach(clearTimeout);bridgeTimers=[];bridge.phase='listen';bridge.got=0;renderBridge();
   const notes=bridge.step.notes;notes.forEach((n,i)=>bridgeTimers.push(setTimeout(()=>{if(screen!=='bridge')return;sound.tone?.(NOTE_FREQ[n],.55,'triangle',.16);sound.tone?.(NOTE_FREQ[n],.4,'sine',.05,0,.22);const el=document.querySelector(`[data-pad="${n}"]`);el?.classList.remove('sing');void el?.offsetWidth;el?.classList.add('sing');},500+i*820)));
   bridgeTimers.push(setTimeout(()=>{if(screen!=='bridge')return;bridge.phase='play';renderBridge();},500+notes.length*820+200));}
+// The beat bridge of the Two Tracks: four drum beats to listen to, then the drum keeps the beat and the child taps along.
+// A tap near a beat lights a quarter of the bridge; a miss simply does not count. After a while the drum rests until 'עוד פעם'.
+const BEAT_PLAY=24,beatPeriod=()=>60/(bridge.step?.bpm||100);
+function startBeats(){bridgeTimers.forEach(clearTimeout);bridgeTimers=[];const P=beatPeriod()*1000,B=bridge.step.beats;bridge.phase='listen';bridge.used=[];bridge.t0=performance.now()+500;renderBridge();
+  for(let n=0;n<B+BEAT_PLAY;n++)bridgeTimers.push(setTimeout(()=>{if(screen!=='bridge'||bridge.phase==='done')return;bridgeBeat(n);},500+n*P));
+  // The drum invites the taps half a beat before the first beat that counts.
+  bridgeTimers.push(setTimeout(()=>{if(screen==='bridge'&&bridge.phase==='listen'){bridge.phase='play';renderBridge();}},500+(B-.5)*P));
+  bridgeTimers.push(setTimeout(()=>{if(screen==='bridge'&&bridge.phase==='play'){bridge.phase='rest';renderBridge();}},500+(B+BEAT_PLAY-.5)*P));}
+function bridgeBeat(n){if(sound.beatTick)sound.beatTick(n%2===0);else sound.tone?.(n%2===0?196:165,.14,'triangle',.2,-40);
+  const pad=document.querySelector('[data-beat]');if(pad){pad.classList.remove('beat');void pad.offsetWidth;pad.classList.add('beat');}drawBridgeBeat(1);bridgeTimers.push(setTimeout(()=>drawBridgeBeat(0),160));}
+function tapBeat(){const pad=document.querySelector('[data-beat]');if(bridge.phase!=='play'||!pad)return;pad.classList.remove('tap');void pad.offsetWidth;pad.classList.add('tap');
+  const n=beatJudge((performance.now()-bridge.t0)/1000,{period:beatPeriod(),from:bridge.step.beats,used:bridge.used});
+  if(n<0){sound.tone?.(262,.12,'sine',.05);return;}
+  bridge.used.push(n);bridge.got++;sound.tone?.(NOTE_FREQ[Math.min(2,bridge.got-1)]*(bridge.got>3?1.5:1),.35,'triangle',.15);
+  if(bridge.got>=bridge.step.beats){bridgeDone();return;}renderBridge();}
+// The beat bridge drawn from the painted bridge of light when it is there; the ink arc of the echo bridge otherwise.
+function drawBridgeBeat(pulse=0){const cv=$('bridge-beat');if(!cv||cv.hidden||!bridge.step?.beats)return;gfx.drawBeatBridge?.(cv,{lit:bridge.phase==='done'?bridge.step.beats:bridge.got,pulse});}
 function renderBridge(){
-  const step=bridge.step;if(!step){showView('story');return;}
+  const step=bridge.step;if(!step){showView('story');return;}const beats=step.beats|0,parts=beats||3;
+  {const img=$('bridge-img');if(img){const src=arenaPicture(step.island);img.onerror=()=>{img.onerror=null;img.src=arenaFallback(step.island);};if(img.getAttribute('src')!==src&&img.getAttribute('src')!==arenaFallback(step.island))img.src=src;}}
   $('bridge-eyebrow').textContent=islandOf(step.island).name;$('bridge-title').innerHTML=bridge.phase==='done'?'הגשר <em>חזר!</em>':(BRIDGE_NAME[step.island]||'הגשר').replace(/ (\S+)$/,' <em>$1.</em>');
-  $('bridge-hint').textContent=bridge.phase==='intro'?'מקשיבים לשלושה צלילים, ואז מקישים אותם באותו הסדר.':bridge.phase==='listen'?'מקשיבים…':bridge.phase==='play'?'עכשיו אתם! הקישו על האבנים לפי הסדר.':'כל הכבוד!';
-  // One long arch from cliff to cliff, in three parts that light up one by one.
-  $('bridge-arc').innerHTML=[0,1,2].map(i=>{const pts=[];for(let k=0;k<=12;k++){const x=20+(i+k/12)*120,y=104-86*(1-((x-200)/180)**2);pts.push(x.toFixed(1)+' '+y.toFixed(1));}return `<path class="arc-seg${i<bridge.got||bridge.phase==='done'?' on':''}" d="M${pts.join(' L')}"/>`;}).join('');
-  $('bridge-pads').innerHTML=[0,1,2].map(n=>`<button class="echo-pad n${n}" data-pad="${n}" aria-label="אבן ${n+1}" ${bridge.phase!=='play'?'disabled':''}>${icon('sound')}</button>`).join('');
-  document.querySelectorAll('[data-pad]').forEach(el=>el.onclick=()=>tapPad(+el.dataset.pad));
-  $('bridge-play').hidden=bridge.phase!=='intro'&&bridge.phase!=='play';$('bridge-play').innerHTML=(bridge.phase==='intro'?'מקשיבים':'עוד פעם')+' '+icon('sound');
+  $('bridge-hint').textContent=beats?({intro:'מקשיבים לארבע פעימות, ואז מקישים על התוף איתן.',listen:'מקשיבים…',play:'עכשיו אתם! הקישו בקצב.',rest:'התוף נח. עוד פעם?',done:'כל הכבוד!'})[bridge.phase]||'':bridge.phase==='intro'?'מקשיבים לשלושה צלילים, ואז מקישים אותם באותו הסדר.':bridge.phase==='listen'?'מקשיבים…':bridge.phase==='play'?'עכשיו אתם! הקישו על האבנים לפי הסדר.':'כל הכבוד!';
+  // One long arch from cliff to cliff, in parts that light up one by one (three notes, or four beats).
+  $('bridge-arc').innerHTML=Array.from({length:parts},(_,i)=>{const pts=[];for(let k=0;k<=12;k++){const x=20+(i+k/12)*360/parts,y=104-86*(1-((x-200)/180)**2);pts.push(x.toFixed(1)+' '+y.toFixed(1));}return `<path class="arc-seg${i<bridge.got||bridge.phase==='done'?' on':''}" d="M${pts.join(' L')}"/>`;}).join('');
+  {const cv=$('bridge-beat'),painted=!!(beats&&gfx.drawBeatBridge&&fxSrc('bridge-light'));cv.hidden=!painted;$('bridge-arc').classList.toggle('under-light',painted);if(painted)requestAnimationFrame(()=>drawBridgeBeat(0));}
+  if(beats){const drum=fxSrc('drum'),lit=fxSrc('drum-lit');$('bridge-pads').innerHTML=`<button class="beat-pad${drum?' painted':''}" data-beat aria-label="תוף הקצב" ${bridge.phase==='play'?'':'disabled'}>${drum?`<img class="drum-off" src="${drum}" alt=""><img class="drum-on" src="${lit||drum}" alt="">`:icon('drum')}</button><span class="beat-dots" aria-hidden="true">${Array.from({length:beats},(_,i)=>`<i class="${i<bridge.got||bridge.phase==='done'?'on':''}"></i>`).join('')}</span>`;
+    const pad=$('bridge-pads').querySelector('[data-beat]');pad.onpointerdown=e=>{e.preventDefault();tapBeat();};pad.onkeydown=e=>{if((e.code==='Space'||e.code==='Enter')&&!e.repeat){e.preventDefault();tapBeat();}};}
+  else{$('bridge-pads').innerHTML=[0,1,2].map(n=>`<button class="echo-pad n${n}" data-pad="${n}" aria-label="אבן ${n+1}" ${bridge.phase!=='play'?'disabled':''}>${icon('sound')}</button>`).join('');
+    document.querySelectorAll('[data-pad]').forEach(el=>el.onclick=()=>tapPad(+el.dataset.pad));}
+  $('bridge-pads').classList.toggle('beats',!!beats);
+  $('bridge-play').hidden=beats?!['intro','play','rest'].includes(bridge.phase):bridge.phase!=='intro'&&bridge.phase!=='play';$('bridge-play').innerHTML=(bridge.phase==='intro'?'מקשיבים':'עוד פעם')+' '+icon(beats?'drum':'sound');
   $('bridge-next').hidden=bridge.phase!=='done';$('bridge-next').innerHTML='ממשיכים '+icon('arrow');
   $('bridge-symbol').innerHTML=bridgeHTML();
   if(bridge.phase==='intro')say('bridge-guide',step.intro);else if(bridge.phase==='done')say('bridge-guide',step.after);
@@ -153,8 +179,9 @@ function renderBridge(){
 function tapPad(n){if(bridge.phase!=='play')return;const want=bridge.step.notes[bridge.got];sound.tone?.(NOTE_FREQ[n],.4,'triangle',.15);
   if(n!==want){sound.tone?.(180,.3,'sawtooth',.06,-60);say('bridge-guide','כמעט! מקשיבים שוב מההתחלה.');bridgeTimers.push(setTimeout(playBridgeTune,900));bridge.phase='listen';renderBridge();return;}
   bridge.got++;if(bridge.got<bridge.step.notes.length){renderBridge();return;}
-  // The bridge is back: the world's piece joins the living bridge, and a star box spark for the way.
-  const world=completeBridge(profile);addSparks(profile,SPARKS_PER_BOX);persist();bridge.phase='done';storyEvent={step:bridge.step,bridge:world};sound.reveal(true);renderBridge();
+  bridgeDone();}
+// The bridge is back: the world's piece joins the living bridge, and a star box spark for the way.
+function bridgeDone(){bridgeTimers.forEach(clearTimeout);bridgeTimers=[];const world=completeBridge(profile);addSparks(profile,SPARKS_PER_BOX);persist();bridge.phase='done';storyEvent={step:bridge.step,bridge:world};sound.reveal(true);renderBridge();
   setTimeout(()=>document.querySelector(`#bridge-symbol [data-piece="${world}"]`)?.classList.add('just-lit'),200);notify('קיבלתם תיבת כוכב על הגשר!');}
 let selectedUpgrade=null;
 const buildChips=(id,ids)=>upgradeOptions(CREATURES[id]).filter(u=>cleanUpgrades(ids).includes(u.id)).map(u=>`<span class="build-chip">${icon(u.icon)}${u.name}</span>`).join('');
@@ -162,7 +189,8 @@ const bossAdvice='המגן של סלעוז חוסם ירי מלפנים. זוז�
 const rivalAdvice={slauz:bossAdvice,havzuk:'הבזוק מהיר אבל יש לו פחות חיים. התרחקו מפרץ החשמל ותקפו אחרי ההבזק.',maimi:'הגל של מיימי דוחף ומאט. זנקו הצדה וחזרו לתקוף.',
   windguard:'שומר הרוחות שולח טורנדו. זוזו הצידה מהדרך שלו!',seaguard:'הצב העתיק איטי מאוד. כשהוא מפעיל את טבעת הגאות, חכו שהיא תיעלם ורק אז תירו.',fireguard:'אריה האש שואג אש קדימה. אל תעמדו מולו מקרוב, וזוזו מהרצפה הבוערת.',zoharon:'כשמופיעים עיגולים זהובים על הרצפה, צאו מהם מהר: כוכבים נופלים!',chutal:'חוטל זורקת חוט אור שמושך אליה. כשהחוט עף, זוזו הצידה.',ozenav:'כשזזים, אוזנב נעלם. עמדו רגע בשקט, ראו איפה הוא, ואז ירו לשם.',rishrush:'כשהפעמונים מצלצלים ומאירים, עוד רגע יוצא עיגול צלילים. התרחקו, או התקרבו ממש אליו.',kashevet:'כשהאבן על החזה מאירה, צאו מהעיגול: גל השקט לא נותן לירות. בחצי החיים היא עפה ונוצות נופלות: זוזו מהעיגולים.',zankor:'זנקור בורח מהר. אל תרדפו אחריו: חכו שייעצר בקצה, ואז ירו.',hedanon:'כשמופיעות טבעות סגולות על הרצפה, צאו מהן: ההד פוגע פעמיים.',tlaor:'טלאור מתקן אבנים ואת עצמו. תקפו אותו מהר, לפני שהוא תופר הכל.',kokhavit:'כשהמגן שלה מאיר, הפגיעות הראשונות נבלעות. תירו כמה יריות קטנות כדי לשבור אותו.',
   lohatan:'לוהטן כבד ואיטי. זוזו הצידה מכדור האש ואל תעמדו על אדמה בוערת.',tehomon:'לתהומון המון חיים. כשמופיעה מערבולת, צאו ממנה מהר, והיא גם בולעת קליעים.',zikuk:'זיקוק יורה קרן ישרה ורחוקה. אל תעמדו מולו בקו ישר, והתקרבו אליו.',
-  retetoz:'רטטוז צץ פתאום לידכם. כשהוא נעלם, התכוננו לחמוק.',tzlilon:'צלילון קטן וחלש, אבל ההיפנוט שלו מקפיא. שמרו ממנו מרחק.',shorshu:'כשמופיע עיגול ירוק מתחתיכם, זוזו לפני שהשורשים תופסים!',galgalor:'גלגל אור יורה לכל הכיוונים. רחוק ממנו פחות קליעים פוגעים.'};
+  retetoz:'רטטוז צץ פתאום לידכם. כשהוא נעלם, התכוננו לחמוק.',tzlilon:'צלילון קטן וחלש, אבל ההיפנוט שלו מקפיא. שמרו ממנו מרחק.',shorshu:'כשמופיע עיגול ירוק מתחתיכם, זוזו לפני שהשורשים תופסים!',galgalor:'גלגל אור יורה לכל הכיוונים. רחוק ממנו פחות קליעים פוגעים.',
+  tzadon:'צעדון כבד ומשוריין. כשהוא דורך, צאו מהעיגולים: כל דריכה מגיעה רחוק יותר.',rhythmdeer:'אייל הקצב תוקף על הפעימה. בין פעימה לפעימה החזה שלו נפתח: זה הרגע לירות!'};
 const levelName=level=>LEVELS[level].name;
 const stars=n=>'★'.repeat(n)+'☆'.repeat(3-n);
 const ELEMENT_ART={'קול':'nebula','מהירות':'canyon','רוח':'storm','מים':'water','חשמל':'storm','עוצמה':'canyon','אש':'volcano','אור':'light','רעד':'quake','היפנוט':'nebula','טבע':'forest','אנרגיה':'crystal'};
@@ -173,14 +201,14 @@ function cardBars(c,form){
   return formBars(cardStats(c),cardStats(formCard(c,formSpecOf(c)))).map(s=>`<li${s.gain?' class="up"':''}><span>${s.label}</span><i><em style="width:${s.base}%"></em>${s.gain?`<em class="gain" style="width:${s.gain}%"></em>`:''}</i><b>${s.value}</b></li>`).join('');
 }
 function cardHTML(id,{canvasId,skin='base',big=false,frame=profile.frame,form=false}={}){
-  const c=CREATURES[id],r=RARITY[c.rarity]||RARITY['רגיל'],look=skinById(skin);
+  const c=CREATURES[id],r=RARITY[c.rarity]||RARITY['רגיל'],look=skinById(skin),design=form?labFor(id):null,mech=design?rules.MECHS?.[design.mech]:null;
   return `<article class="tcard rarity-${r.stars} skin-${look.id}${big?' big':''}${frame?' frame-'+frame:''}${form?' form':''}" style="--c:${c.color};--d:${c.dark}" data-el="${ELEMENT_ART[c.element]||'water'}">
     <header><span class="tcard-num">#${c.number}</span>${profile.creatures[id]&&creatureLevel(profile,id)>1?`<span class="tcard-level${creatureLevel(profile,id)>=MAX_LEVEL?' master':''}">רמה ${creatureLevel(profile,id)}</span>`:''}<span class="tcard-el">${icon(c.specialIcon)}${c.element}</span></header>
-    <div class="tcard-art"><canvas id="${canvasId}" aria-hidden="true"></canvas>${look.id!=='base'?`<span class="tcard-skin">${look.name}</span>`:''}${form?`<span class="tcard-stamp">${crownArt()}עוצמה</span>`:''}</div>
-    <div class="tcard-title"><h3>${c.name}</h3><small>${form?'צורת־עוצמה':c.role}</small></div>
+    <div class="tcard-art"><canvas id="${canvasId}" aria-hidden="true"></canvas>${look.id!=='base'?`<span class="tcard-skin">${look.name}</span>`:''}${form?`<span class="tcard-stamp">${crownArt()}עוצמה</span>`:''}${mech?`<span class="tcard-mech">${icon(mech.icon)}<b>${esc(mech.words)}</b></span>`:''}</div>
+    <div class="tcard-title"><h3>${design?esc(design.name):c.name}</h3><small>${form?(design?c.name+' · צורת־עוצמה':'צורת־עוצמה'):c.role}</small></div>
     <div class="tcard-special">${icon(c.specialIcon)}<b>${c.special}</b></div>
     <ul class="tcard-bars">${cardBars(c,form)}</ul>
-    <footer><span class="tcard-stars" aria-label="${c.rarity}">${stars(r.stars)}</span><span>${c.rarity}</span></footer>
+    <footer><span class="tcard-stars" aria-label="${c.rarity}">${stars(r.stars)}</span>${design?`<span class="tcard-emblem">${icon('lab')}<small>${esc(rules.FORM_CREDIT||'')}</small></span>`:`<span>${c.rarity}</span>`}</footer>
   </article>`;
 }
 function storyCardHTML(id,{big=false}={}){const c=STORY_CARDS[id];
@@ -193,6 +221,7 @@ function notify(text){$('notice').textContent=text;$('notice').hidden=false;clea
 function persist(){if(!saveProfile(storage,profile)&&!saveNoticeShown){notify('השמירה במכשיר אינה זמינה. אפשר להמשיך לשחק עד שסוגרים את הדף.');saveNoticeShown=true;}updateHeader();}
 function updateHeader(){{const p=activePlayer();$('player-chip-name').textContent=playerName(p);livePortrait('player-chip-face',faceOf(p),{skin:skinOf(profile,faceOf(p))});}$('header-wins').textContent=profile.league.trophies;$('cards-badge').hidden=!profile.newCards.length;$('cards-badge').textContent=profile.newCards.length;$('sound-toggle').innerHTML=icon(profile.sound?'sound':'muted');$('sound-toggle').setAttribute('aria-label',profile.sound?'השתקת צליל':'הפעלת צליל');$('sound-toggle').setAttribute('aria-pressed',String(!profile.sound));}
 function showView(name){
+  if(LAB_ASKED&&!labOpened){labOpened=true;name='lab';}
   const from=screen;metaInit();
   // Coming to the boxes from anywhere else always starts at the waiting chest, never at the last box's prizes.
   if(name==='boxes'&&from!=='boxes')boxUI={taps:0,result:null,chosen:null};
@@ -206,13 +235,15 @@ function showView(name){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===name||el.dataset.view==='lobby'&&['cup','workshop','challenge','wild','story','castle','versus','boxes','league','tower','goals','online','bridge','campfire'].includes(name)));
   if(name!=='battle'){clearInput();sound.setScene('lobby');sound.resume();document.body.classList.remove('versus-play');}
   if(name!=='wild')storyIntro=storyIntro&&name==='battle';
-  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();if(name==='versus')renderVersus();if(name==='players'){$('player-form').hidden=true;renderPlayers();}if(name==='boxes')renderBoxes();if(name==='league')renderLeague();if(name==='tower')renderTower();if(name==='goals'){refreshTodayGoals();renderGoals();}if(name==='online')renderOnline();if(name==='bridge')renderBridge();if(name==='campfire')renderCampfire();
+  if(name==='lobby'){buildRoster();refreshSelection();renderStoryPanel();}if(name==='wild')renderWild();if(name==='story')renderStory();if(name==='castle')renderCastle();if(name==='cards')renderAlbum();if(name==='cup')renderCup();if(name==='workshop')renderWorkshop();if(name==='records')renderRecords();if(name==='challenge')renderChallenge();if(name==='versus')renderVersus();if(name==='players'){$('player-form').hidden=true;renderPlayers();}if(name==='boxes')renderBoxes();if(name==='league')renderLeague();if(name==='tower')renderTower();if(name==='goals'){refreshTodayGoals();renderGoals();}if(name==='online')renderOnline();if(name==='bridge')renderBridge();if(name==='campfire')renderCampfire();if(name==='lab')renderLab();
   if(['lobby','story','cards','league','tower'].includes(name))setTimeout(()=>{if(screen===name)maybeRitual();},650);
+  // Ron's welcome hat box, once ever after the update: offered on the lobby once the ritual check is done, one offer per visit.
+  if(name==='lobby')setTimeout(()=>{if(screen==='lobby'&&!document.querySelector('dialog[open]'))maybeWelcome();},1000);
   window.scrollTo({top:0,behavior:'instant'});requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'instant'}));
 }
 function buildRoster(){
   $('roster').innerHTML=Object.values(CREATURES).map(c=>!isUnlocked(profile,c.id)&&c.box?`<button class="creature-card locked star-wait" data-boxes aria-label="${c.name}: יצור מתיבת זהב" style="--accent:${c.color};--accent-glow:${c.color}1a"><div class="card-top"><span class="element-label">${icon('star')}תיבת זהב</span></div><span class="shirt-number">${c.number}</span><canvas class="portrait" id="portrait-${c.id}" aria-hidden="true"></canvas><div class="card-copy"><div class="card-name"><h2>${c.name}</h2><span>${c.element} · ${c.rarity}</span></div><div class="wild-call">${icon('star')} מחכה בתיבת זהב</div></div></button>`:!isUnlocked(profile,c.id)&&c.star?`<button class="creature-card locked star-wait" data-star="${c.id}" aria-label="${c.name}: ${c.female?'שומרת':'שומר'} הכוכב, מחכה בטירה הזהובה" style="--accent:${c.color};--accent-glow:${c.color}1a"><div class="card-top"><span class="element-label">${icon('star')}${c.female?'שומרת':'שומר'} הכוכב</span></div><span class="shirt-number">${c.number}</span><canvas class="portrait" id="portrait-${c.id}" aria-hidden="true"></canvas><div class="card-copy"><div class="card-name"><h2>${c.name}</h2><span>${c.element} · ${c.rarity}</span></div><div class="wild-call">${icon('star')} מחכה בטירה הזהובה</div></div></button>`:!isUnlocked(profile,c.id)?`<button class="creature-card locked" data-wild="${c.id}" aria-label="יצור פרא: ${c.name}. נצחו אותו כדי לשחרר" style="--accent:${c.color};--accent-glow:${c.color}1a"><div class="card-top"><span class="element-label">${icon('lock')}יצור פרא</span></div><span class="shirt-number">${c.number}</span><canvas class="portrait" id="portrait-${c.id}" aria-hidden="true"></canvas><div class="card-copy"><div class="card-name"><h2>${c.name}</h2><span>${c.element} · ${c.rarity}</span></div><div class="wild-call">${icon('lock')} מחכה ב${islandOf(homeIsland(c.id))?.name||'מסע השרשרת'}</div></div></button>`:`<button class="creature-card" data-creature="${c.id}" aria-label="בחירת ${c.name}, ${c.role}" aria-pressed="false" style="--accent:${c.color};--accent-glow:${c.color}1a"><span class="selected-mark">${icon('check')}</span><div class="card-top"><span class="element-label">${icon(c.specialIcon)}${c.element}</span></div><span class="shirt-number">${c.number}</span><canvas class="portrait" id="portrait-${c.id}" aria-hidden="true"></canvas><div class="card-copy"><div class="card-name"><h2>${c.name}</h2><span>${c.role}</span></div><div class="stat-grid"><div><strong>${c.hp}</strong><small>חיים</small><span class="stat-bar"><i style="width:${c.hp/230*100}%"></i></span></div><div><strong>${c.speed}</strong><small>מהירות</small><span class="stat-bar"><i style="width:${c.speed/298*100}%"></i></span></div><div><strong>${c.damage}</strong><small>נזק לפגיעה</small><span class="stat-bar"><i style="width:${c.damage/24*100}%"></i></span></div></div><div class="card-bottom"><span>ירי כל ${c.interval.toFixed(2)} שנ׳</span><b>${c.armor?'שריון סופג '+Math.round(c.armor*100)+'%':'כוח מיוחד כל '+c.specialCooldown+' שנ׳'}</b></div></div></button>`).join('');
-  for(const c of Object.values(CREATURES))livePortrait('portrait-'+c.id,c.id,{roster:true});
+  for(const c of Object.values(CREATURES))livePortrait('portrait-'+c.id,c.id,{roster:true,hats:hatsFor(c.id)});
   document.querySelectorAll('[data-creature]').forEach(el=>el.addEventListener('click',()=>{profile.selected=el.dataset.creature;persist();refreshSelection();sound.click();}));
   document.querySelectorAll('[data-star]').forEach(el=>el.addEventListener('click',()=>{sound.click();notify('שומרי הכוכב מחכים בטירה הזהובה. כשתתקנו את הכוכב, הם יצטרפו אליכם.');}));
   document.querySelectorAll('#roster [data-boxes]').forEach(el=>el.addEventListener('click',()=>{sound.click();notify('יצורי התיבה מגיעים בתיבות הזהב. בכל תיבת זהב בוחרים אחד מתוך שניים.');showView('boxes');}));
@@ -234,17 +265,17 @@ function renderWild(){
   const c=CREATURES[wildTarget],level=step?step.level:wildLevel(profile);
   $('wild-stage').style.setProperty('--c',c.color);$('wild-stage').dataset.el=ELEMENT_ART[c.element]||'water';
   $('wild-progress').textContent=replay?islandOf(step.island).name+' · קרב חוזר · השיא שלך: '+stars(starsOf(profile,step.id)):step?(islandOf(step.island).name+' · שלב '+(STEPS.filter(s=>s.island===step.island).indexOf(step)+1)+' מתוך '+STEPS.filter(s=>s.island===step.island).length):releasedCount(profile)+' מתוך '+WILD.length+' יצורי פרא כבר בנבחרת שלך';
-  $('wild-guide').hidden=!step;if(replay)say('wild-guide','קרב חוזר! שלושה כוכבים מקבלים כשנשאר לך הרבה חיים, או כשהמשימה הולכת ממש טוב.');else if(step)say('wild-guide',missionEased(profile,step)?(step.easier||'הפעם היריב קצת עייף. אתם יכולים!')+' '+step.intro:step.intro,{voice:'voice-shadow-'+step.id});
+  $('wild-guide').hidden=!step;if(replay)say('wild-guide','קרב חוזר! שלושה כוכבים מקבלים כשנשאר לכם הרבה חיים, או כשהמשימה הולכת ממש טוב.');else if(step)say('wild-guide',missionEased(profile,step)?(step.easier||'הפעם היריב קצת עייף. אתם יכולים!')+' '+step.intro:step.intro,{voice:'voice-shadow-'+step.id});
   const ch2step=chapterOf(step)===2;document.querySelector('#wild .wild-tag').textContent=step?.kind==='mission'?(ch2step?'משימת העולם':'משימת האי'):step?.kind==='guardian'?(ch2step?(c.female?'שומרת העולם':'שומר העולם'):'שומר האי'):step?.kind==='mirror'?'הבבואה':'אחוז בצל';
   $('wild-name').textContent=step?.kind==='mission'?MODES[step.mode].name:step?.kind==='mirror'?'הבבואה של '+c.name:step?.title||c.name;$('wild-name').style.color=c.color;$('wild-role').textContent=c.role+' · כוח '+c.element+' · '+c.rarity;
-  $('wild-power-icon').innerHTML=icon(step?.kind==='mission'?MISSION_ICON[step.mode]:c.specialIcon);$('wild-power-icon').style.color=c.color;$('wild-power-title').textContent=step?.kind==='mission'?'איך מנצחים':c.special;$('wild-power-label').textContent=step?.kind==='mission'?'המשימה':byGender(c,'הכוח המיוחד שלו','הכוח המיוחד שלה');$('wild-power-description').textContent=step?.kind==='mission'?MODES[step.mode].goal:c.description;
+  $('wild-power-icon').innerHTML=icon(step?.kind==='mission'?MISSION_ICON[step.mode]||'star':c.specialIcon);$('wild-power-icon').style.color=c.color;$('wild-power-title').textContent=step?.kind==='mission'?'איך מנצחים':c.special;$('wild-power-label').textContent=step?.kind==='mission'?'המשימה':byGender(c,'הכוח המיוחד שלו','הכוח המיוחד שלה');$('wild-power-description').textContent=step?.kind==='mission'?MODES[step.mode].goal:c.description;
   if(step?.kind==='mission')$('wild-role').textContent=(step.rivals?'היריבים: '+step.rivals.map(id=>CREATURES[id].name).join(', ')+' בצל · ':friendlyStep(profile,step)?c.name+' רוצה להתחרות · ':'היריב: '+c.name+' בצל · ')+(profile.missionStars[step.id]?'השיא שלך: '+stars(profile.missionStars[step.id]):'עד שלושה כוכבים');
-  $('wild-level').textContent='רמת היריב: '+levelName(step?.kind==='mission'?missionLevel(profile,step):level)+'. '+(step?.kind==='mission'?MISSION_HINT[step.mode]:'')+(step?.kind==='mirror'?'הבבואה יודעת כל מה שאתם יודעים. תפתיעו אותה.':rivalAdvice[c.id]||'');
+  $('wild-level').textContent='רמת היריב: '+levelName(step?.kind==='mission'?missionLevel(profile,step):level)+'. '+(step?.kind==='mission'&&MISSION_HINT[step.mode]?MISSION_HINT[step.mode]:step?.kind==='mirror'?'הבבואה יודעת כל מה שאתם יודעים. תפתיעו אותה.':rivalAdvice[c.id]||'');
   const theirCard=c.name+' והקלף '+byGender(c,'שלו','שלה');
-  document.querySelector('#wild .wild-prize strong').textContent=replay?'הפרס: עוד כוכבים, וניצוצות לתיבת הכוכב':step?(step.kind==='mission'?'הפרס: עד שלושה כוכבים, והדרך לשומר':step.kind==='free'?'הפרס: '+theirCard:step.kind==='guardian'?(ch2step?'הפרס: '+theirCard+', והדרך ל'+(BRIDGE_NAME[step.island]||'גשר'):'הפרס: האור '+islandOf(step.island).gemName+', '+theirCard):'הפרס: האור הלבן והכוכב הזהוב'):'הפרס: '+theirCard;
+  document.querySelector('#wild .wild-prize strong').textContent=replay?'הפרס: עוד כוכבים, וניצוצות לתיבת הכוכב':step?(step.kind==='mission'?(step.rival&&!isUnlocked(profile,step.rival)?'הפרס: '+theirCard:'הפרס: עד שלושה כוכבים, והדרך לשומר'):step.kind==='free'?'הפרס: '+theirCard:step.kind==='guardian'?(ch2step?'הפרס: '+theirCard+', והדרך ל'+(BRIDGE_NAME[step.island]||'גשר'):'הפרס: האור '+islandOf(step.island).gemName+', '+theirCard):'הפרס: האור הלבן והכוכב הזהוב'):'הפרס: '+theirCard;
   if(!isUnlocked(profile,profile.selected))profile.selected='maimi';
   $('wild-fighters').innerHTML=Object.values(CREATURES).filter(f=>isUnlocked(profile,f.id)).map(f=>`<button class="fighter-chip${f.id===profile.selected?' chosen':''}" data-fighter="${f.id}" aria-pressed="${f.id===profile.selected}" style="--c:${f.color}"><canvas id="chip-${f.id}" aria-hidden="true"></canvas><b>${f.name}</b><small class="chip-level">רמה ${creatureLevel(profile,f.id)}</small></button>`).join('');
-  for(const f of Object.values(CREATURES))if(isUnlocked(profile,f.id))livePortrait('chip-'+f.id,f.id,{skin:skinOf(profile,f.id)});
+  for(const f of Object.values(CREATURES))if(isUnlocked(profile,f.id))livePortrait('chip-'+f.id,f.id,{skin:skinOf(profile,f.id),hats:hatsFor(f.id)});
   livePortrait('wild-portrait',c.id,{big:true,skin:step?.kind==='mirror'?'night':null});
   document.querySelectorAll('[data-fighter]').forEach(el=>el.onclick=()=>{profile.selected=el.dataset.fighter;persist();sound.click();renderWild();});
   $('wild-start').onclick=()=>startBattle(step?'story':'wild');
@@ -255,12 +286,15 @@ const albumTotal=()=>Object.keys(CREATURES).length+STORY_CARD_IDS.length,albumOw
 let albumTab='creatures';
 function renderAlbum(){
   const owned=[...Object.keys(CREATURES).filter(id=>isUnlocked(profile,id)),...profile.storyCards],total=albumTotal(),W=wonderPage(wonderList(),profile.wonders?.seen),seenW=W.filter(w=>w.seen).length;
-  // The Star Book has two pages: the creatures, and the Wonders seen in battle.
-  $('album-tabs').hidden=!W.length;if(!W.length)albumTab='creatures';
-  $('album-tab-creatures').textContent=owned.length+'/'+total;$('album-tab-wonders').textContent=seenW+'/'+W.length;
+  // The Star Book has three pages: the creatures, the Wonders seen in battle, and the mixes of copied supers.
+  const mixOn=Array.isArray(rules.COPYABLE),MX=mixOn?mixPages(owned.filter(id=>CREATURES[id]),profile.mixes,rules.COPYABLE):[];
+  $('album-tabs').hidden=!W.length&&!mixOn;if(albumTab==='wonders'&&!W.length||albumTab==='mixes'&&!mixOn)albumTab='creatures';
+  document.querySelector('[data-album-tab="wonders"]').hidden=!W.length;document.querySelector('[data-album-tab="mixes"]').hidden=!mixOn;
+  $('album-tab-creatures').textContent=owned.length+'/'+total;$('album-tab-wonders').textContent=seenW+'/'+W.length;$('album-tab-mixes').textContent=MX.reduce((n,p)=>n+p.got,0);
   document.querySelectorAll('[data-album-tab]').forEach(b=>{const on=b.dataset.albumTab===albumTab;b.setAttribute('aria-selected',String(on));b.classList.toggle('chosen',on);b.onclick=()=>{if(on)return;sound.click();albumTab=b.dataset.albumTab;renderAlbum();};});
-  $('album-creatures').hidden=albumTab!=='creatures';$('album-wonders').hidden=albumTab!=='wonders';
+  $('album-creatures').hidden=albumTab!=='creatures';$('album-wonders').hidden=albumTab!=='wonders';$('album-mixes').hidden=albumTab!=='mixes';
   if(albumTab==='wonders'){$('album-progress').textContent=seenW+' מתוך '+W.length+' פלאים';renderWonders();return;}
+  if(albumTab==='mixes'){const got=MX.reduce((n,p)=>n+p.got,0);$('album-progress').textContent=got?got+' '+(got===1?'שילוב':'שילובים')+' בספר':'עוד אין שילובים. תפסו כוכב העתקה בקרב!';renderMixes(MX);return;}
   $('album-progress').textContent=owned.length+' מתוך '+total+' קלפים'+(profile.newCards.length?' · '+profile.newCards.length+' מחכים שתהפכו אותם!':'');
   $('album-meter').style.width=owned.length/total*100+'%';renderFramePicker();
   $('album').innerHTML=Object.values(CREATURES).map(c=>{
@@ -268,25 +302,25 @@ function renderAlbum(){
     if(profile.newCards.includes(c.id))return `<button class="album-slot fresh" data-album-new="${c.id}" aria-label="קלף חדש של ${c.name}. הקישו כדי להפוך">${cardBack(c.id)}<span class="album-hint">חדש! הקישו להפוך</span></button>`;
     return `<button class="album-slot" data-album-card="${c.id}" aria-label="הקלף של ${c.name}">${cardHTML(c.id,{canvasId:'album-'+c.id,skin:skinOf(profile,c.id)})}${formBadge(c.id)}</button>`;
   }).join('');
-  for(const c of Object.values(CREATURES))if(isUnlocked(profile,c.id)&&!profile.newCards.includes(c.id))livePortrait('album-'+c.id,c.id,{skin:skinOf(profile,c.id),card:true});
+  for(const c of Object.values(CREATURES))if(isUnlocked(profile,c.id)&&!profile.newCards.includes(c.id))livePortrait('album-'+c.id,c.id,{skin:skinOf(profile,c.id),card:true,hats:hatsFor(c.id)});
   $('album-story').innerHTML=STORY_CARD_IDS.map(id=>!storyCardOwned(profile,id)?`<div class="album-slot locked">${cardBack(id,{label:'קלף סיפור'})}<span class="album-hint">${icon('lock')} בטירה הזהובה</span></div>`:profile.newCards.includes(id)?`<button class="album-slot fresh" data-album-new="${id}">${cardBack(id)}<span class="album-hint">חדש! הקישו להפוך</span></button>`:`<div class="album-slot">${storyCardHTML(id)}</div>`).join('');
   document.querySelectorAll('#album-story [data-album-new]').forEach(el=>el.onclick=()=>revealCard(el.dataset.albumNew));
   document.querySelectorAll('[data-album-wild]').forEach(el=>el.onclick=()=>{sound.click();const c=CREATURES[el.dataset.albumWild];if(c.box){notify(c.name+' מחכה בתיבת זהב. בכל תיבת זהב בוחרים אחד מתוך שניים.');showView('boxes');return;}notify(c.star?'שומרי הכוכב מחכים בטירה הזהובה. כשתתקנו את הכוכב, הם יצטרפו אליכם.':c.name+' עדיין בצל. '+byGender(c,'הוא מחכה','היא מחכה')+' ב'+(islandOf(homeIsland(c.id))?.name||'מסע השרשרת')+'.');showView('story');});
   document.querySelectorAll('[data-album-new]').forEach(el=>el.onclick=()=>revealCard(el.dataset.albumNew));
-  document.querySelectorAll('[data-album-card]').forEach(el=>el.onclick=()=>{sound.click();openCard(el.dataset.albumCard);});
+  document.querySelectorAll('[data-album-card]').forEach(el=>el.onclick=()=>{sound.click();const id=el.dataset.albumCard;if(designFresh(id)&&openRitual(id,{back:()=>{if(screen==='cards')renderAlbum();}}))return;openCard(id);});
 }
 // The castle hands over the story cards, then the star guardians join, one card after another.
 function revealCastle(){const [next,...rest]=profile.newCards.filter(id=>STORY_CARD_IDS.includes(id)||CREATURES[id]?.star);if(!next){showView('cards');return;}revealCard(next,{back:'story',joined:!!CREATURES[next],chain:rest.length?revealCastle:null});}
 function revealCard(id,{joined=false,back=null,chain=null}={}){
   const c=CREATURES[id]||STORY_CARDS[id];flipCard(profile,id);persist();
-  $('reveal-back').innerHTML=cardBack(id);$('reveal-front').innerHTML=STORY_CARDS[id]?storyCardHTML(id,{big:true}):cardHTML(id,{canvasId:'reveal-art',skin:skinOf(profile,id),big:true});if(CREATURES[id])livePortrait('reveal-art',id,{skin:skinOf(profile,id),card:true});
+  $('reveal-back').innerHTML=cardBack(id);$('reveal-front').innerHTML=STORY_CARDS[id]?storyCardHTML(id,{big:true}):cardHTML(id,{canvasId:'reveal-art',skin:skinOf(profile,id),big:true});if(CREATURES[id])livePortrait('reveal-art',id,{skin:skinOf(profile,id),card:true,hats:hatsFor(id)});
   const d=$('reveal-dialog');d.style.setProperty('--c',c.color);$('reveal-flip').classList.remove('flipped');d.classList.remove('burst','ritual','ritual-done','holding');ritual=null;$('ritual-skip').hidden=true;
   $('reveal-kicker').textContent=joined?'יצור חדש בנבחרת!':'קלף חדש!';$('reveal-title').textContent='';$('reveal-text').textContent='';
   if(chain){$('reveal-primary').textContent='לקלף הבא';$('reveal-primary').onclick=()=>{d.close();chain();};}
   else if(back){$('reveal-primary').textContent=inChapter2(profile)?'חזרה למפה':'חזרה למפת השרשרת';$('reveal-primary').onclick=()=>{d.close();showView(back);};}
   else if(!CREATURES[id]){$('reveal-primary').textContent='לאלבום הקלפים';$('reveal-primary').onclick=()=>{d.close();showView('cards');};}
   else{$('reveal-primary').textContent='לקרב עם '+c.name;$('reveal-primary').onclick=()=>{d.close();profile.selected=id;persist();showView('lobby');};}
-  $('reveal-secondary').onclick=()=>{d.close();showView('cards');};
+  $('reveal-secondary').textContent='לאלבום הקלפים';$('reveal-secondary').onclick=()=>{d.close();showView('cards');};
   if(!d.open)d.showModal();sound.unlock();
   setTimeout(()=>{$('reveal-flip').classList.add('flipped');d.classList.add('burst');sound.reveal(joined);$('reveal-title').textContent=c.name+(joined?(c.female?' הצטרפה אליכם!':' הצטרף אליכם!'):'');$('reveal-text').textContent=c.special+': '+c.description;},650);
   if(screen==='story')renderStory();
@@ -294,7 +328,7 @@ function revealCard(id,{joined=false,back=null,chain=null}={}){
 }
 function openCard(id,{form=false}={}){
   cardTarget=id;const c=CREATURES[id],skin=skinOf(profile,id),wins=profile.creatures[id]?.wins||0,side=form&&formOn(id);
-  $('card-dialog-card').innerHTML=cardHTML(id,{canvasId:'dialog-art',skin,big:true,form:side});livePortrait('dialog-art',id,{skin,card:true,form:side});
+  $('card-dialog-card').innerHTML=cardHTML(id,{canvasId:'dialog-art',skin,big:true,form:side});livePortrait('dialog-art',id,{skin,card:true,form:side,hats:hatsFor(id),lab:side?labFor(id):null});
   // An unlocked Power Form turns the card over to its form side; before that, the crown shows the wins to go.
   {const left=formToGo(id);$('card-form').innerHTML=formOn(id)?`<div class="form-toggle" role="group" aria-label="צד הקלף"><button type="button" data-card-side="base" aria-pressed="${!side}">רגיל</button><button type="button" data-card-side="form" aria-pressed="${side}">${crownArt()}עוצמה</button></div>`:`<div class="form-road">${icon('crown')}<span class="form-dots">${formDots(left,FORM_WINS()).map(on=>`<i class="${on?'on':''}"></i>`).join('')}</span><small>עוד ${left} ${left===1?'ניצחון':'ניצחונות'} לצורת־עוצמה</small></div>`;}
   document.querySelectorAll('[data-card-side]').forEach(el=>el.onclick=()=>{const f=el.dataset.cardSide==='form';if(f===side)return;sound.click();openCard(id,{form:f});});
@@ -304,6 +338,7 @@ function openCard(id,{form=false}={}){
   if(SKINS.some(k=>k.box&&!skinUnlocked(profile,id,k.id)))$('skin-picker').insertAdjacentHTML('beforeend','<button class="skin-option skin-more" data-boxes><span class="skin-swatch"></span><b>עוד מראות</b><small>בתיבות כוכב</small></button>');
   document.querySelector('#skin-picker [data-boxes]')?.addEventListener('click',()=>{sound.click();$('card-dialog').close();showView('boxes');});
   document.querySelectorAll('[data-skin]').forEach(el=>el.onclick=()=>{if(chooseSkin(profile,id,el.dataset.skin)){persist();sound.click();openCard(id,{form:side});if(screen==='cards')renderAlbum();}});
+  renderHatPicker(id,side);
   $('card-dialog-play').textContent=profile.selected===id?c.name+' כבר בחר לקרב':'בוחרים את '+c.name+' לקרב';
   $('card-dialog-play').onclick=()=>{profile.selected=id;persist();sound.click();$('card-dialog').close();showView('lobby');};
   if(!$('card-dialog').open)$('card-dialog').showModal();
@@ -318,10 +353,10 @@ const wonderList=()=>Array.isArray(rules.WONDERS)?rules.WONDERS:[];
 // A painted piece from the FX sheet once it has loaded, else the line icon.
 const fxSrc=name=>art?.fx?.[name]?.src||'';
 const crownArt=()=>fxSrc('crown')?`<img class="crown-art" src="${fxSrc('crown')}" alt="">`:icon('crown');
-const stickerArt=w=>{const src=fxSrc(w.sticker||'wonder-'+w.id);return src?`<img src="${src}" alt="">`:icon(w.icon||'sparkle');};
+const stickerArt=w=>{const name=w.sticker||'wonder-'+w.id,src=fxSrc(name)||gfx.stickerSrc?.(name)||'';return src?`<img src="${src}" alt="">`:icon(w.icon&&document.getElementById('i-'+w.icon)?w.icon:'sparkle');};
 const dotsHTML=left=>formDots(left,FORM_WINS()).map(on=>`<i class="${on?'on':''}"></i>`).join('');
 function formBadge(id){
-  if(formOn(id))return `<span class="tcard-crown" title="צורת־עוצמה">${crownArt()}</span>`;
+  if(formOn(id))return `<span class="tcard-crown${designFresh(id)?' new-design':''}" title="צורת־עוצמה">${crownArt()}</span>`;
   const left=formToGo(id);return `<span class="form-dots" title="עוד ${left} ${left===1?'ניצחון':'ניצחונות'} לצורת־עוצמה">${dotsHTML(left)}</span>`;
 }
 // Only Wonders that exist get a place, so the page can always be filled. An unseen one is a dark shape and a question mark.
@@ -329,6 +364,73 @@ function renderWonders(){
   const W=wonderPage(wonderList(),profile.wonders?.seen);
   $('album-wonders').innerHTML=`<p class="wonders-lead">${icon('book')} פלאים מהקרבות. כל פלא חוזר!</p><div class="wonder-grid">${W.map(w=>`<div class="wonder-sticker ${w.seen?'seen':'unseen'}" style="--w:${w.color||'#ffd23a'}"><span class="wonder-pic">${stickerArt(w)}${w.seen?'':'<b class="wonder-q" aria-hidden="true">?</b>'}</span><b>${w.seen?esc(w.name):'?'}</b><small>${w.seen?'ראיתם ×'+w.count:'עוד לא ראיתם'}</small></div>`).join('')}</div>`;
 }
+// ------------------------------------------------------------------ wave 2: hats, Lab designs and mixes in the Star Book
+// Hats never carry stats: any hat on any creature, earned only. The rules and the list come from core.
+const HAT_LIST=()=>Array.isArray(rules.HATS)?rules.HATS:[];
+function hatsFor(id,pp=profile){const h=rules.hatsOf?.(pp,id);return h&&(h.head||h.face)?h:null;}
+function labFor(id,pp=profile){return rules.labOf?.(pp,id)||null;}
+// A new Lab design whose form has not been shown yet: the album crown pulses until the ritual shows it.
+function designFresh(id){return formOn(id)&&!!labFor(id)&&!ritualDone(id);}
+// A painted picture over its line icon: when the file is missing the icon stays.
+const picOver=(src,iconId,cls='')=>`<span class="pic${cls?' '+cls:''}">${icon(iconId)}<img src="${src}" alt="" onerror="this.remove()"></span>`;
+const hatPic=h=>picOver('./art/gen/hat-'+h+'.png','hat','hat-pic'),hatName=h=>rules.hatById?.(h)?.name||'';
+// The card dialog's hat row: the hats this child owns, and 'בלי'. A tap puts a hat on (in its own slot) or takes it off.
+// A hat going on springs, a hat coming off pops.
+function hatSound(pp,id,h){const on=!!h&&h!=='none'&&Object.values(rules.hatsOf?.(pp,id)||{}).includes(h);if(sound.hat)sound.hat(on);else sound.click();}
+function renderHatPicker(id,side){
+  const el=$('hat-picker');if(!el)return;const all=HAT_LIST();el.hidden=!all.length||!rules.wearHat;if(el.hidden)return;
+  const owned=rules.ownedHats?.(profile)||[],w=rules.hatsOf?.(profile,id)||{},bare=!w.head&&!w.face;
+  el.innerHTML=`<span class="micro-label">${icon('hat')}כובעים</span><div class="hat-row"><button type="button" class="hat-option none${bare?' chosen':''}" data-hat="none" aria-pressed="${bare}"><b>בלי</b></button>${owned.map(h=>{const on=w.head===h.id||w.face===h.id;return `<button type="button" class="hat-option tier-${h.tier}${on?' chosen':''}" data-hat="${h.id}" aria-pressed="${on}" aria-label="${esc(h.name)}" title="${esc(h.name)}">${hatPic(h.id)}</button>`;}).join('')}${owned.length<all.length?`<button type="button" class="hat-option more" data-hat-more aria-label="עוד כובעים מחכים בתיבות הכוכב">${icon('star')}<small>בתיבות</small></button>`:''}</div>`;
+  el.querySelectorAll('[data-hat]').forEach(b=>b.onclick=()=>{const h=b.dataset.hat;if(!rules.wearHat(profile,id,h==='none'?null:h))return;persist();hatSound(profile,id,h);openCard(id,{form:side});if(screen==='cards')renderAlbum();if(screen==='lobby')renderHome();});
+  el.querySelector('[data-hat-more]')?.addEventListener('click',()=>{sound.click();$('card-dialog').close();showView('boxes');});
+}
+// The mix pages: one page per creature on the team; a slot for every super it can borrow, named by the two elements.
+let mixPage=null;
+function renderMixes(pages){
+  if(!pages.some(p=>p.id===mixPage))mixPage=(pages.find(p=>p.id===profile.selected)||pages.find(p=>p.got)||pages[0])?.id||null;
+  const P=pages.find(p=>p.id===mixPage),c=P&&CREATURES[P.id];
+  $('album-mixes').innerHTML=`<p class="wonders-lead">${icon('mix')} כוכב העתקה נותן את כוח־העל של היריב. כל שילוב חדש נותן ניצוץ!</p><div class="mix-tabs" role="tablist" aria-label="דפי השילובים">${pages.map(p=>`<button type="button" role="tab" class="mix-tab${p.id===mixPage?' chosen':''}${p.got?' some':''}" data-mix-page="${p.id}" aria-selected="${p.id===mixPage}" style="--c:${CREATURES[p.id].color}"><b>${CREATURES[p.id].name}</b><small dir="ltr">${p.got}/${p.total}</small></button>`).join('')}</div>`+
+    (P?`<section class="mix-page" style="--c:${c.color}"><header class="mix-head"><canvas id="mix-face" aria-hidden="true"></canvas><h2>${c.name} <b dir="ltr">${P.got}/${P.total}</b></h2></header><div class="mix-grid">${P.slots.map(s=>{const k=CREATURES[s.kind];return s.got?`<div class="mix-slot got" style="--k:${k.color}"><span class="mix-pic">${icon(k.specialIcon)}</span><b>${esc(rules.mixName?.(P.id,s.kind)||'')}</b><small>${k.name}</small></div>`:`<div class="mix-slot" style="--k:${k.color}"><span class="mix-pic">${icon(k.specialIcon)}<i>?</i></span><small>${k.name}</small></div>`;}).join('')}</div></section>`:'');
+  if(P)livePortrait('mix-face',P.id,{skin:skinOf(profile,P.id),hats:hatsFor(P.id)});
+  document.querySelectorAll('[data-mix-page]').forEach(b=>b.onclick=()=>{if(b.dataset.mixPage===mixPage)return;sound.click();mixPage=b.dataset.mixPage;renderMixes(pages);});
+}
+// ------------------------------------------------------------------ the Lab: ?lab, not linked from any menu
+// A grown-up and the creative director choose each creature's Power Form together: a headpiece, a name and one of two
+// mechanics. Saving puts the designs in this player's save at once (battles and the card's form side use them) and
+// downloads lab-YYYY-MM.json for the repository. The only credit anywhere is the creative director's stamp.
+const LAB_ASKED=new URLSearchParams(location.search).has('lab');let labOpened=false,labDrafts=null;
+const labData=()=>({ids:Array.isArray(rules.LAB_CREATURES)?rules.LAB_CREATURES:[],O:rules.FORM_OPTIONS||{},N:rules.LAB_NAMES||{},LM:rules.LAB_MECHS||{},M:rules.MECHS||{}});
+function labRowHTML(id){
+  const {O,N,LM,M}=labData(),c=CREATURES[id],d=labDrafts[id],saved=labFor(id),same=!!saved&&saved.option===d.option&&saved.mech===d.mech&&saved.name===d.name.trim();
+  return `<article class="lab-row${labReady(d)?' ready':''}" data-lab="${id}" style="--c:${c.color}"><div class="lab-stage"><canvas id="lab-pup-${id}" aria-hidden="true"></canvas><b>${c.name}</b><small class="lab-saved"${same?'':' hidden'}>${icon('check')}נשמר</small></div><div class="lab-picks">
+    <div class="lab-options" role="group" aria-label="המראה של ${c.name}">${O[id].map(o=>`<button type="button" class="lab-option${d.option===o?' chosen':''}" data-lab-option="${id}:${o}" aria-pressed="${d.option===o}">${picOver('./art/gen/'+(rules.formImg?.(id,o)||'form-'+id+'-'+o)+'.png','crown','form-pic')}</button>`).join('')}</div>
+    <div class="lab-names" role="group" aria-label="שם לצורה">${N[id].map((n,i)=>`<button type="button" class="lab-name${d.name===n?' chosen':''}" data-lab-name="${id}:${i}">${esc(n)}</button>`).join('')}<input id="lab-name-${id}" class="lab-name-input" maxlength="16" value="${esc(d.name)}" placeholder="שם אחר…" aria-label="שם אחר לצורה" autocomplete="off" spellcheck="false" enterkeyhint="done"></div>
+    <div class="lab-mechs" role="group" aria-label="הכוח בצורת־העוצמה">${LM[id].map(m=>`<button type="button" class="lab-mech${d.mech===m?' chosen':''}" data-lab-mech="${id}:${m}" aria-pressed="${d.mech===m}">${icon(M[m]?.icon||'star')}<b>${esc(M[m]?.words||m)}</b></button>`).join('')}</div></div></article>`;
+}
+function labBind(id){
+  const {O,N}=labData(),row=document.querySelector(`.lab-row[data-lab="${id}"]`);if(!row)return;
+  livePortrait('lab-pup-'+id,id,{form:true,lab:{option:labDrafts[id].option||O[id][0]},clip:['idle','run'],hats:hatsFor(id)});
+  const redraw=()=>{row.outerHTML=labRowHTML(id);labBind(id);labSaveState();};
+  row.querySelectorAll('[data-lab-option]').forEach(b=>b.onclick=()=>{labClick('lab-option');labDrafts[id]=labPick(labDrafts[id],b.dataset.labOption.split(':')[1],O[id],N[id]);redraw();});
+  row.querySelectorAll('[data-lab-name]').forEach(b=>b.onclick=()=>{labClick('lab-name');labDrafts[id].name=N[id][+b.dataset.labName.split(':')[1]]||'';redraw();});
+  row.querySelectorAll('[data-lab-mech]').forEach(b=>b.onclick=()=>{labClick('lab-mech');labDrafts[id].mech=b.dataset.labMech.split(':')[1];redraw();});
+  const input=$('lab-name-'+id);input.oninput=()=>{labDrafts[id].name=input.value.replace(/[<>&"']/g,'').slice(0,16);row.querySelectorAll('[data-lab-name]').forEach(b=>b.classList.toggle('chosen',b.textContent===labDrafts[id].name));labSaveState();};
+}
+const labClick=kind=>sound.uiClick?sound.uiClick(kind):sound.click();
+function labSaveState(){const {ids}=labData(),ready=ids.filter(id=>labReady(labDrafts?.[id])).length;$('lab-save').disabled=!ready;$('lab-status').textContent=ids.length?'מוכנים '+ready+' מתוך '+ids.length:'';}
+function renderLab(){
+  const {ids,O,N}=labData();$('lab-credit').textContent=rules.FORM_CREDIT||'';
+  if(!ids.length){$('lab-list').innerHTML='<p class="muted">המעבדה עוד לא מוכנה בגרסה הזאת של המשחק.</p>';labSaveState();return;}
+  labDrafts??=Object.fromEntries(ids.map(id=>[id,labDraft(labFor(id),O[id],N[id])]));
+  $('lab-list').innerHTML=ids.map(labRowHTML).join('');for(const id of ids)labBind(id);labSaveState();
+}
+// Saving: every ready design goes into the save (cleaned by core) and the month's file is downloaded.
+function saveLabPage(){
+  const {ids}=labData();let saved=0;for(const id of ids){const d=labDrafts?.[id];if(labReady(d)&&rules.saveLab?.(profile,id,{option:d.option,name:String(d.name||'').trim(),mech:d.mech}))saved++;}
+  if(!saved)return false;persist();labDrafts=null;const name=labFileName();downloadText(name,JSON.stringify(rules.labExport?.(profile)||{},null,2)+'\n');
+  labClick('lab-save');renderLab();$('lab-status').textContent='נשמר · '+name;notify('נשמר! הצורות החדשות כבר בקרבות ובקלפים.');return true;
+}
+function downloadText(name,text){try{const url=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);}catch{}}
 // ------------------------------------------------------------------ the Power Form ritual
 // The first time a creature's form opens, the child holds two thumbs on its card until the card turns over.
 let ritual=null,formWaiting=null;const ritualAsked=new Set();
@@ -342,11 +444,11 @@ function openRitual(id,{back=null,label=null}={}){
   d.style.setProperty('--c',c.color);d.style.setProperty('--hold','0');d.classList.remove('burst','ritual-done','holding');d.classList.add('ritual');d.classList.toggle('one-thumb',!two);
   $('reveal-flip').classList.remove('flipped');
   $('reveal-back').innerHTML=cardHTML(id,{canvasId:'ritual-base',skin,big:true});$('reveal-front').innerHTML=cardHTML(id,{canvasId:'ritual-form',skin,big:true,form:true});
-  livePortrait('ritual-base',id,{skin,card:true});livePortrait('ritual-form',id,{skin,card:true,form:true});
+  livePortrait('ritual-base',id,{skin,card:true,hats:hatsFor(id)});livePortrait('ritual-form',id,{skin,card:true,form:true,lab:labFor(id),hats:hatsFor(id)});
   $('reveal-kicker').textContent='צורת־עוצמה חדשה!';$('reveal-title').textContent=c.name;$('reveal-text').textContent=two?'החזיקו את שני העיגולים':'החזיקו את העיגול, או את הרווח';
   $('ritual-skip').hidden=true;setTimeout(()=>{if(ritual?.id===id&&!ritual.done)$('ritual-skip').hidden=false;},500);
   $('reveal-primary').textContent=label||(back?'ממשיכים!':'יאללה!');$('reveal-primary').onclick=()=>{const b=ritual?.back;d.close();if(typeof b==='function')b();};
-  $('reveal-secondary').onclick=()=>{d.close();match=null;showView('cards');};
+  $('reveal-secondary').textContent='לאלבום הקלפים';$('reveal-secondary').onclick=()=>{d.close();match=null;showView('cards');};
   if(!d.open)d.showModal();sound.unlock?.();
   ritualLoop();return true;
 }
@@ -365,7 +467,7 @@ function ritualFlip(){
   markRitualFor(R.id);persist();
   $('reveal-flip').classList.add('flipped');d.classList.add('burst','ritual-done');d.classList.remove('holding');d.style.setProperty('--hold','1');$('ritual-skip').hidden=true;
   if(sound.formBurst)sound.formBurst(0,{sting:true});else sound.reveal(true);
-  $('reveal-title').textContent=c.name+' · צורת־עוצמה!';
+  {const d=labFor(R.id);$('reveal-title').textContent=d?d.name+'!':c.name+' · צורת־עוצמה!';}
   $('reveal-text').innerHTML=`<span class="ritual-how" aria-hidden="true">${icon('bolt')}${icon('bolt')}<b>←</b>${crownArt()}</span>שני כוחות־על פוגעים, ואז לוחצים!`;
 }
 // The ritual waits for a calm moment on the island screens: the creature just unlocked, or the one chosen.
@@ -373,8 +475,8 @@ function ritualFlip(){
 function maybeRitual(){
   if(screen==='battle'||document.querySelector('dialog[open]'))return;
   const sel=profile.selected;
-  if(!(profile.forms?.ritual||[]).length){let any=false;for(const k of Object.keys(CREATURES))if(k!==sel&&isUnlocked(profile,k)&&formOn(k))any=markRitualFor(k)||any;if(any)persist();}
-  const id=[formWaiting,sel].find(k=>k&&isUnlocked(profile,k)&&formOn(k)&&!ritualDone(k)&&!ritualAsked.has(k));
+  if(!(profile.forms?.ritual||[]).length){let any=false;for(const k of Object.keys(CREATURES))if(k!==sel&&!labFor(k)&&isUnlocked(profile,k)&&formOn(k))any=markRitualFor(k)||any;if(any)persist();}
+  const id=[formWaiting,sel].find(k=>k&&isUnlocked(profile,k)&&formOn(k)&&!ritualDone(k)&&!ritualAsked.has(k)&&(k===formWaiting||!labFor(k)));
   if(id)openRitual(id);
 }
 function continueJourney(){match=null;const next=journeyView(profile);showView(next==='lobby'?'cup':next);}
@@ -433,9 +535,15 @@ function currentInput(){
   return {moveX,moveY,fire:input.pointerFire||input.buttonFire||input.toggleFire||keys.has('Space')||keys.has('KeyJ'),special:input.special,...(input.pointerFire&&input.aim?{aimX:input.aim.x,aimY:input.aim.y}:{})};
 }
 let chosenTrio=null;
-const MISSION_ICON={lava:'flame',wind:'swirl',ball:'spiral',trio:'star',echo:'sound'};
-const MISSION_HINT={echo:'מקשיבים לאבנים, ואז דורכים עליהן לפי הסדר. טעיתם? המנגינה מתנגנת שוב. ',lava:'זוזו מהעיגולים המהבהבים והישארו בתוך הטבעת.',wind:'מי שנופל מפיל את כל הנוצות. שמרו עליהן!',ball:'עם הפנינה אי אפשר לירות: ירי בועט אותה לשער. שלוש פגיעות והיא נופלת.',trio:'כשיצור נופל, הבא בתור נכנס. כל יצור שנשאר חשוב.'};
-const MISSION_TIP={lava:'אספו גחלים כדי לגדול, וזוזו מהעיגולים המהבהבים.',wind:'מי שנופל מפיל את הנוצות. החזיקו מרחק כשאתם מובילים.',ball:'כשליריב יש את הפנינה, פגעו בו שלוש פעמים, או הפעילו עליו את כוח־העל, והפנינה נופלת.',trio:'שמרו על החיים של כל יצור, וחכו עם הכוח המיוחד לרגע הנכון.',echo:'מקשיבים למנגינה עד הסוף, ואז דורכים על האבנים לפי הסדר.'};
+const MISSION_ICON={lava:'flame',wind:'swirl',ball:'spiral',trio:'star',echo:'sound',hill:'shield',race:'pair'};
+const MISSION_HINT={echo:'מקשיבים לאבנים, ואז דורכים עליהן לפי הסדר. טעיתם? המנגינה מתנגנת שוב. ',lava:'זוזו מהעיגולים המהבהבים והישארו בתוך הטבעת.',wind:'מי שנופל מפיל את כל הנוצות. שמרו עליהן!',ball:'עם הפנינה אי אפשר לירות: ירי בועט אותה לשער. שלוש פגיעות והיא נופלת.',trio:'כשיצור נופל, הבא בתור נכנס. כל יצור שנשאר חשוב.',
+  hill:'עמדו לבד בתוך הטבעת. כשהיא מהבהבת, היא עוברת למקום אחר.',race:'השער נפתח רק כששניכם בתוכו יחד. חכו זה לזה!'};
+const MISSION_TIP={lava:'אספו גחלים כדי לגדול, וזוזו מהעיגולים המהבהבים.',wind:'מי שנופל מפיל את הנוצות. החזיקו מרחק כשאתם מובילים.',ball:'כשליריב יש את הפנינה, פגעו בו שלוש פעמים, או הפעילו עליו את כוח־העל, והפנינה נופלת.',trio:'שמרו על החיים של כל יצור, וחכו עם הכוח המיוחד לרגע הנכון.',echo:'מקשיבים למנגינה עד הסוף, ואז דורכים על האבנים לפי הסדר.',
+  hill:'הישארו בתוך הטבעת, וכשהיא זזה רוצו ראשונים למקום החדש.',race:'רוצו לשער יחד עם החבר, והתרחקו מהצללים שמאטים.'};
+// The round label under the clock for each mission: what wins it, in a few words.
+const MISSION_ROUND={wind:'אספו '+WIND_TARGET+' נוצות והחזיקו '+WIND_HOLD+' שניות',lava:'גחלי כוח מגדילים אתכם · הלבה סוגרת',ball:'ראשון ל־'+BALL_GOALS+' גולים מנצח',trio:'שלושה מול שלושה',echo:'מי שמשלים 3 מנגינות מנצח',hill:'ראשון ל־'+(sim.HILL_TARGET??25)+' נקודות מנצח',race:'חמישה שערים, ביחד'};
+// The Wonder of the Day plays on its own painted variant where there is one (ice on the coast, bubbles at sea, storm in the wind).
+const WONDER_ARENA={ice:null,bubbles:'sea',storm:'wind'},WONDER_ISLANDS=[null,'wind','sea','fire','mirror','castle'];
 const wantsTrio=m=>m==='quick'?$('training-mode').value==='trio':m==='story'?(s=>s?.kind==='mission'&&s.mode==='trio')(replayStep||currentStep(profile)):false;
 // The trio picker: tap three released creatures; the order is the order they enter.
 function openTeamPicker(nextMode){
@@ -449,26 +557,33 @@ function openTeamPicker(nextMode){
 }
 // The match a start builds, without touching the screen. The same call pre-rolls the next battle for the 'עוד קרב!' button.
 // Who may grow a Power Form: the child once the creature reached its level; a rival only from challenger up (quick); never in a cup.
+// Every single-player battle carries this child's hats, Lab designs, which creatures may grow a form, copy stars and the comeback star.
 function buildMatch(nextMode,{seed=Date.now()+Math.floor(Math.random()*1e5)}={}){
-  const player=isUnlocked(profile,profile.selected)?profile.selected:'maimi',wonders=['quick','league','tower','wild','story'].includes(nextMode)?sim.wonderOptions?.(profile)||{}:{};
+  const player=isUnlocked(profile,profile.selected)?profile.selected:'maimi',wonders=['quick','league','tower','wild','story'].includes(nextMode)?sim.wonderOptions?.(profile)||{}:{},play=sim.playOptions?.(profile)||{};
   const boost=levelBoost(profile,nextMode==='challenge'?(profile.lastBuild?.player||player):player);
-  if(nextMode==='tower')return makeTowerMatch(profile,{seed,...wonders});
-  if(nextMode==='league')return makeLeagueMatch(profile,{seed,...wonders});
-  if(nextMode==='challenge')return makeChallengeMatch(profile,{seed,boost});
-  if(nextMode==='story')return makeStoryMatch(profile,{seed,team:chosenTrio,replay:replayStep?.id,boost,...wonders});
-  if(nextMode==='wild')return wildTarget?makeWildMatch(profile,wildTarget,{seed,boost,...wonders}):null;
+  if(nextMode==='tower')return makeTowerMatch(profile,{seed,...play,...wonders});
+  if(nextMode==='league')return makeLeagueMatch(profile,{seed,...play,...wonders});
+  if(nextMode==='challenge')return makeChallengeMatch(profile,{seed,boost,...play});
+  if(nextMode==='story')return makeStoryMatch(profile,{seed,team:chosenTrio,replay:replayStep?.id,boost,...play,...wonders});
+  if(nextMode==='wild')return wildTarget?makeWildMatch(profile,wildTarget,{seed,boost,...play,...wonders}):null;
+  // The Wonder of the Day: one level gentler than the league, a random rival, the Wonder there from the third second to the end.
+  if(nextMode==='wonder'){const LL=sim.LEAGUE_LEVELS||Object.keys(LEVELS),level=LL[Math.max(0,LL.indexOf(leagueLevel(profile))-1)]||'rookie',W=sim.wonderOfDay?.(profile,players.active);if(W?.changed)persist();
+    // The rival is one the child has met: a story creature (a guardian too) only once it was freed, never ahead of its story fight.
+    const day=W?{wonderDay:W.id}:sim.wonderDayOptions?.(profile,players.active)||{},rivals=Object.keys(CREATURES).filter(id=>id!==player&&(!WILD.includes(id)||isUnlocked(profile,id))),rival=rivals[Math.floor(Math.random()*rivals.length)];
+    const arena=day.wonderDay in WONDER_ARENA?WONDER_ARENA[day.wonderDay]:WONDER_ISLANDS[Math.floor(Math.random()*WONDER_ISLANDS.length)];
+    return makeMatch({...play,...day,player,rival,level,boost,seed,arena,life:sim.quickLife?.(level)??1,forms:[sim.formUnlocked?.(profile,player)??false,LL.indexOf(level)>=2]});}
   if(nextMode!=='quick')return null;
   const rival=$('rival').value,level=profile.level,kind=$('training-mode').value||null;
-  return makeMatch({player,rival,level,boost,boss:rival==='slauz'&&!kind,seed,mode:kind,arena:({lava:'fire',wind:'wind',ball:'sea',trio:'castle'})[kind]||null,...wonders,life:kind?1:sim.quickLife?.(level)??1,
+  return makeMatch({...play,player,rival,level,boost,boss:rival==='slauz'&&!kind,seed,mode:kind,arena:({lava:'fire',wind:'wind',ball:'sea',trio:'castle'})[kind]||null,...wonders,life:kind?1:sim.quickLife?.(level)??1,
     forms:[sim.formUnlocked?.(profile,player)??false,['challenger','veteran','champion'].includes(level),false],
     ...(kind==='trio'?{team:trioTeam(profile,chosenTrio),rivalTeam:Object.keys(CREATURES).filter(id=>CREATURES[id].rarity!=='אגדי').sort(()=>Math.random()-.5).slice(0,3)}:{})});
 }
 // The next battle waits ready under the result's big button: same mode, same creature, same child, a fresh seed.
 let queued=null;
 // A tower key names the climb itself (its seed), not only the floor: a new climb never meets the old climb's rival.
-const queueKey=m=>{const r=profile.tower.run;return m==='quick'?[$('rival').value,$('training-mode').value,profile.level].join('|'):m==='tower'?(r?[r.seed,r.floor,r.picks.length,r.creature].join('|'):''):m==='league'?leagueLevel(profile):'';};
+const queueKey=m=>{const r=profile.tower.run;return m==='quick'?[$('rival').value,$('training-mode').value,profile.level].join('|'):m==='tower'?(r?[r.seed,r.floor,r.picks.length,r.creature].join('|'):''):m==='league'?leagueLevel(profile):m==='wonder'?dayKey():'';};
 function queueNext(nextMode){queued=null;
-  if(!['league','quick','tower'].includes(nextMode)||nextMode==='tower'&&(!profile.tower.run||profile.tower.run.pending)||wantsTrio(nextMode))return null;
+  if(!['league','quick','tower','wonder'].includes(nextMode)||nextMode==='tower'&&(!profile.tower.run||profile.tower.run.pending)||wantsTrio(nextMode))return null;
   try{const m=buildMatch(nextMode);if(!m)return null;queued={match:m,mode:nextMode,player:profile.selected,who:players.active,floor:profile.tower.run?.floor??null,key:queueKey(nextMode)};}catch{queued=null;return null;}
   return nextPreview();}
 function nextPreview(){const m=queued?.match;return m?{mode:queued.mode,rival:m.actors[1].id,arena:m.arena||null,giant:!!m.actors[1].giant,floor:m.tower?.floor??null,level:m.level}:null;}
@@ -480,17 +595,19 @@ function startBattle(nextMode=mode){
   let rival,level,player,upgrades;
   const rematch=!!q&&q.mode===nextMode&&q.player===profile.selected&&q.who===players.active&&q.key===queueKey(nextMode)&&(nextMode!=='tower'||q.floor===(profile.tower.run?.floor??null));
   if(mode==='cup'){startCup(profile);if(needsUpgrade(profile)){showView('workshop');return;}const r=CUP[profile.cup.stage];cupFinal=profile.cup.stage===2;player=profile.cup.player;persist();
-    match=makeMatch({player,rival:r.rival,level:r.level,upgrades:profile.cup.upgrades,boost:levelBoost(profile,player),boss:r.rival==='slauz',seed:Date.now()+Math.floor(Math.random()*1e5),forms:[sim.formUnlocked?.(profile,player)??false,false]});}
+    match=makeMatch({...(sim.playOptions?.(profile)||{}),player,rival:r.rival,level:r.level,upgrades:profile.cup.upgrades,boost:levelBoost(profile,player),boss:r.rival==='slauz',seed:Date.now()+Math.floor(Math.random()*1e5),forms:[sim.formUnlocked?.(profile,player)??false,false]});}
   else match=rematch?q.match:buildMatch(mode);
   if(!match){showView('lobby');return;}
   // A pre-rolled rematch skips the long wait: a tap on 'עוד קרב!' reaches 'go' in under a second and a half.
   if(rematch)match.countdown=Math.min(match.countdown,1.4);
-  player=match.actors[0].id;rival=match.actors[1].id;level=match.level;upgrades=match.actors[0].upgrades;sound.versus=false;sound.online=false;document.querySelector('.player-info .fighter-lines span').textContent='אתם';renderer.setMatch(match,[skinOf(profile,match.actors[0].id),match.mirror?'night':null],{local:0});clearInput();accumulator=0;resetBattleFx();
-  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');sound.unlock();sound.setScene('battle');sound.resume();sound.setLocalSide?.(0);sound.setMusicRate?.(1);if(mode==='wild')sound.play('voice-wild-battle',{delay:.2});
-  const p=match.actors[0].spec,r=match.actors[1].spec;
+  player=match.actors[0].id;rival=match.actors[1].id;level=match.level;upgrades=match.actors[0].upgrades;sound.versus=false;sound.online=false;sound.allied=!!match.allied;document.querySelector('.player-info .fighter-lines span').textContent='אתם';renderer.setMatch(match,[skinOf(profile,match.actors[0].id),match.mirror?'night':null,match.allied&&match.actors[2]?skinOf(profile,match.actors[2].id):null],{local:0});clearInput();accumulator=0;resetBattleFx();
   const storyStep=match.story?STEPS.find(s=>s.id===match.story):null;
+  // The announcer counts 3-2-1 for the first battle of a session and for a guardian; every battle ends its countdown with 'קדימה!'.
+  callsStart(match,{rematch,guardian:!!storyStep&&['guardian','mirror'].includes(storyStep.kind)||!!match.spectacle||!!match.tower?.guard||!!match.actors[1].boss});
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');sound.unlock();sound.setScene('battle',{track:musicFor(match)});sound.resume();sound.setLocalSide?.(0);sound.setMusicRate?.(1);if(mode==='wild')sound.play('voice-wild-battle',{delay:.2});
+  const p=match.actors[0].spec,r=match.actors[1].spec;
   $('player-name').textContent=p.name;$('rival-name').textContent=storyStep?.kind==='mirror'?'הבבואה שלך':storyStep?.title||r.name;$('player-symbol').innerHTML=icon(p.specialIcon);$('rival-symbol').innerHTML=icon(r.specialIcon);$('rival-level').textContent=LEVELS[level].name;
-  $('match-label').textContent=mode==='cup'?CUP[profile.cup.stage].title:mode==='challenge'?CHALLENGE.title:match.mode?MODES[match.mode].name:mode==='story'?islandOf(storyStep.island).name:mode==='wild'?'קרב פרא':mode==='league'?'ליגת היצורים':mode==='tower'?'מגדל המסכה':'אימון';$('round-label').textContent=match.mode?({wind:'אספו '+WIND_TARGET+' נוצות והחזיקו '+WIND_HOLD+' שניות',lava:'גחלי כוח מגדילים אתכם · הלבה סוגרת',ball:'ראשון ל־'+BALL_GOALS+' גולים מנצח',trio:'שלושה מול שלושה',echo:'מי שמשלים 3 מנגינות מנצח'})[match.mode]:mode==='cup'?`שלב ${profile.cup.stage+1} מתוך 4`:mode==='challenge'?'שלב 4 מתוך 4':mode==='story'?(match.replay?'קרב חוזר · עד שלושה כוכבים':storyStep.kind==='free'?'ניצחון משחרר את '+r.name+' מהצל':storyStep.kind==='mirror'?'אומץ זה לפעול למרות הפחד':'ניצחון מדליק את האור '+islandOf(storyStep.island).gemName):mode==='wild'?'ניצחון משחרר את '+r.name:mode==='tower'?'קומה '+match.tower.floor+(match.tower.guard?' · שומר הקומה':match.twist==='crumble'?' · האבנים מתפוררות':match.twist==='open'?' · בלי אבנים':''):mode==='league'?'דרגת '+rankOf(profile.league.trophies).name+' · '+profile.league.trophies+' גביעים':'קרב בודד · אינו מקדם את המסע';
+  $('match-label').textContent=mode==='cup'?CUP[profile.cup.stage].title:mode==='challenge'?CHALLENGE.title:match.mode?MODES[match.mode].name:mode==='story'?islandOf(storyStep.island).name:mode==='wild'?'קרב פרא':mode==='league'?'ליגת היצורים':mode==='tower'?'מגדל המסכה':mode==='wonder'?'הפלא של היום':'אימון';$('round-label').textContent=match.mode?MISSION_ROUND[match.mode]||'':mode==='wonder'?sim.wonderById?.(match.wonder?.id)?.name||'':mode==='cup'?`שלב ${profile.cup.stage+1} מתוך 4`:mode==='challenge'?'שלב 4 מתוך 4':mode==='story'?(match.replay?'קרב חוזר · עד שלושה כוכבים':storyStep.kind==='free'?'ניצחון משחרר את '+r.name+' מהצל':storyStep.kind==='mirror'?'אומץ זה לפעול למרות הפחד':islandOf(storyStep.island).gemName?'ניצחון מדליק את האור '+islandOf(storyStep.island).gemName:'ניצחון משחרר את '+r.name+' מהצל'):mode==='wild'?'ניצחון משחרר את '+r.name:mode==='tower'?'קומה '+match.tower.floor+(match.tower.guard?' · שומר הקומה':match.twist==='crumble'?' · האבנים מתפוררות':match.twist==='open'?' · בלי אבנים':''):mode==='league'?'דרגת '+rankOf(profile.league.trophies).name+' · '+profile.league.trophies+' גביעים':'קרב בודד · אינו מקדם את המסע';
   $('special-action-icon').innerHTML=icon(p.specialIcon);$('special-action-name').textContent=p.special;$('special-button').style.setProperty('--c',p.color);
   $('arena-tip').textContent=rival==='slauz'&&match.actors[1].boss?bossAdvice:(mode==='wild'||mode==='story'||mode==='league')&&rivalAdvice[rival]&&!match.mirror?rivalAdvice[rival]:'רווח או כפתור ירי מכוונים ליריב. זוזו כדי להתחמק.';$('arena-tip').style.opacity='1';$('match-toast').classList.remove('visible');toastUntil=0;
   $('battle-build').innerHTML=buildChips(player,upgrades);$('battle-build').hidden=!upgrades.length;$('boss-banner').hidden=!match.actors[1].boss;
@@ -501,15 +618,19 @@ function startBattle(nextMode=mode){
   startTutorial();
   if(match.tower){const shown=match;setTimeout(()=>{if(match===shown&&match.status!=='finished')cue('tower','קומה '+match.tower.floor,1.6);},2400);}
   // The guardian's entrance ends inside the countdown: during play the whole arena stays still on screen.
-  {const r=match.actors[1];if(!rematch&&(r.boss||storyStep&&['guardian','mirror'].includes(storyStep.kind)))renderer.cinematic(r.x,r.y-80,1.55,2.1);}
+  // A spectacle guardian rises out of its ink inside the countdown: the push-in waits for the rise, the roar comes with it, its bar paints in.
+  {const r=match.actors[1],shown=match;if(match.spectacle){$('battle').querySelector('.rival-info')?.classList.add('paint-in');$('battle').querySelector('.rival-info')?.style.setProperty('--paint',Math.max(.6,match.countdown-.3).toFixed(2)+'s');sound.roar?.({delay:Math.max(0,match.countdown-1.6)});calls.fx.push('roar');
+      if(!rematch)setTimeout(()=>{if(match===shown&&match.status==='countdown')renderer.cinematic(r.x,r.y-80,1.45,Math.max(1,match.countdown-.1));},Math.max(0,match.countdown-2.2)*1000);}
+    else if(!rematch&&(r.boss||storyStep&&['guardian','mirror'].includes(storyStep.kind)))renderer.cinematic(r.x,r.y-80,1.55,2.1);}
   $('goal-card').hidden=!match.mode;if(match.mode){$('goal-icon').innerHTML=icon(MISSION_ICON[match.mode]);$('goal-name').textContent=MODES[match.mode].name;$('goal-text').textContent=MODES[match.mode].goal;goalUntil=clock+3;}
-  $('leave-button').textContent=mode==='tower'?'הפסקה · חזרה למגדל':mode==='league'?'הפסקה · חזרה לליגה':mode==='story'?'הפסקה · חזרה למפה':mode==='quick'||mode==='wild'?'חזרה לבחירת יצור':'הפסקה · חזרה למסע';
+  $('leave-button').textContent=mode==='tower'?'הפסקה · חזרה למגדל':mode==='league'?'הפסקה · חזרה לליגה':mode==='story'?'הפסקה · חזרה למפה':mode==='quick'||mode==='wild'||mode==='wonder'?'חזרה לבחירת יצור':'הפסקה · חזרה למסע';
   renderHUD();$('arena').focus({preventScroll:true});
 }
 let goalUntil=0;
 const TUT_KEY='creature-league.tutorial';
 let tutorial=null;
-const TUT_TEXT={touch:['שימו אגודל בצד שמאל וגררו כדי לזוז','לחצו כדי לירות על היריב','כוח־העל מלא! לחצו עליו','מעולה! עכשיו נצחו!'],keys:['זוזו עם החצים או W A S D','רווח כדי לירות על היריב','כוח־העל מלא! לחצו E','מעולה! עכשיו נצחו!']};
+// One short line each: the lesson sits in the HUD band at the top, and the glowing control below shows where.
+const TUT_TEXT={touch:['גררו אגודל משמאל כדי לזוז','לחצו על הכפתור האדום','כוח־העל מלא! לחצו עליו','מעולה! עכשיו נצחו!'],keys:['זוזו עם החצים או W A S D','רווח כדי לירות על היריב','כוח־העל מלא! לחצו E','מעולה! עכשיו נצחו!']};
 const TUT_TARGET=['joystick','fire-button','special-button',null];
 function startTutorial(){
   let seen=false;try{seen=storage.getItem(TUT_KEY)==='1';}catch{}
@@ -539,7 +660,7 @@ function tutorialGuard(){if(tutorial&&tutorial.step<3&&match?.status==='playing'
 const scoreSide=(i,v)=>`<span class="mb-side ${i===localSide()?'me':'foe'}">${v}</span>`,scoreRow=(v0,mid,v1)=>scoreSide(0,v0)+(mid?`<span class="mb-goal">${mid}</span>`:'')+scoreSide(1,v1);
 function renderHUD(){if(!match)return;const [a,b]=match.actors,L=localSide();
   // A creature under the HUD fades the clock, never a cue that is showing: a warning must stay readable.
-  {const fade=renderer.wide&&match.actors.some(x=>!(x.out>0)&&renderer.offsetY+(x.y-x.spec.height*(renderer.size||1))*renderer.scale<70);document.querySelector('.battle-top').classList.toggle('hud-fade',fade);$('mode-banner').classList.toggle('hud-fade',fade);$('cue-row').classList.toggle('hud-fade',fade&&!cueNow);}
+  {const fade=renderer.wide&&match.actors.some(x=>!(x.out>0)&&renderer.offsetY+(x.y-x.spec.height*(renderer.size||1))*renderer.scale<(UPRIGHT.matches?34:70));document.querySelector('.battle-top').classList.toggle('hud-fade',fade);$('mode-banner').classList.toggle('hud-fade',fade);$('cue-row').classList.toggle('hud-fade',fade&&!cueNow);}
   // The mission's card explains the goal during the countdown only; during play the arena is free of sentences.
   if(!$('goal-card').hidden&&(clock>goalUntil||match.status!=='countdown'))$('goal-card').hidden=true;
   $('fire-button').setAttribute('aria-pressed',String(input.toggleFire));$('fire-button').classList.toggle('latched',input.toggleFire);
@@ -558,30 +679,50 @@ function renderHUD(){if(!match)return;const [a,b]=match.actors,L=localSide();
     else if(match.ball){const [s0,s1]=match.ball.score;$('mode-banner').innerHTML=scoreRow(`<b class="mb-score">${s0}</b>`,match.ball.overtime?icon('trophy'):icon('target')+`<small>${BALL_GOALS}</small>`,`<b class="mb-score">${s1}</b>`);}
     else if(match.echo){const E=match.echo;$('mode-banner').innerHTML=scoreRow(`<b class="mb-score">${E.songs[0]}</b>`,E.phase==='listen'?icon('ear'):E.phase==='play'?icon('sound')+`<small>${E.progress[L]??E.progress[0]}/${E.song.length}</small>`:icon('sparkle'),`<b class="mb-score">${E.songs[1]}</b>`);}
     else if(match.trio){const dots=n=>`<span class="trio-dots">${[0,1,2].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</span>`;$('mode-banner').innerHTML=scoreRow(dots(trioLeft(match,0)),'',dots(trioLeft(match,1)));}
-    else{$('mode-banner').innerHTML=scoreRow(icon('flame')+me.power+'/'+MAX_POWER,match.lava.scale<.99?`<i class="mb-closing">${icon('target')}</i>`:'',foe.power+'/'+MAX_POWER+icon('flame'));}}
+    // The armour hill: points to the target, the one standing alone in the ring marked; the pair race: gates passed by the two friends and by the rival.
+    else if(match.hill){hillPoints(match.hill);const H=match.hill,T=sim.HILL_TARGET??25,pt=i=>`<b class="mb-score${H.holder===i?' mb-hold':''}">${Math.floor(H.points?.[i]||0)}</b><small>/${T}</small>`;bannerHTML(scoreRow(icon('shield')+pt(0),'',pt(1)));}
+    else if(match.race){const R=match.race,G=sim.RACE_GATES??5;bannerHTML(scoreRow(icon(iconOr('gate','arch'))+`<b class="mb-score">${Math.min(G,R.at|0)}</b><small>/${G}</small>`,'',`<b class="mb-score">${Math.min(G,R.rival|0)}</b><small>/${G}</small>`));}
+    else if(match.lava){$('mode-banner').innerHTML=scoreRow(icon('flame')+me.power+'/'+MAX_POWER,match.lava.scale<.99?`<i class="mb-closing">${icon('target')}</i>`:'',foe.power+'/'+MAX_POWER+icon('flame'));}}
   if(match.challenge){const next=match.covers.filter(c=>c.hp>0).sort((a,b)=>a.collapseAt-b.collapseAt)[0];$('challenge-banner').textContent=next?`מחסה מתפורר בעוד ${Math.max(0,Math.ceil(next.collapseAt-match.time))} שנ׳ · המשיכו לזוז`:'הזירה פתוחה · אין יותר מחסות!';}
   if(clock>toastUntil)$('match-toast').classList.remove('visible');
+  // A spectacle guardian's bar paints itself in during the countdown only.
+  if(match.status!=='countdown')document.querySelector('#battle .rival-info.paint-in')?.classList.remove('paint-in');
+  // The friend's pause note on the guest phone stays true when the host stops or goes on.
+  if(match.online&&online?.role==='guest'&&$('pause-dialog').open)pauseText(true);
   wonderHUD();cueTick();
 }
+// Each whole point a side gains on the armour hill ticks once (the child's climb in pitch, the rival's stay soft).
+let hillSeen=null;
+function hillPoints(H){const p=[0,1].map(i=>Math.floor(H.points?.[i]||0));if(hillSeen?.m!==match){hillSeen={m:match,p};return;}if(match.status==='playing')for(const s of [0,1])if(p[s]>hillSeen.p[s])sound.hillPoint?.(s,p[s]);hillSeen.p=p;}
+// The banner is rebuilt only when what it shows changed.
+function bannerHTML(html){const el=$('mode-banner');if(el._html!==html){el._html=html;el.innerHTML=html;}}
 // The super button tells everything without words: a ring in three parts that click as they fill, two gold pips
 // for the landed supers, and the star crown when the Power Form is one press away.
 function superHUD(el,a,slot){if(!el||!a)return;const ch=a.superCharge||0,seg=Math.min(3,Math.floor(ch*3+1e-6)),can=!!a.canForm&&!a.formUsed;
   if(seg>(segSeen[slot]??3)&&seg<3&&match.status==='playing')uiSound('segment');segSeen[slot]=seg;
   el.classList.toggle('can-form',can);el.classList.toggle('form-ready',can&&(a.pips||0)>=(sim.FORM_PIPS??2));el.classList.toggle('in-form',(a.form||0)>0);
   el.querySelectorAll('.pips i').forEach((p,i)=>p.classList.toggle('on',i<(a.pips||0)));
-  const crown=art?.fx?.['crown-frame'];if(crown?.src&&!el.classList.contains('has-crown-art')){el.style.setProperty('--crown-frame',`url("${crown.src}")`);el.classList.add('has-crown-art');}}
+  const crown=art?.fx?.['crown-frame'];if(crown?.src&&!el.classList.contains('has-crown-art')){el.style.setProperty('--crown-frame',`url("${crown.src}")`);el.classList.add('has-crown-art');}
+  // A caught copy star: the button shows the copied super's picture inside a ring of both colours until it is used.
+  const cp=a.copy&&CREATURES[a.copy]?a.copy:'';if((el.dataset.copy||'')!==cp){el.dataset.copy=cp;el.classList.toggle('has-copy',!!cp);if(cp)el.style.setProperty('--c2',CREATURES[cp].color);else el.style.removeProperty('--c2');
+    const own=CREATURES[cp||a.id],ic=el.querySelector('[id^="special-action-icon"]');if(ic&&own)ic.innerHTML=icon(own.specialIcon);if(el.id==='special-button'&&own)$('special-action-name').textContent=own.special;}}
 // While a Wonder runs: its picture under the clock with a ring that empties over its twelve seconds. No words.
 function wonderHUD(){const W=match?.wonder,el=$('wonder-chip');if(!el)return;const on=W?.state==='active'&&!!W.id;
-  if(on){if(el.dataset.id!==W.id){const w=sim.wonderById?.(W.id),sticker=art?.fx?.['wonder-'+W.id];el.dataset.id=W.id;el.innerHTML=(sticker?.src?`<img src="${sticker.src}" alt="">`:icon(w?.icon||'sparkle'))+'<b></b><i class="wonder-ring"></i>';el.style.setProperty('--w',w?.color||'#ffd23a');}
+  if(on){if(el.dataset.id!==W.id){const w=sim.wonderById?.(W.id),sticker=art?.fx?.['wonder-'+W.id];el.dataset.id=W.id;el.innerHTML=(sticker?.src?`<img src="${sticker.src}" alt="">`:icon(iconOr(w?.icon)))+'<b></b><i class="wonder-ring"></i>';el.style.setProperty('--w',w?.color||'#ffd23a');}
+    // The Wonder of the Day lasts to the end: no ring to empty.
+    el.classList.toggle('endless',!!W.endless);
     el.style.setProperty('--p',Math.max(0,Math.min(1,1-(W.age||0)/(sim.WONDER_TIMES?.active||12))).toFixed(3));}
   else el.dataset.id='';if(el.hidden===on)el.hidden=!on;}
 function toast(text,seconds=2){$('match-toast').textContent=text;$('match-toast').classList.add('visible');toastUntil=clock+seconds;}
-function pauseBattle(e){if(match?.online&&online?.role==='guest'){if(e?.type==='click'){pauseText(true);if(!$('pause-dialog').open)$('pause-dialog').showModal();}else{clearInput();onlineSend({type:'in',...packInput({},online.supers)});}return;}if(!match||screen!=='battle'||match.status==='finished'||match.status==='paused')return;previousStatus=match.status;match.status='paused';clearInput();sound.pause();if(match.online)onlineSend({type:'snap',snap:snapshot(match)});pauseText(false);if(!$('pause-dialog').open)$('pause-dialog').showModal();}
-// The friend's phone runs a two-phone battle, so the guest's pause cannot stop it: the dialog says so honestly.
+function pauseBattle(e){if(match?.online&&online?.role==='guest'){if(e?.type==='click'||e?.type==='keydown'){pauseText(true);if(!$('pause-dialog').open)$('pause-dialog').showModal();}else{clearInput();onlineSend({type:'in',...packInput({},online.supers)});}return;}if(!match||screen!=='battle'||match.status==='finished'||match.status==='paused')return;previousStatus=match.status;match.status='paused';clearInput();sound.pause();if(match.online)onlineSend({type:'snap',snap:snapshot(match)});pauseText(false);if(!$('pause-dialog').open)$('pause-dialog').showModal();}
+// The friend's phone runs a two-phone battle, so the guest's pause cannot stop it: the dialog says so honestly. When the host's
+// phone did stop the battle (its child paused, or this phone went quiet), the note says that instead, and changes back when it goes on.
 const PAUSE_TEXT={};
-function pauseText(guest){const d=$('pause-dialog'),h=d.querySelector('h2'),p=d.querySelector('p');if(!h||!p)return;PAUSE_TEXT.h??=h.textContent;PAUSE_TEXT.p??=p.textContent;h.textContent=guest?'הקרב ממשיך':PAUSE_TEXT.h;p.textContent=guest?'בקרב משני טלפונים אין עצירה: היצור שלכם עדיין בזירה. חוזרים מהר!':PAUSE_TEXT.p;}
+function pauseText(guest){const d=$('pause-dialog'),h=d.querySelector('h2'),p=d.querySelector('p');if(!h||!p)return;PAUSE_TEXT.h??=h.textContent;PAUSE_TEXT.p??=p.textContent;const held=guest&&match?.status==='paused';
+  const ht=!guest?PAUSE_TEXT.h:held?'הקרב עצור רגע':'הקרב ממשיך',pt=!guest?PAUSE_TEXT.p:held?'הטלפון של '+(online?.friend?.name||'החבר')+' עצר את הקרב. ממשיכים מאותה נקודה ביחד.':'בקרב משני טלפונים אין עצירה: היצור שלכם עדיין בזירה. חוזרים מהר!';
+  if(h.textContent!==ht)h.textContent=ht;if(p.textContent!==pt)p.textContent=pt;}
 function resumeBattle(){if(match?.online&&online?.role==='guest'){$('pause-dialog').close();return;}if(!match||match.status!=='paused'){if($('pause-dialog').open)$('pause-dialog').close();return;}$('pause-dialog').close();match.status=previousStatus;clearInput();accumulator=0;sound.resume();$('arena').focus({preventScroll:true});}
-function leaveBattle(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());slows=[];sound.setMusicRate?.(1);
+function leaveBattle(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());slows=[];sound.setMusicRate?.(1);if(mode==='wonder'&&!match?.online){match=null;showView('lobby');return;}
   // A two-phone battle (running, or just over) always leads back to the room while the friend is still linked.
   if(match?.online||!match&&mode==='online'&&online){if(match?.online&&match.status!=='finished')onlineSend({type:'abort'});match=null;showView('online');return;}match=null;showView(mode==='versus'||mode==='coop'?'versus':mode==='tower'?'tower':mode==='league'?'league':mode==='story'?'story':mode==='quick'?'lobby':mode==='wild'?(wildTarget&&!isUnlocked(profile,wildTarget)?'wild':'lobby'):journeyView(profile));}
 function onFinish(){
@@ -593,15 +734,18 @@ function onFinish(){
   const storyResult=mode==='story'?recordStory(profile,match):null;if(storyResult&&!storyResult.replay)storyEvent=storyResult;
   const hero=match.actors[0].id,winsBefore=profile.creatures[hero]?.wins||0,xpBefore=profile.creatures[hero]?.xp||0,wildId=storyResult?.released||match.wild,wasLocked=!!storyResult?.released||(wildId&&!isUnlocked(profile,wildId));
   const levelBefore=creatureLevel(profile,hero),formBefore=formOn(hero),leagueResult=mode==='league'?recordLeague(profile,match):null,towerResult=mode==='tower'?recordTower(profile,match):null;
-  recordResult(profile,match,mode);const wonder=rules.recordWonder?.(profile,match)||null;rules.recordFormUse?.(profile,match);persist();
-  refreshTodayGoals();const daily=progressDaily(profile,{win:match.winner===0,creature:hero,supers:match.actors[0].stats.specials,mode,towerCleared:!!towerResult?.won,storyStep:!!(storyResult&&!storyResult.replay),replayStars:storyResult?.replay?storyResult.stars:0});persist();clearInput();
+  recordResult(profile,match,mode);const wonder=rules.recordWonder?.(profile,match)||null;rules.recordFormUse?.(profile,match);
+  // A copied super fired with a creature fills its mix page (a new mix gives a spark); the Wonder of the Day and a pair race that built the bridge of light are remembered.
+  const mixes=rules.recordMixes?.(profile,match)||[],mixFirst=!!mixes.length&&Object.values(profile.mixes||{}).reduce((n,l)=>n+(l?.length||0),0)===mixes.length;if(mode==='wonder')rules.recordWonderDay?.(profile);if(mode==='story')rules.recordTracks?.(profile,match);persist();
+  refreshTodayGoals();const me0=match.actors[0],daily=progressDaily(profile,{win:match.winner===0,creature:hero,supers:me0.stats.specials,mode,towerCleared:!!towerResult?.won,storyStep:!!(storyResult&&!storyResult.replay),replayStars:storyResult?.replay?storyResult.stars:0,formUsed:!!me0.formUsed,newWonder:!!wonder?.first,copied:me0.stats.copies||0,wonderDay:mode==='wonder'});persist();clearInput();
   const winsAfter=profile.creatures[hero]?.wins||0,newSkin=SKINS.find(k=>k.wins>winsBefore&&k.wins<=winsAfter),released=wasLocked&&isUnlocked(profile,wildId),freed=released?CREATURES[wildId]:null;
   const p=match.actors[0],r=match.actors[1],rc=CREATURES[r.id],stats=resultStats(match),win=match.winner===0,draw=match.winner===-1;
   const challengeWin=mode==='challenge'&&win;
   const missionStep=match.story&&STEPS.find(s=>s.id===match.story&&s.kind==='mission');
   // The stamp says it in a word or two; the longer story of the battle waits behind the "?" button.
-  let stamp=match.mode&&win?(missionStep?'המשימה הושלמה!':'ניצחון!'):storyResult?.step.kind==='mirror'?'ניצחתם את הפחד!':storyResult?.lit&&!released?'האור נדלק!':freed?freed.name+byGender(freed,' השתחרר!',' השתחררה!'):finalWin?'הגביע שלכם!':challengeWin?'הזירה שלכם!':win?'ניצחון!':draw?'תיקו!':'כמעט!';
-  let sub=match.mode&&win?(storyResult?.stars?(storyResult.stars===3?'מושלם! שלושה כוכבים.':'רוצים שלושה כוכבים? אפשר לשחק שוב מהמפה.'):({wind:'החזקתם את הרוח עד הסוף!',lava:'שרדתם את טבעת הלבה!',ball:'איזה משחק! '+match.ball?.score.join(' : '),trio:'השלישייה שלכם ניצחה ביחד!',echo:'השלמתם את המנגינות!'})[match.mode]||'כל הכבוד!'):match.mode&&missionStep?(missionEased(profile,missionStep)?'בניסיון הבא יהיה קצת יותר קל. אתם יכולים!':MISSION_TIP[match.mode]||'עוד ניסיון אחד, ואתם שם!'):storyResult?.step.kind==='mirror'?'האור הלבן נדלק בשרשרת, והכוכב הזהוב מוביל לטירה.':mode==='story'&&!win?(draw?'כמעט! עוד ניסיון אחד.':'הצל הקטן מאמין בכם. מנסים שוב, אולי בדרך אחרת?'):freed&&storyResult?.lit?freed.name+byGender(freed,' השתחרר',' השתחררה')+', והאור '+islandOf(storyResult.lit).gemName+' נדלק בשרשרת!':freed?freed.name+byGender(freed,' מצטרף לנבחרת, והקלף שלו מחכה שתהפכו אותו!',' מצטרפת לנבחרת, והקלף שלה מחכה שתהפכו אותו!'):mode==='wild'?rc.name+' עדיין '+byGender(rc,'פראי','פראית')+'. '+(draw?'עוד ניסיון?':'כל ניסיון מלמד משהו חדש.'):finalWin?'זכיתם בגביע! נפתחה הזירה המתפוררת, והשילוב שלכם ממשיך איתכם.':challengeWin?'השלמתם את כל ארבעת האתגרים! התג נוסף להישגים שלכם.':win?(mode==='cup'?`השלמתם ${profile.cup.stage} מתוך 4 אתגרים. עכשיו בוחרים כוח, ואז ${CUP[profile.cup.stage].title} מול ${CREATURES[CUP[profile.cup.stage].rival].name}.`:'ניצחון באימון! עוד קרב, או ממשיכים במסע.'):draw?'אותו אחוז חיים נשאר לשני היצורים. מנסים שוב?':mode==='quick'?'לכל יריב יש נקודת חולשה. מנסים דרך אחרת?':'השלב והכוחות שלכם נשמרו. מנסים שוב בדרך אחרת?';
+  // A mission that frees its rival (Tzadon on his hill) celebrates the friend first, like a freeing fight.
+  let stamp=match.mode&&win&&!freed?(missionStep?'המשימה הושלמה!':'ניצחון!'):storyResult?.step.kind==='mirror'?'ניצחתם את הפחד!':storyResult?.lit&&!released?'האור נדלק!':freed?freed.name+byGender(freed,' השתחרר!',' השתחררה!'):finalWin?'הגביע שלכם!':challengeWin?'הזירה שלכם!':win?'ניצחון!':draw?'תיקו!':'כמעט!';
+  let sub=match.mode&&win&&!freed?(storyResult?.stars?(storyResult.stars===3?'מושלם! שלושה כוכבים.':'רוצים שלושה כוכבים? אפשר לשחק שוב מהמפה.'):({wind:'החזקתם את הרוח עד הסוף!',lava:'שרדתם את טבעת הלבה!',ball:'איזה משחק! '+match.ball?.score.join(' : '),trio:'השלישייה שלכם ניצחה ביחד!',echo:'השלמתם את המנגינות!'})[match.mode]||'כל הכבוד!'):match.mode&&missionStep&&!win?(missionEased(profile,missionStep)?'בניסיון הבא יהיה קצת יותר קל. אתם יכולים!':MISSION_TIP[match.mode]||'עוד ניסיון אחד, ואתם שם!'):storyResult?.step.kind==='mirror'?'האור הלבן נדלק בשרשרת, והכוכב הזהוב מוביל לטירה.':mode==='story'&&!win?(draw?'כמעט! עוד ניסיון אחד.':'הצל הקטן מאמין בכם. מנסים שוב, אולי בדרך אחרת?'):freed&&storyResult?.lit?freed.name+byGender(freed,' השתחרר',' השתחררה')+', והאור '+islandOf(storyResult.lit).gemName+' נדלק בשרשרת!':freed?freed.name+byGender(freed,' מצטרף לנבחרת, והקלף שלו מחכה שתהפכו אותו!',' מצטרפת לנבחרת, והקלף שלה מחכה שתהפכו אותו!'):mode==='wild'?rc.name+' עדיין '+byGender(rc,'פראי','פראית')+'. '+(draw?'עוד ניסיון?':'כל ניסיון מלמד משהו חדש.'):finalWin?'זכיתם בגביע! נפתחה הזירה המתפוררת, והשילוב שלכם ממשיך איתכם.':challengeWin?'השלמתם את כל ארבעת האתגרים! התג נוסף להישגים שלכם.':win?(mode==='wonder'?'ניצחון בפלא של היום! עוד קרב?':mode==='cup'?`השלמתם ${profile.cup.stage} מתוך 4 אתגרים. עכשיו בוחרים כוח, ואז ${CUP[profile.cup.stage].title} מול ${CREATURES[CUP[profile.cup.stage].rival].name}.`:'ניצחון באימון! עוד קרב, או ממשיכים במסע.'):draw?'אותו אחוז חיים נשאר לשני היצורים. מנסים שוב?':mode==='quick'||mode==='wonder'?'לכל יריב יש נקודת חולשה. מנסים דרך אחרת?':'השלב והכוחות שלכם נשמרו. מנסים שוב בדרך אחרת?';
   if(towerResult){stamp=towerResult.won?(match.tower.guard?'השומר הובס!':'קומה '+towerResult.cleared+'!'):'כמעט!';sub=towerResult.won?(towerResult.record?'שיא חדש במגדל!':'ממשיכים לטפס.')+(towerResult.pick?' עכשיו בוחרים כוח חדש לטיפוס.':''):towerResult.retry?'כוכב ההצלה שלכם נדלק: מנסים שוב את קומה '+towerResult.floor+'.':'הגעתם לקומה '+towerResult.floor+'. השיא שלכם: קומה '+towerResult.best+'.';}
   if(leagueResult){sub=leagueResult.rankUp?'עליתם לדרגת '+leagueResult.rankUp.name+'!':win?'עוד '+(nextPrizeAt(profile)-profile.league.best)+' גביעים לתיבה הבאה בדרך.':draw?'צמוד! הגביעים נשארו במקום.':leagueResult.delta?'הקרב הבא יהיה קצת יותר קל. אתם יכולים!':'עד '+LEAGUE_SAFE+' גביעים הפסד לא מוריד כלום.';}
   if(storyResult?.replay){stamp=storyResult.improved?'שיא חדש!':win?'ניצחון!':'כמעט!';if(win)sub=storyResult.stars===3?'שלושה כוכבים! מושלם.':storyResult.improved?'השיא החדש שלכם: '+storyResult.stars+' כוכבים.':'השיא שלכם: '+storyResult.best+' כוכבים. אפשר לנסות שוב.';}
@@ -609,9 +753,10 @@ function onFinish(){
   let tip=r.boss?(stats.weakHits>0?`ניצלתם את רגע ההתאוששות של סלעוז ${stats.weakHits} פעמים!`:bossAdvice):win?p.spec.tip:match.mirror?'הבבואה זזה כמוכם. הפתיעו אותה מהצד.':rivalAdvice[r.id]||'זוזו הצידה מהירי, ותקפו כשהיריב עוצר.';
   if(match.reason==='time')tip=match.ball?'הזמן נגמר: מי שהבקיע יותר גולים ניצח.':match.trio?'הזמן נגמר: מי שנשארו לו יותר יצורים ניצח.':'הזמן נגמר: הניצחון נקבע לפי אחוז החיים שנותר לכל יצור.';
   const starCount=win?(storyResult?.stars||(p.hp/p.spec.hp>=.5?3:p.hp/p.spec.hp>=.25?2:1)):0;
-  const kicker=`${mode==='cup'?'גביע החופים':mode==='challenge'?CHALLENGE.title:mode==='wild'?'קרב פרא':mode==='story'?(inChapter2(profile)?'פרק 2 · המפריד במסכה':'מסע השרשרת'):mode==='league'?'ליגת היצורים':mode==='tower'?'מגדל המסכה':'אימון · קרב בודד'} · ${LEVELS[match.level].name}`;
+  const kicker=`${mode==='cup'?'גביע החופים':mode==='challenge'?CHALLENGE.title:mode==='wild'?'קרב פרא':mode==='story'?(inChapter2(profile)?'פרק 2 · המפריד במסכה':'מסע השרשרת'):mode==='league'?'ליגת היצורים':mode==='tower'?'מגדל המסכה':mode==='wonder'?'הפלא של היום':'אימון · קרב בודד'} · ${LEVELS[match.level].name}`;
   sessionTick();if(typeof queueNext==='function')queueNext(mode);lastArena=match.arena||null;
-  const formNew=!formBefore&&formOn(hero);if(formNew)formWaiting=hero;
+  // A form unlocked now, or a new Lab design on its first battle: the ritual shows it.
+  const formNew=!formBefore&&formOn(hero),designNew=!formNew&&designFresh(hero);if(formNew||designNew)formWaiting=hero;
   // What the big button does. Story keeps its own targets: the card to flip, the map.
   const again=m=>()=>startBattle(m),toCampfire=()=>{match=null;showView('campfire');};
   let base;
@@ -621,23 +766,25 @@ function onFinish(){
   else if(challengeWin)base={label:'לצפייה בתג שלי',icon:'trophy',go:()=>{match=null;showView('records');}};
   else if(mode==='cup'&&win)base={label:'בוחרים כוח וממשיכים',icon:'arrow',go:()=>{match=null;showView('workshop');}};
   else if(towerResult&&!towerResult.retry&&!(towerResult.won&&!towerResult.pick))base={label:towerResult.pick?'בוחרים כוח':'טיפוס חדש',icon:'tower',go:()=>{match=null;showView('tower');}};
-  else base={label:['league','quick'].includes(mode)?'עוד קרב!':towerResult?.won?'לקומה '+(profile.tower.run?.floor||'')+'!':draw?'קרב הכרעה':'מנסים שוב!',icon:'play',battle:true,next:['league','quick','tower'].includes(mode),go:again(mode)};
+  else base={label:['league','quick','wonder'].includes(mode)?'עוד קרב!':towerResult?.won?'לקומה '+(profile.tower.run?.floor||'')+'!':draw?'קרב הכרעה':'מנסים שוב!',icon:'play',battle:true,next:['league','quick','tower','wonder'].includes(mode),go:again(mode)};
   let primary=base,secondary=mode==='league'?{label:'דרך הגביעים',go:()=>{match=null;showView('league');}}:towerResult&&base.battle?{label:'למגדל',go:()=>{match=null;showView('tower');}}:mode==='quick'&&win&&currentStep(profile)?{label:'ממשיכים במסע',go:()=>{match=null;goStory();}}:mode==='story'&&!storyResult?{label:inChapter2(profile)?'למפה':'למפת השרשרת',go:()=>{match=null;showView('story');}}:null;
   // After about ten battles or twenty-five minutes the big button is the campfire; one more battle is still a small button.
   const rest=campfireDue();
   if(rest&&primary.battle){secondary={label:primary.label.replace('!',''),battle:true,go:primary.go};primary={label:'מנוחה ליד המדורה',icon:'campfire',go:toCampfire};}
   let pv=primary.next&&typeof nextPreview==='function'?nextPreview():null;
-  // A form unlocked in this battle: the big button opens the ritual first. A next battle (or the campfire) never starts from the ritual:
-  // the result comes back with its calm big button and the next rival's face.
-  if(formNew&&!released){const later={primary,secondary,preview:pv&&pv.mode===mode?pv:null,homeCampfire:rest&&!primary.battle&&primary.go!==toCampfire},back=primary.battle||primary.go===toCampfire?()=>resultAgain(later):primary.go;
-    primary={label:'צורת־עוצמה חדשה!',icon:'crown',form:true,go:()=>openRitual(hero,{back})};pv=null;}
-  const team=!rest&&!released&&!match.trio&&(['league','quick','wild'].includes(mode)||mode==='story'&&!storyResult)?mostPlayed(profile.creatures,Object.keys(CREATURES).filter(id=>isUnlocked(profile,id)),hero,5):[];
+  // A form unlocked in this battle: the big button opens the ritual first; a new mix turns its card over next. A next battle
+  // (or the campfire) never starts from either: the result comes back with its calm big button and the next rival's face.
+  if((formNew||designNew||mixes.length)&&!released){const later={primary,secondary,preview:pv&&pv.mode===mode?pv:null,homeCampfire:rest&&!primary.battle&&primary.go!==toCampfire};let back=primary.battle||primary.go===toCampfire?()=>resultAgain(later):primary.go;
+    if(mixes.length){const after=back;back=()=>openMixReveal(mixes,{back:after,first:mixFirst});primary={label:'שילוב חדש!',icon:'mix',form:true,go:back};}
+    if(formNew||designNew)primary={label:'צורת־עוצמה חדשה!',icon:'crown',form:true,go:()=>openRitual(hero,{back})};pv=null;}
+  const team=!rest&&!released&&!match.trio&&(['league','quick','wild','wonder'].includes(mode)||mode==='story'&&!storyResult)?mostPlayed(profile.creatures,Object.keys(CREATURES).filter(id=>isUnlocked(profile,id)),hero,5):[];
   // Chips: what moved in this battle, in pictures.
   const chips=[];
   if(leagueResult){const d=leagueResult.delta;chips.push(`<div class="rchip league${d>0?' up':d<0?' down':''}">${rankBadge(leagueResult.rank)}<b dir="ltr" data-count="${d}">${d>0?'+':d<0?'−':''}${Math.abs(d)}</b>${icon('trophy')}${leagueResult.rankUp?`<em>${esc(leagueResult.rankUp.name)}!</em>`:''}</div>`);}
   if(towerResult)chips.push(`<div class="rchip tower"><span class="tower-badge">${icon('tower')}</span><b>${towerResult.won?'קומה '+towerResult.cleared+' ✓':towerResult.retry?'כוכב הצלה':'קומה '+towerResult.floor}</b>${towerResult.record?'<em>שיא!</em>':''}</div>`);
-  if(match.ball||match.trio){const s=match.ball?match.ball.score:[trioLeft(match,0)+'/3',trioLeft(match,1)+'/3'];chips.push(`<div class="rchip score"><b>${s[0]} : ${s[1]}</b></div>`);}
+  if(match.ball||match.trio||match.hill||match.race){const s=match.ball?match.ball.score:match.hill?(match.hill.points||[0,0]).map(Math.floor):match.race?[Math.min(5,match.race.at|0)+'/5',Math.min(5,match.race.rival|0)+'/5']:[trioLeft(match,0)+'/3',trioLeft(match,1)+'/3'];chips.push(`<div class="rchip score"><b>${s[0]} : ${s[1]}</b></div>`);}
   chips.push(xpChip(hero,xpBefore,levelBefore,formBefore));
+  for(const x of mixes.slice(0,2))chips.push(`<div class="rchip mix" style="--c:${CREATURES[x.id]?.color||'#ffd23a'};--k:${CREATURES[x.kind]?.color||'#ffd23a'}">${icon('mix')}<b>${esc(x.name)}</b></div>`);
   if(newSkin)chips.push(`<div class="rchip unlock" style="--c:${p.spec.color}"><span class="skin-swatch skin-${newSkin.id}"></span><b>${esc(newSkin.name)}</b><button class="button secondary" id="result-wear" type="button">ללבוש!</button></div>`);
   if(wonder){const w=rules.wonderById?.(wonder.id)||wonderList().find(x=>x.id===wonder.id)||{id:wonder.id,name:'',icon:'sparkle'};chips.push(`<div class="rchip wonder${wonder.first?' first':''}" style="--w:${w.color||'#ffd23a'}" title="${esc(w.name)}"><span class="wonder-fly">${stickerArt(w)}</span><span class="rchip-book">${icon('book')}</span><b dir="ltr">${wonder.first?'+1':'×'+wonder.count}</b></div>`);}
   if(daily.bonus||daily.moved.some(g=>g.done))chips.push(`<div class="rchip goals">${icon('target')}<span class="goals-dots">${profile.daily.goals.map(g=>`<i class="${g.done?'on':''}"></i>`).join('')}</span>${daily.bonus?chestHTML('gold',{mini:true}):''}</div>`);
@@ -647,7 +794,7 @@ function onFinish(){
   const sparksHTML=`<span class="rs-label">${gained?`<b dir="ltr">+${gained}</b> ${sparkWord(gained)}`:''}</span><span class="spark-meter big">${sparkMeter(sparkStart%SPARKS_PER_BOX)}</span><span class="rs-chest">${chestHTML(profile.box.pending?'gold':boxTier(profile.box.opened),{mini:true})}<b class="rs-new" dir="ltr">+${newBoxes}</b></span>${waiting&&!released?`<button class="button secondary rs-open" id="result-box-open" type="button">פותחים!${waiting>1?`<small>${waiting}</small>`:''}</button>`:''}`;
   resultLayout({hero,skin:skinOf(profile,hero),win,stamp,kicker,stars:starCount,chips,sparksHTML,steps:sparkSteps(sparkStart,sparkStart+gained,SPARKS_PER_BOX),newBoxes,newSkin,mode,
     content:`<p class="result-sub">${esc(sub)}</p>${tip?`<p class="result-tip">${esc(tip)}</p>`:''}`,primary,secondary,team,homeCampfire:rest&&!primary.battle&&primary.go!==toCampfire,preview:pv&&pv.mode===mode?pv:null});
-  showResult(match,{voice:win?'voice-victory':null});
+  showResult(match,{voice:win?'voice-victory':match.winner===1?'voice-announcer-almost':null});
 }
 // ------------------------------------------------------------------ the league and creature levels
 const rankBadge=(rank,{big=false}={})=>`<span class="rank-shield${big?' big':''}" style="--r:${rank.color}">${icon('trophy')}</span>`;
@@ -665,7 +812,7 @@ function renderLeague(){
   $('league-road').innerHTML=stops.map(t=>{const r=RANKS.find(k=>k.at===t),got=L.best>=t,isNext=t===next;return `<li class="road-stop${got?' got':''}${isNext?' next':''}">${r?rankBadge(r):chestHTML(got?'wood':isNext?'silver':'wood',{mini:true})}<b>${t}</b><small>${got?'✓':r?'דרגת '+r.name:isNext?'הבאה':''}</small></li>`;}).join('');
   const ids=Object.keys(CREATURES).filter(id=>isUnlocked(profile,id));if(!ids.includes(profile.selected))profile.selected='maimi';
   $('league-fighters').innerHTML=ids.map(f=>`<button class="fighter-chip${f===profile.selected?' chosen':''}" data-league-fighter="${f}" aria-pressed="${f===profile.selected}" style="--c:${CREATURES[f].color}"><canvas id="lchip-${f}" aria-hidden="true"></canvas><b>${CREATURES[f].name}</b><small class="chip-level">רמה ${creatureLevel(profile,f)}</small></button>`).join('');
-  for(const f of ids)livePortrait('lchip-'+f,f,{skin:skinOf(profile,f)});
+  for(const f of ids)livePortrait('lchip-'+f,f,{skin:skinOf(profile,f),hats:hatsFor(f)});
   document.querySelectorAll('[data-league-fighter]').forEach(el=>el.onclick=()=>{profile.selected=el.dataset.leagueFighter;persist();sound.click();renderLeague();});
 }
 // ------------------------------------------------------------------ the result: a four-second show, then one calm tap
@@ -696,20 +843,20 @@ function resultLayout(R){
   if(!plain){
     const img=$('result-stamp').querySelector('img'),src=fxSrc('stamp');img.hidden=!src;if(src)img.src=src;$('result-stamp').classList.toggle('painted',!!src);
     $('result-stamp-text').textContent=R.stamp;$('result-stamp').classList.toggle('long',R.stamp.length>11);
-    livePortrait('result-portrait',R.hero,{skin:R.skin,clip:R.win?'attack':'idle'});
+    livePortrait('result-portrait',R.hero,{skin:R.skin,clip:R.win?'attack':'idle',hats:hatsFor(R.hero)});
     $('result-stars').hidden=!R.stars;$('result-stars').innerHTML=Array.from({length:3},(_,i)=>`<span class="${i<R.stars?'earned':''}">${icon('star')}</span>`).join('');
     $('result-kicker').textContent=R.kicker;$('result-chips').innerHTML=R.chips.filter(Boolean).join('');$('result-sparks').innerHTML=R.sparksHTML||'';$('result-sparks').hidden=!R.sparksHTML;
     $('result-content').innerHTML=R.content;
     $('result-box-open')?.addEventListener('click',()=>{$('result-dialog').close();match=null;sound.click();showView('boxes');});
-    $('result-wear')?.addEventListener('click',e=>{if(!chooseSkin(profile,R.hero,R.newSkin.id))return;persist();sound.click();stage.run.skin=R.newSkin.id;e.currentTarget.outerHTML='<span class="worn">✓</span>';livePortrait('result-portrait',R.hero,{skin:R.newSkin.id});});
+    $('result-wear')?.addEventListener('click',e=>{if(!chooseSkin(profile,R.hero,R.newSkin.id))return;persist();sound.click();stage.run.skin=R.newSkin.id;e.currentTarget.outerHTML='<span class="worn">✓</span>';livePortrait('result-portrait',R.hero,{skin:R.newSkin.id,hats:hatsFor(R.hero)});});
   }
   const P=$('result-primary'),A=R.primary;P.className='button primary full result-primary'+(R.preview?' with-next':'')+(A.form?' form-new':'');
-  P.innerHTML=R.preview?`<span class="next-face"><img src="${arenaPicture(R.preview.arena)}" alt=""><canvas id="result-next" aria-hidden="true"></canvas></span><b>${esc(A.label)}</b>`:`${A.icon?icon(A.icon):''}<b>${esc(A.label)}</b>`;
+  P.innerHTML=R.preview?`<span class="next-face"><img src="${arenaPicture(R.preview.arena)}" alt="" onerror="this.onerror=null;this.src='${arenaFallback(R.preview.arena)}'"><canvas id="result-next" aria-hidden="true"></canvas></span><b>${esc(A.label)}</b>`:`${A.icon?icon(A.icon):''}<b>${esc(A.label)}</b>`;
   if(R.preview)livePortrait('result-next',R.preview.rival,{still:true});
   const S=$('result-secondary');S.hidden=!R.secondary;S.onclick=null;if(R.secondary){S.textContent=R.secondary.label;S.className='button secondary full'+(R.secondary.battle?' again':'');}
   const T=$('result-team'),team=plain?[]:R.team||[];T.hidden=!team.length;
   T.innerHTML=team.map(id=>`<button type="button" class="result-pick${id===R.hero?' chosen':''}" data-result-pick="${id}" style="--c:${CREATURES[id].color}" aria-label="עוד קרב עם ${CREATURES[id].name}"><canvas id="result-pick-${id}" aria-hidden="true"></canvas></button>`).join('');
-  for(const id of team)livePortrait('result-pick-'+id,id,{skin:skinOf(profile,id),still:true});
+  for(const id of team)livePortrait('result-pick-'+id,id,{skin:skinOf(profile,id),still:true,hats:hatsFor(id)});
   $('result-home').hidden=plain;$('result-home').innerHTML=icon(R.homeCampfire?'campfire':'home');$('result-home').setAttribute('aria-label',R.homeCampfire?'מנוחה ליד המדורה':'הביתה');$('result-tip').hidden=plain;$('result-tip').setAttribute('aria-expanded','false');
   d.querySelector('.result-actions').inert=!plain;
   stage.run={...R,actionsShown:false};
@@ -736,7 +883,7 @@ function runBeats(){
   const at=(ms,f)=>stage.timers.push(setTimeout(f,ms));
   d.classList.add('b1');ding('stamp');
   $('result-stars').querySelectorAll('span.earned').forEach((s,i)=>at(380+i*300,()=>{s.classList.add('on');ding('star',i);}));
-  if(R.win)at(1000,()=>livePortrait('result-portrait',R.hero,{skin:R.skin}));
+  if(R.win)at(1000,()=>livePortrait('result-portrait',R.hero,{skin:R.skin,hats:hatsFor(R.hero)}));
   at(BEAT[1],()=>{d.classList.add('b2');countUp();});
   at(BEAT[2],()=>{d.classList.add('b3');R.steps.forEach((s,i)=>at(i*230,()=>sparkTo(s,i)));at(R.steps.length*230+420,()=>{document.querySelectorAll('#result-sparks .spark-meter i').forEach((e,j)=>e.classList.toggle('on',j<profile.box.sparks));if(R.newBoxes)document.querySelector('#result-sparks .rs-chest')?.classList.add('got');});});
   at(Math.max(BEAT[3],BEAT[2]+R.steps.length*230+450),showActions);
@@ -760,12 +907,12 @@ function finishBeats(){
   document.querySelectorAll('#result-chips [data-count]').forEach(b=>{const n=+b.dataset.count;b.textContent=(n>0?'+':n<0?'−':'')+Math.abs(n);});
   document.querySelectorAll('#result-sparks .spark-meter i').forEach((e,j)=>e.classList.toggle('on',j<profile.box.sparks));
   if(R.newBoxes)document.querySelector('#result-sparks .rs-chest')?.classList.add('got');
-  livePortrait('result-portrait',R.hero,{skin:R.skin});showActions();
+  livePortrait('result-portrait',R.hero,{skin:R.skin,hats:hatsFor(R.hero)});showActions();
 }
 function showActions(){
   const R=stage.run,d=$('result-dialog');if(!R||R.actionsShown)return;R.actionsShown=true;d.classList.add('b4');d.querySelector('.result-actions').inert=false;
   const close=f=>()=>{d.close();f();};
-  armPrimary($('result-primary'),close(R.primary.go));
+  armPrimary($('result-primary'),close(R.primary.go),{wait:R.primary.wait||null});
   if(R.secondary){if(R.secondary.battle)armPrimary($('result-secondary'),close(R.secondary.go));else $('result-secondary').onclick=close(()=>{sound.click();R.secondary.go();});}
   document.querySelectorAll('[data-result-pick]').forEach(el=>armPrimary(el,close(()=>{profile.selected=el.dataset.resultPick;persist();startBattle(R.mode);})));
   $('result-home').onclick=close(()=>{match=null;sound.click();showView(R.homeCampfire?'campfire':'lobby');});
@@ -784,17 +931,17 @@ function trackInput(){
   window.addEventListener('keyup',e=>lift('k'+e.code),true);
   window.addEventListener('blur',()=>held.clear());document.addEventListener('visibilitychange',()=>{if(document.hidden)held.clear();});
 }
-function armPrimary(btn,go){
-  btn._arm={shownAt:performance.now(),go,awake:false};btn._press=null;btn.classList.add('sleep');btn.classList.remove('awake');btn.setAttribute('aria-disabled','true');armed.add(btn);
+function armPrimary(btn,go,{wait=null}={}){
+  btn._arm={shownAt:performance.now(),go,awake:false,wait};btn._press=null;btn.classList.add('sleep');btn.classList.remove('awake');btn.setAttribute('aria-disabled','true');armed.add(btn);
   btn.onpointerdown=e=>{const now=performance.now(),others=[...held.keys()].filter(k=>k!=='p'+e.pointerId).length;btn._press={at:now,ok:!!btn._arm&&pressWakes({at:now,shownAt:btn._arm.shownAt,lastUp:lastLift,held:others})};};
   btn.onclick=e=>{const a=btn._arm;if(!a)return;const ok=e.detail===0?a.awake:!!btn._press?.ok&&performance.now()-btn._press.at<3000;btn._press=null;
-    if(!ok){btn.classList.remove('nudge');void btn.offsetWidth;btn.classList.add('nudge');return;}
+    if(!ok||a.wait&&!a.wait()){btn.classList.remove('nudge');void btn.offsetWidth;btn.classList.add('nudge');return;}
     disarm();a.go();};
   if(!armTimer)armTimer=setInterval(armWatch,100);
 }
 function armWatch(){
   let woke=false;const now=performance.now();
-  for(const b of armed){if(!b.isConnected||!b.closest('dialog[open]')||!b._arm){armed.delete(b);continue;}const a=b._arm;if(a.awake)continue;
+  for(const b of armed){if(!b.isConnected||!b.closest('dialog[open]')||!b._arm){armed.delete(b);continue;}const a=b._arm;if(a.awake||a.wait&&!a.wait())continue;
     if(pressWakes({at:now,shownAt:a.shownAt,lastUp:lastLift,held:held.size})){a.awake=true;b.classList.remove('sleep');b.classList.add('awake');b.removeAttribute('aria-disabled');woke=true;}}
   if(woke)ding('ready');
   if(!armed.size){clearInterval(armTimer);armTimer=0;}
@@ -806,7 +953,7 @@ function dialogPortraits(){
   if(dialogLoop||typeof timeScale==='function')return;let last=null;
   const tick=now=>{dialogLoop=0;if(screen!=='battle'||!document.querySelector('dialog[open]'))return;const dt=last==null?0:Math.max(0,Math.min(.1,(now-last)/1000));last=now;
     for(const [canvasId,entry] of portraits){const el=$(canvasId),o=entry.opts;if(!el||!el.closest('dialog[open]'))continue;if(o.still){if(now-(entry.drawn||0)<250)continue;entry.drawn=now;}
-      drawPortrait(el,entry.puppet,entry.id,clock,dt*(o.speed??1),{active:true,skin:o.skin||null,form:!!o.form,clip:o.clip||'idle',glowColor:o.glowColor||null});}
+      drawPortrait(el,entry.puppet,entry.id,clock,dt*(o.speed??1),{active:true,skin:o.skin||null,form:!!o.form,clip:o.clip||'idle',glowColor:o.glowColor||null,hats:o.hats||null,lab:o.lab||null});}
     dialogLoop=requestAnimationFrame(tick);};
   dialogLoop=requestAnimationFrame(tick);
 }
@@ -820,14 +967,84 @@ function sessionTick(){const s=sessionAfterBattle(readSession(),Date.now());writ
 function campfireDue(){return campfireReady(readSession(),Date.now());}
 function renderCampfire(){
   const id=isUnlocked(profile,profile.selected)?profile.selected:'maimi';
-  $('campfire-arena').src=arenaPicture(lastArena||'wind');livePortrait('campfire-portrait',id,{skin:skinOf(profile,id),speed:.5});
+  $('campfire-arena').onerror=()=>{$('campfire-arena').onerror=null;$('campfire-arena').src=arenaFallback(lastArena);};$('campfire-arena').src=arenaPicture(lastArena||'wind');livePortrait('campfire-portrait',id,{skin:skinOf(profile,id),speed:.5,hats:hatsFor(id)});
   say('campfire-guide','איזה יום! עכשיו כולם נחים ליד המדורה.',{voice:'voice-shadow-hello'});
   sound.setScene('campfire');sound.sting?.('sting-campfire',{delay:.2});writeSession(sessionRested(Date.now()));
 }
+// No battle yet in this session (the wave-1 session rules): the announcer counts 3-2-1 only then.
+function sessionFresh(){return freshSession(readSession(),Date.now());}
+// ------------------------------------------------------------------ Ron's welcome hat box: once ever, after the update
+// Three taps open the box, three hats come out (two common, one rare), one is chosen and worn at once. Closed without a
+// choice, the same three wait for the next visit to the island.
+let hatbox=null;
+// It waits for the child's first tap of the visit: that tap turns a phone to full screen, which would cover a window opened before it.
+let firstClick=false;
+function maybeWelcome(){if(rules.welcomeDue?.(profile)&&!$('hatbox-dialog').open&&(firstClick||!matchMedia('(pointer:coarse)').matches))openWelcomeBox();}
+function openWelcomeBox(){
+  if(!rules.welcomeOffer||!rules.chooseWelcomeHat||!profile.hats)return false;const offer=rules.welcomeOffer(profile);persist();if(!offer.length)return false;
+  hatbox={taps:0,offer,chosen:null};renderHatbox();const d=$('hatbox-dialog');if(!d.open)d.showModal();sound.unlock?.();return true;}
+function renderHatbox(){
+  const H=hatbox,d=$('hatbox-dialog');if(!H)return;const opened=H.taps>=3,id=isUnlocked(profile,profile.selected)?profile.selected:'maimi',c=CREATURES[id];
+  d.classList.toggle('opened',opened);d.classList.toggle('chosen',!!H.chosen);
+  $('hatbox-title').textContent=H.chosen?hatName(H.chosen)+'!':opened?'בוחרים כובע אחד':'מתנה מרון!';
+  $('hatbox-line').textContent=H.chosen?'כבר על '+c.name+'! אפשר להחליף כובע בכל קלף, ועוד כובעים מחכים בתיבות הכוכב.':opened?'אחד מהם שלכם!':['הבאתי לכם תיבה. הקישו עליה!','עוד פעמיים!','עוד פעם אחת!'][H.taps];
+  $('hatbox-chest').hidden=opened;$('hatbox-chest').dataset.tier=['wood','silver','gold'][Math.min(2,H.taps)];
+  $('hatbox-hats').hidden=!opened||!!H.chosen;$('hatbox-hats').innerHTML=opened&&!H.chosen?H.offer.map((h,i)=>`<button type="button" class="hatbox-hat tier-${rules.hatById?.(h)?.tier||'common'}" data-hatbox="${h}" style="--i:${i}">${hatPic(h)}<b>${esc(hatName(h))}</b></button>`).join(''):'';
+  $('hatbox-worn').hidden=!H.chosen;$('hatbox-done').hidden=!H.chosen;
+  if(H.chosen)livePortrait('hatbox-portrait',id,{skin:skinOf(profile,id),hats:hatsFor(id),clip:'attack'});
+  d.querySelectorAll('[data-hatbox]').forEach(b=>armCard(b,()=>{if(!hatbox||hatbox.chosen||!rules.chooseWelcomeHat(profile,b.dataset.hatbox))return;hatbox.chosen=b.dataset.hatbox;persist();if(sound.hat)sound.hat(true);else sound.click();renderHatbox();if(screen==='lobby'){buildRoster();refreshSelection();renderHome();}}));
+}
+function tapHatbox(){const H=hatbox;if(!H||H.taps>=3)return;H.taps++;const chest=$('hatbox-chest');chest.classList.remove('shake');void chest.offsetWidth;chest.classList.add('shake');
+  sound.tone?.(260+H.taps*150,.22,'triangle',.12,120);if(H.taps>=3){chest.classList.add('open');sound.play?.('sfx-join-fanfare',{volume:.8});setTimeout(()=>{chest.classList.remove('open');renderHatbox();},450);}else renderHatbox();}
+// ------------------------------------------------------------------ comeback cards: the loser of a round picks one of three
+// Same screen: each child has a half. The loser's half shows three cards face down, the winner's half one card back.
+// A calm tap turns one over (a picture and two words); a moment later the next round starts with it.
+let ccard=null,onlineLastCard=null;
+const CARD_FACE_ICON={super:'bolt',crystal:'sparkle',decoy:'pair',speed:'arrow',heart:'heart'};
+const ccardBack=()=>`<span class="ccard-back">${picOver('./art/gen/fx-card-back-blue.png','star','ccard-pic')}</span>`;
+const ccardFace=id=>`<span class="ccard-face">${picOver('./art/gen/fx-ccard-'+id+'.png',CARD_FACE_ICON[id]||'star','ccard-pic')}<b>${esc(rules.CCARD_WORDS?.[id]||'')}</b></span>`;
+const ccardButtons=deal=>deal.map((id,i)=>`<button type="button" class="ccard" data-ccard="${i}" aria-label="קלף ${i+1}"><span class="ccard-inner">${ccardBack()}${ccardFace(id)}</span></button>`).join('');
+// A choice a thumb still pressing from the battle must not take: the same calm-press rule as the big button.
+function armCard(btn,go){const shownAt=performance.now();btn.onpointerdown=e=>{btn._ok=pressWakes({at:performance.now(),shownAt,lastUp:lastLift,held:[...held.keys()].filter(k=>k!=='p'+e.pointerId).length});};
+  btn.onclick=e=>{const now=performance.now(),ok=e.detail===0?pressWakes({at:now,shownAt}):!!btn._ok;btn._ok=false;if(!ok){btn.classList.remove('nudge');void btn.offsetWidth;btn.classList.add('nudge');return;}go();};}
+function turnCard(row,i){row.querySelectorAll('[data-ccard]').forEach((b,j)=>{b.disabled=true;b.classList.toggle('picked',j===i);b.classList.toggle('dropped',j!==i);});row.querySelector(`[data-ccard="${i}"]`)?.classList.add('flipped');if(sound.cardFlip)sound.cardFlip();else sound.play?.('sfx-card-flip');}
+function openComebackCards(loser,{onDone=null}={}){
+  const deal=rules.dealComebackCards?.(Math.random,versus.cardsUsed||[])||[];if(!deal.length||!(loser===0||loser===1)){onDone?.();return false;}
+  ccard={loser,deal,picked:null,onDone};const d=$('ccard-dialog');
+  [0,1].forEach(side=>{const half=d.querySelector('.ccard-half.p'+(side+1)),c=CREATURES[versus.ids[side]]||CREATURES.maimi;half.classList.toggle('picks',side===loser);
+    half.innerHTML=`<div class="ccard-who" style="--c:${c.color}"><b></b><small>${c.name}</small></div><div class="ccard-row">${side===loser?ccardButtons(deal):`<span class="ccard idle"><span class="ccard-inner">${ccardBack()}</span></span>`}</div><p class="ccard-hint">${side===loser?'בוחרים קלף!':'מחכים…'}</p>`;
+    half.querySelector('.ccard-who b').textContent=vsName(side);});
+  d.querySelectorAll('[data-ccard]').forEach(b=>armCard(b,()=>pickComebackCard(+b.dataset.ccard)));
+  if(!d.open)d.showModal();sound.unlock?.();return true;}
+function pickComebackCard(i){const C=ccard,d=$('ccard-dialog');if(!C||C.picked!=null||!C.deal[i])return;C.picked=i;const id=C.deal[i];
+  versus.card={side:C.loser,id};versus.cardsUsed=[...(versus.cardsUsed||[]),id];turnCard(d.querySelector('.ccard-half.picks'),i);
+  setTimeout(()=>{if(ccard!==C)return;ccard=null;d.close();C.onDone?.();},1200);}
+// ------------------------------------------------------------------ a new mix: its card turns over after the battle
+// Two creatures and the mix's name, and its spark. The first mix ever carries the Little Shadow's 'you listened so well'.
+let mixReveal=null;
+function openMixReveal(mixes,{back=null,first=false}={}){
+  const list=(mixes||[]).filter(x=>x&&CREATURES[x.id]&&CREATURES[x.kind]);if(!list.length){if(typeof back==='function')back();return false;}
+  const [m,...rest]=list,a=CREATURES[m.id],k=CREATURES[m.kind],d=$('reveal-dialog');mixReveal={back};
+  d.style.setProperty('--c',a.color);$('reveal-flip').classList.remove('flipped');d.classList.remove('burst','ritual','ritual-done','holding','one-thumb');d.classList.add('mix');ritual=null;$('ritual-skip').hidden=true;
+  $('reveal-back').innerHTML=cardBack(m.id,{label:'שילוב חדש'});
+  $('reveal-front').innerHTML=`<article class="tcard mix-card big" style="--c:${a.color};--d:${a.dark};--k:${k.color}"><header><span class="tcard-num">${icon('mix')}</span><span class="tcard-el">${a.element} + ${k.element}</span></header><div class="tcard-art mix-art"><canvas id="mix-a" aria-hidden="true"></canvas><span class="mix-plus" aria-hidden="true">+</span><canvas id="mix-b" aria-hidden="true"></canvas></div><div class="tcard-title"><h3>${esc(m.name)}</h3><small>${a.name} + ${k.name}</small></div><div class="tcard-special">${icon(k.specialIcon)}<b>${k.special}</b></div><footer><span class="mix-spark"><i></i><b dir="ltr">+1</b></span><span>שילוב</span></footer></article>`;
+  livePortrait('mix-a',m.id,{skin:skinOf(profile,m.id),hats:hatsFor(m.id),clip:'attack'});livePortrait('mix-b',m.kind,{});
+  $('reveal-kicker').textContent='שילוב חדש!';$('reveal-title').textContent='';$('reveal-text').textContent='';
+  const go=f=>()=>{mixReveal=null;d.classList.remove('mix');$('reveal-secondary').textContent='לאלבום הקלפים';d.close();f();};
+  $('reveal-primary').textContent=rest.length?'לשילוב הבא':'ממשיכים';$('reveal-primary').onclick=go(()=>{if(rest.length)openMixReveal(rest,{back});else if(typeof back==='function')back();});
+  $('reveal-secondary').textContent='לספר השילובים';$('reveal-secondary').onclick=go(()=>{match=null;albumTab='mixes';mixPage=m.id;showView('cards');});
+  if(!d.open)d.showModal();sound.unlock?.();
+  setTimeout(()=>{if(mixReveal?.back!==back||!d.open)return;$('reveal-flip').classList.add('flipped');d.classList.add('burst');if(sound.mixFanfare){sound.play?.('sfx-card-flip');sound.mixFanfare();}else sound.reveal?.(false);$('reveal-title').textContent=m.name+'!';$('reveal-text').textContent=first&&tale.SHADOW_LINES?.copy?tale.SHADOW_LINES.copy:a.name+byGender(a,' השתמש',' השתמשה')+' בכוח של '+k.name+'.';},650);
+  return true;}
+// ------------------------------------------------------------------ the Wonder of the Day: a home tile, no timer, nothing lost by skipping a day
+function renderWonderStrip(){const el=$('home-wonder');if(!el)return;const on=!!rules.wonderOfDay&&(profile.played||0)>=3;el.hidden=!on;if(!on)return;
+  const W=rules.wonderOfDay(profile,players.active);if(W.changed)persist();const w=rules.wonderById?.(W.id)||wonderList().find(x=>x.id===W.id);
+  $('home-wonder-pic').innerHTML=w?`<span class="wonder-pic${W.fresh?' unseen':''}" style="--w:${w.color||'#ffd23a'}">${stickerArt(w)}${W.fresh?'<b class="wonder-q" aria-hidden="true">?</b>':''}</span>`:icon('sparkle');
+  el.setAttribute('aria-label','הפלא של היום'+(w&&!W.fresh?': '+w.name:''));el.classList.toggle('fresh',!!W.fresh);}
 // ------------------------------------------------------------------ meta controls, bound once
 let metaBound=false;
 function metaInit(){
-  if(metaBound)return;metaBound=true;trackInput();
+  if(metaBound)return;metaBound=true;trackInput();window.addEventListener('click',()=>{firstClick=true;setTimeout(()=>{if(screen==='lobby'&&!document.querySelector('dialog[open]'))maybeWelcome();},1000);},{capture:true,once:true});
   // Screens that fill a sideways phone measure the bar above them.
   {const bar=document.querySelector('.header'),fit=()=>document.documentElement.style.setProperty('--header-h',(bar?.offsetHeight||0)+'px');fit();if(window.ResizeObserver&&bar)new ResizeObserver(fit).observe(bar);window.addEventListener('resize',fit);}
   document.querySelectorAll('.ritual-thumb').forEach(el=>{const i=+el.dataset.thumb;
@@ -847,9 +1064,20 @@ function metaInit(){
     if((e.code==='Enter'||e.code==='NumpadEnter')&&!e.repeat&&document.activeElement===$('result-dialog')&&$('result-primary')._arm?.awake){e.preventDefault();$('result-primary').click();}});
   $('result-dialog').addEventListener('close',()=>{stageStop();clearTimeout(resultWait);disarm();});
   $('campfire-back').onclick=()=>{sound.click();showView('lobby');};
+  $('lab-save').onclick=()=>saveLabPage();$('hatbox-chest').onclick=tapHatbox;$('hatbox-done').onclick=()=>{sound.click();$('hatbox-dialog').close();};
+  $('home-wonder').onclick=()=>{sound.click();startBattle('wonder');};
+  // The comeback cards closed without a pick: the next round starts without a card.
+  $('ccard-dialog').addEventListener('close',()=>{const C=ccard;if(!C)return;ccard=null;C.onDone?.();});
+  // A mix card closed with Esc over a finished battle carries on the way its button would have.
+  // (A close that arrives after the window was opened again for the next card is the old window's, and is let go.)
+  $('reveal-dialog').addEventListener('close',()=>{const M=mixReveal;if(!M||$('reveal-dialog').open)return;mixReveal=null;$('reveal-dialog').classList.remove('mix');$('reveal-secondary').textContent='לאלבום הקלפים';if(screen==='battle'&&match?.status==='finished'&&!document.querySelector('dialog[open]')){if(typeof M.back==='function')M.back();else{match=null;showView('lobby');}}});
 }
 // Read-only test hooks for the screens around the battles.
-window.__LEAGUE_META__=Object.freeze({session:()=>readSession(),queued:()=>typeof nextPreview==='function'?nextPreview():null,ritual:id=>openRitual(id||profile.selected)});
+window.__LEAGUE_META__=Object.freeze({session:()=>readSession(),queued:()=>typeof nextPreview==='function'?nextPreview():null,ritual:id=>openRitual(id||profile.selected),
+  // Wave 2: the Lab's state, Ron's hat box, the comeback cards, a mix card and the Wonder of the Day (the openers only on a verify save).
+  lab:()=>({open:screen==='lab',drafts:labDrafts?JSON.parse(JSON.stringify(labDrafts)):null,saved:rules.labExport?.(profile)||{},file:labFileName()}),welcome:()=>storagePrefix?openWelcomeBox():!!hatbox,
+  ccards:(loser=1)=>storagePrefix?openComebackCards(loser,{onDone:()=>{}}):false,mix:list=>storagePrefix?openMixReveal(list||[{id:profile.selected,kind:'havzuk',name:rules.mixName?.(profile.selected,'havzuk')||'שילוב חדש'}],{first:true}):false,
+  wonderDay:()=>rules.wonderOfDay?{...rules.wonderOfDay(profile,players.active),played:profile.wonderDay?.played||0}:null,fresh:()=>sessionFresh()});
 // ------------------------------------------------------------------ friend battles across two phones
 // The host runs the battle and sends a picture of it twenty times a second; the guest draws it and sends its moves.
 // Only a name, a creature and its look travel between the phones.
@@ -857,7 +1085,11 @@ let online=null,onlineTimer=null;
 const myName=()=>playerName(activePlayer());
 const onlineSend=msg=>online?.link?.send(msg);
 function onlineSay(text){$('online-status').textContent=text;}
-function onlineHello(){const id=isUnlocked(profile,profile.selected)?profile.selected:'maimi';onlineSend({type:'hello',v:PROTOCOL,name:myName(),creature:id,skin:skinOf(profile,id)});}
+// The hello carries the creature's look: its skin, its hats and its Lab design (only the picture and the mechanic, never the name typed for it).
+function onlineHello(){const id=isUnlocked(profile,profile.selected)?profile.selected:'maimi',lab=sim.labOf?.(profile,id),hats=sim.hatsOf?.(profile,id);onlineSend({type:'hello',v:PROTOCOL,name:myName(),creature:id,skin:skinOf(profile,id),hats:hats&&(hats.head||hats.face)?hats:null,lab:lab?{option:lab.option,mech:lab.mech}:null});}
+// What arrives from the other phone is checked: only known hats in their own slot, only a design this creature can have.
+const netHats=h=>{if(!h||typeof h!=='object')return null;const ok=(x,slot)=>typeof x==='string'&&sim.hatById?.(x)?.slot===slot?x:null,head=ok(h.head,'head'),face=ok(h.face,'face');return head||face?{head,face}:null;};
+const netLab=(id,d)=>d&&typeof d==='object'&&sim.FORM_OPTIONS?.[id]?.includes(d.option)&&sim.LAB_MECHS?.[id]?.includes(d.mech)?{option:d.option,mech:d.mech}:null;
 function onlineReset(text=''){if(online?.link)try{online.link.close();}catch{}online=null;clearInterval(onlineTimer);onlineTimer=null;if(text)notify(text);if(screen==='online')renderOnline();}
 function onlineHandlers(){return {
   onOpen:()=>{if(!online)return;online.connected=true;online.heard=performance.now();onlineHello();renderOnline();sound.reveal?.(false);},
@@ -867,7 +1099,9 @@ function onlineHandlers(){return {
 };}
 function onlineMessage(msg){
   if(msg.type==='hello'){if(msg.v!==PROTOCOL){onlineReset('לחבר יש גרסה אחרת של המשחק. מרעננים את הדף בשני הטלפונים.');return;}
-    online.friend={name:String(msg.name||'חבר').replace(/[<>]/g,'').slice(0,12),creature:CREATURES[msg.creature]?msg.creature:'maimi',skin:SKINS.some(k=>k.id===msg.skin)?msg.skin:'base'};if(screen==='online')renderOnline();return;}
+    {const creature=CREATURES[msg.creature]?msg.creature:'maimi';online.friend={name:String(msg.name||'חבר').replace(/[<>]/g,'').slice(0,12),creature,skin:SKINS.some(k=>k.id===msg.skin)?msg.skin:'base',hats:netHats(msg.hats),lab:netLab(creature,msg.lab)};}if(screen==='online')renderOnline();return;}
+  // The friend's comeback card after a round it lost: kept for the host's next start.
+  if(msg.type==='card'&&online.role==='host'){if(online.cardFor===1&&(sim.COMEBACK_CARDS||[]).includes(msg.id))online.card={side:1,id:msg.id};return;}
   // A start this phone cannot build (another version of the game) is refused, never half-built.
   if(msg.type==='start'&&online.role==='guest'){const cfg=sim.cleanStart?sim.cleanStart(msg):msg;if(!cfg){onlineReset('לחבר יש גרסה אחרת של המשחק. מרעננים את הדף בשני הטלפונים.');return;}startOnline(cfg);return;}
   if(msg.type==='snap'&&online.role==='guest'&&match?.online){const events=applySnapshot(match,msg.snap);for(const e of events)battleEvent(e);
@@ -930,7 +1164,7 @@ function renderOnline(){
   if(o?.connected){const me=isUnlocked(profile,profile.selected)?profile.selected:'maimi',f=o.friend;
     $('online-friends').innerHTML=`<div class="online-who" style="--c:${CREATURES[me].color}"><canvas id="of-me" aria-hidden="true"></canvas><b></b><small>${CREATURES[me].name}</small></div><span class="versus-vs">VS</span><div class="online-who" style="--c:${f?CREATURES[f.creature].color:'#8fa9b3'}">${f?'<canvas id="of-friend" aria-hidden="true"></canvas>':''}<b></b><small>${f?CREATURES[f.creature].name:'…'}</small></div>`;
     const names=document.querySelectorAll('#online-friends .online-who b');names[0].textContent=myName();names[1].textContent=f?.name||'…';
-    livePortrait('of-me',me,{skin:skinOf(profile,me)});if(f)livePortrait('of-friend',f.creature,{skin:f.skin});}
+    livePortrait('of-me',me,{skin:skinOf(profile,me),hats:hatsFor(me)});if(f)livePortrait('of-friend',f.creature,{skin:f.skin,hats:f.hats||null});}
   $('online-modes').hidden=!(o?.connected&&o.role==='host');
   if(o?.connected&&o.role==='host'){$('online-modes').innerHTML=VS_MODES.map(m=>`<button class="vs-mode${m.id===o.mode?' chosen':''}" data-online-mode="${m.id}" aria-pressed="${m.id===o.mode}">${icon(m.icon)}<b>${m.name}</b><small>${m.text}</small></button>`).join('');
     document.querySelectorAll('[data-online-mode]').forEach(el=>el.onclick=()=>{o.mode=el.dataset.onlineMode;sound.click();renderOnline();});}
@@ -942,17 +1176,23 @@ function renderOnline(){
 // The host starts each battle; both phones build the same match from the same numbers.
 function hostStartOnline(){
   const o=online;if(!o?.connected||!o.friend||o.role!=='host')return;const me=isUnlocked(profile,profile.selected)?profile.selected:'maimi';
-  const cfg={type:'start',seed:Date.now()%2147483647,mode:o.mode||null,arena:({lava:'fire',wind:'wind',ball:'sea'})[o.mode]||VS_ARENAS[Math.floor(Math.random()*VS_ARENAS.length)],ids:[me,o.friend.creature],names:[myName(),o.friend.name],skins:[skinOf(profile,me),o.friend.skin],wins:o.wins,wonderOpts:sim.wonderOptions?.(profile)||null};
-  onlineSend(cfg);startOnline(cfg);
+  const f=o.friend,lab=sim.labOf?.(profile,me),hats=sim.hatsOf?.(profile,me);o.round=(o.round||0)+1;
+  // Both phones build the same battle: the hats and designs of both sides, the comeback card of the round's loser, and whether the
+  // announcer counts 3-2-1 (only the room's first battle of a session).
+  const cfg={type:'start',seed:Date.now()%2147483647,mode:o.mode||null,arena:({lava:'fire',wind:'wind',ball:'sea'})[o.mode]||VS_ARENAS[Math.floor(Math.random()*VS_ARENAS.length)],ids:[me,f.creature],names:[myName(),f.name],skins:[skinOf(profile,me),f.skin],wins:o.wins,wonderOpts:sim.wonderOptions?.(profile)||null,
+    hats:[hats&&(hats.head||hats.face)?{[me]:hats}:null,f.hats?{[f.creature]:f.hats}:null],labs:[lab?{[me]:{option:lab.option,mech:lab.mech}}:null,f.lab?{[f.creature]:f.lab}:null],ccard:o.card||null,round:o.round,
+    count:o.round===1&&(typeof sessionFresh==='function'?sessionFresh():true)?3:0};
+  o.card=null;o.cardFor=-1;onlineSend(cfg);startOnline(cfg);
 }
 function startOnline(cfg){
   if(!art||!online)return;const o=online;mode='online';cupFinal=false;o.finished=false;o.netPaused=false;o.remote={};o.inState={};o.supers=0;o.pending={ev:[],fx:[]};o.steps=0;o.sendClock=0;if(Array.isArray(cfg.wins))o.wins=[...cfg.wins];
   // Both phones grow the same Wonder from the same numbers: the host's choice travels in the start.
   const w=cfg.wonderOpts&&typeof cfg.wonderOpts==='object'?cfg.wonderOpts:{};
-  match=makeMatch({player:cfg.ids[0],rival:cfg.ids[1],level:'champion',seed:cfg.seed,mode:cfg.mode,arena:cfg.arena,versus:true,wonder:!!w.wonder,wonderPrefer:Array.isArray(w.wonderPrefer)?w.wonderPrefer:[],wonderAvoid:w.wonderAvoid??null});match.online=true;match.names=cfg.names;
+  match=makeMatch({player:cfg.ids[0],rival:cfg.ids[1],level:'champion',seed:cfg.seed,mode:cfg.mode,arena:cfg.arena,versus:true,wonder:!!w.wonder,wonderPrefer:Array.isArray(w.wonderPrefer)?w.wonderPrefer:[],wonderAvoid:w.wonderAvoid??null,
+    hats:Array.isArray(cfg.hats)?cfg.hats:null,labs:Array.isArray(cfg.labs)?cfg.labs:null,ccard:cfg.ccard||null,comeback:true});match.online=true;match.names=cfg.names;callsStart(match,{rematch:cfg.count!==3});
   let skins=[...cfg.skins];if(cfg.ids[0]===cfg.ids[1]&&skins[0]===skins[1])skins[1]=skins[0]==='night'?'ice':'night';
   renderer.setMatch(match,skins,{local:localSide()});clearInput();accumulator=0;sound.versus=true;sound.online=true;resetBattleFx();
-  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');sound.unlock();sound.setScene('battle');sound.resume();sound.setLocalSide?.(localSide());sound.setMusicRate?.(1);
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');sound.unlock();sound.setScene('battle',{track:musicFor(match)});sound.resume();sound.setLocalSide?.(localSide());sound.setMusicRate?.(1);
   // The top HUD follows this phone's child: its own creature in the 'me' slot, the friend's in the other.
   const L=localSide(),me=match.actors[L],friend=match.actors[1-L];
   $('player-name').textContent=me.spec.name;document.querySelector('.player-info .fighter-lines span').textContent=cfg.names[L];$('rival-name').textContent=friend.spec.name;$('rival-level').textContent=cfg.names[1-L];
@@ -978,35 +1218,45 @@ function finishOnline(){
   // A Wonder seen for the first time gives its own spark: the chip and the words say so.
   addSparks(profile,won?2:1);const wonder=rules.recordWonder?.(profile,match)||null;refreshTodayGoals();progressDaily(profile,{friend:true});persist();sessionTick();
   const names=match.names||['',''],sparks=(won?2:1)+(wonder?.first?1:0),wl=wonder&&(rules.wonderById?.(wonder.id)||{id:wonder.id,name:'',icon:'sparkle'});
+  // The child who lost this round picks a comeback card for the next one; the last one taken is dealt only if three are needed.
+  const deal=w>=0&&!won&&typeof onlineCard==='function'?rules.dealComebackCards?.(Math.random,onlineLastCard?[onlineLastCard]:[])||[]:[];
   const wonderChip=wl?`<div class="result-chips-plain"><div class="rchip wonder${wonder.first?' first':''}" style="--w:${wl.color||'#ffd23a'}" title="${esc(wl.name)}"><span class="wonder-fly">${stickerArt(wl)}</span><span class="rchip-book">${icon('book')}</span><b dir="ltr">${wonder.first?'+1':'×'+wonder.count}</b></div></div>`:'';
-  $('result-content').innerHTML=`${won?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${won?'gold':w<0?'':'loss'}">${icon(won?'trophy':w<0?'shield':'star')}</div><span class="result-kicker">חבר משני טלפונים</span><h2 class="result-title"></h2><div class="result-score versus-score"><div><strong>${o?.wins[0]??0}</strong><span></span></div><span>:</span><div><strong>${o?.wins[1]??0}</strong><span></span></div></div>${wonderChip}<p class="result-tip">קיבלתם ${sparks===1?'ניצוץ':sparks+' ניצוצות'} לתיבת הכוכב${!won&&w>=0?', גם על הפסד':''}.</p>`;
+  $('result-content').innerHTML=`${won?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${won?'gold':w<0?'':'loss'}">${icon(won?'trophy':w<0?'shield':'star')}</div><span class="result-kicker">חבר משני טלפונים</span><h2 class="result-title"></h2><div class="result-score versus-score" dir="ltr"><div><strong>${o?.wins[0]??0}</strong><span></span></div><span>:</span><div><strong>${o?.wins[1]??0}</strong><span></span></div></div>${wonderChip}${deal.length?`<div class="online-ccards"><span class="micro-label">קלף עזרה לסיבוב הבא</span><div class="ccard-row" id="online-ccards">${ccardButtons(deal)}</div></div>`:''}<p class="result-tip">קיבלתם ${sparks===1?'ניצוץ':sparks+' ניצוצות'} לתיבת הכוכב${!won&&w>=0?', גם על הפסד':''}.</p>`;
   document.querySelector('#result-content .result-title').textContent=w<0?'תיקו!':'ניצחון ל'+names[w]+'!';
   document.querySelectorAll('#result-content .versus-score div span').forEach((el,i)=>{el.textContent=names[i];});
   const host=o?.role==='host';
   // The friend on the other phone is waiting, so here the big button stays "one more" and the host decides when to stop.
-  plainResult({voice:won?'voice-victory':null,primary:{label:host?'עוד קרב!':'חזרה לחדר',battle:host,go:()=>{if(host&&online?.connected)hostStartOnline();else{match=null;showView('online');}}},
+  // The host's big button sleeps while the friend still picks a card (never longer than twelve seconds).
+  const t0=performance.now(),wait=host?()=>typeof onlineCardReady!=='function'||onlineCardReady()||performance.now()-t0>12000:null;
+  plainResult({voice:won?'voice-victory':w>=0?'voice-announcer-almost':null,primary:{label:host?'עוד קרב!':'חזרה לחדר',battle:host,wait,go:()=>{if(host&&online?.connected)hostStartOnline();else{match=null;showView('online');}}},
     secondary:{label:host?'חזרה לחדר':'יוצאים מהחדר',go:()=>{match=null;if(host)showView('online');else{onlineSend({type:'bye'});onlineReset();showView('versus');}}}});
+  const row=$('online-ccards');row?.querySelectorAll('[data-ccard]').forEach(b=>armCard(b,()=>{const i=+b.dataset.ccard,id=deal[i];if(row.dataset.picked||!id||!onlineCard({side:meSide,id}))return;row.dataset.picked=id;onlineLastCard=id;turnCard(row,i);}));
 }
 // ------------------------------------------------------------------ goals of the day
 function refreshTodayGoals(){if(refreshDaily(profile,dayKey(),{seed:players.active,friends:players.players.length>1,storyLeft:!!currentStep(profile)}))persist();}
-function goalText(g){const c=CREATURES[g.param];return {winElement:'נצחו קרב עם יצור '+g.param,winWith:'נצחו קרב עם '+(c?.name||''),wins:'נצחו '+g.need+' קרבות',league:'שחקו '+g.need+' קרבות ליגה',tower:'טפסו '+g.need+' קומות במגדל',supers:'השתמשו '+g.need+' פעמים בכוח־העל',story:'התקדמו שלב אחד במסע',replayStars:'שלושה כוכבים בקרב חוזר במפה',friend:'משחק עם חבר'}[g.type]||'';}
-const ELEMENT_ICON={'מים':'wave','חשמל':'bolt','עוצמה':'mountain','אש':'flame','אור':'sun','רעד':'burrow','היפנוט':'spiral','טבע':'leaf','רוח':'swirl','אנרגיה':'sparkle'};
+function goalText(g){const c=CREATURES[g.param];return {winElement:'נצחו קרב עם יצור '+g.param,winWith:'נצחו קרב עם '+(c?.name||''),wins:'נצחו '+g.need+' קרבות',league:'שחקו '+g.need+' קרבות ליגה',tower:'טפסו '+g.need+' קומות במגדל',supers:'השתמשו '+g.need+' פעמים בכוח־העל',story:'התקדמו שלב אחד במסע',replayStars:'שלושה כוכבים בקרב חוזר במפה',friend:'משחק עם חבר',form:'גדלו לצורת־עוצמה',newWonder:'גלו פלא חדש',copy:'תפסו כוכב העתקה',wonderDay:'שחקו בפלא של היום'}[g.type]||'';}
+const ELEMENT_ICON={'מים':'wave','חשמל':'bolt','עוצמה':'mountain','אש':'flame','אור':'sun','רעד':'burrow','היפנוט':'spiral','טבע':'leaf','רוח':'swirl','אנרגיה':'sparkle','קול':'sound','מהירות':'bolt'};
 function goalPicture(g,i){
   if(g.type==='winWith')return `<canvas id="goal-art-${i}" aria-hidden="true"></canvas>`;
-  const name=g.type==='winElement'?ELEMENT_ICON[g.param]||'star':{wins:'star',league:'trophy',tower:'tower',supers:'bolt',story:'arrow',replayStars:'star',friend:'duo'}[g.type]||'star';return icon(name);
+  if(g.type==='form')return crownArt();
+  if(g.type==='wonderDay'&&rules.wonderOfDay){const W=rules.wonderOfDay(profile,players.active),w=rules.wonderById?.(W.id);if(w)return `<span class="goal-sticker${W.fresh?' unseen':''}">${stickerArt(w)}</span>`;}
+  const name=g.type==='winElement'?ELEMENT_ICON[g.param]||'star':{wins:'star',league:'trophy',tower:'tower',supers:'bolt',story:'arrow',replayStars:'star',friend:'duo',newWonder:'sparkle',copy:'mix',wonderDay:'sparkle'}[g.type]||'star';return icon(name);
 }
 function renderGoalsStrip(){const G=profile.daily.goals,done=G.filter(g=>g.done).length;$('home-goals-title').innerHTML='<span class="strip-long">משימות היום · </span><span class="strip-short">משימות </span>'+done+'/'+G.length;$('home-goals-dots').innerHTML=G.map(g=>`<i class="${g.done?'on':''}"></i>`).join('');$('home-goals').classList.toggle('ready',done<G.length);}
 function renderGoals(){
   const G=profile.daily.goals,today=dayKey();
   $('goals-list').innerHTML=G.map((g,i)=>`<div class="goal${g.done?' done':''}"><div class="goal-pic" style="--c:${CREATURES[g.param]?.color||'#f2c14e'}">${goalPicture(g,i)}</div><div class="goal-copy"><b>${goalText(g)}</b><span class="level-bar"><i style="width:${Math.round(g.have/g.need*100)}%"></i></span><small>${g.done?'הושלם! +'+GOAL_SPARKS+' ניצוצות':g.have+' מתוך '+g.need+' · פרס: '+GOAL_SPARKS+' ניצוצות'}</small></div>${g.done?'<span class="goal-check">✓</span>':`<button class="button secondary" data-goal-go="${i}">יאללה</button>`}</div>`).join('');
-  G.forEach((g,i)=>{if(g.type==='winWith')livePortrait('goal-art-'+i,g.param,{skin:skinOf(profile,g.param)});});
+  G.forEach((g,i)=>{if(g.type==='winWith')livePortrait('goal-art-'+i,g.param,{skin:skinOf(profile,g.param),hats:hatsFor(g.param)});});
   $('goals-bonus').textContent=profile.daily.bonusDay===today?'כל משימות היום הושלמו, והתיבה במתנה כבר אצלכם!':'עוד '+G.filter(g=>!g.done).length+' משימות לתיבה במתנה.';
   // Each goal knows where it is played.
   document.querySelectorAll('[data-goal-go]').forEach(el=>el.onclick=()=>{sound.click();const g=G[+el.dataset.goalGo];
     if(g.type==='winWith'){profile.selected=g.param;persist();}
     if(g.type==='winElement'){const id=Object.keys(CREATURES).find(k=>isUnlocked(profile,k)&&CREATURES[k].element===g.param);if(id){profile.selected=id;persist();}}
+    // The Power Form signpost picks a creature whose form is open; the Wonder of the Day starts its battle.
+    if(g.type==='form'&&!formOn(profile.selected)){const id=Object.keys(CREATURES).find(k=>isUnlocked(profile,k)&&formOn(k));if(id){profile.selected=id;persist();}}
+    if(g.type==='wonderDay'){startBattle('wonder');return;}
     const open=profile.story.done>=4;
-    if(g.type==='league'||(['winWith','winElement','wins','supers'].includes(g.type)&&open&&!currentStep(profile)))showView('league');else if(g.type==='tower')showView('tower');else if(g.type==='friend')showView('versus');else if(g.type==='replayStars')showView('story');else if(g.type==='story')goStory();else showView('lobby');});
+    if(g.type==='league'||(['winWith','winElement','wins','supers','form','newWonder','copy'].includes(g.type)&&open&&!currentStep(profile)))showView('league');else if(g.type==='tower')showView('tower');else if(g.type==='friend')showView('versus');else if(g.type==='replayStars')showView('story');else if(g.type==='story')goStory();else showView('lobby');});
 }
 // ------------------------------------------------------------------ the mask tower
 const pickInfo=(run,id)=>{const b=BLESSINGS.find(x=>x.id===id);if(b)return {name:b.name,text:b.text,icon:b.icon};const u=upgradeOptions(CREATURES[run.creature]).find(x=>x.id===id);return u?{name:u.name,text:u.benefit,icon:u.icon}:{name:id,text:'',icon:'star'};};
@@ -1024,7 +1274,7 @@ function renderTower(){
   $('tower-fighters-title').hidden=!!run;$('tower-fighters').hidden=!!run;
   if(!run){const ids=Object.keys(CREATURES).filter(id=>isUnlocked(profile,id));if(!ids.includes(profile.selected))profile.selected='maimi';
     $('tower-fighters').innerHTML=ids.map(f=>`<button class="fighter-chip${f===profile.selected?' chosen':''}" data-tower-fighter="${f}" aria-pressed="${f===profile.selected}" style="--c:${CREATURES[f].color}"><canvas id="tchip-${f}" aria-hidden="true"></canvas><b>${CREATURES[f].name}</b><small class="chip-level">רמה ${creatureLevel(profile,f)}</small></button>`).join('');
-    for(const f of ids)livePortrait('tchip-'+f,f,{skin:skinOf(profile,f)});
+    for(const f of ids)livePortrait('tchip-'+f,f,{skin:skinOf(profile,f),hats:hatsFor(f)});
     document.querySelectorAll('[data-tower-fighter]').forEach(el=>el.onclick=()=>{profile.selected=el.dataset.towerFighter;persist();sound.click();renderTower();});}
   $('tower-start').hidden=!!run?.pending;$('tower-start').innerHTML=(run?'לקומה '+run.floor+'!':'מתחילים לטפס!')+' '+icon('play');$('tower-quit').hidden=!run;
 }
@@ -1046,10 +1296,14 @@ function prizeHTML(p,i,choice){
     return `<div class="prize${choice?' choice':''}" style="--c:${c.color}"><div class="prize-art"><canvas id="prize-${i}" aria-hidden="true"></canvas></div><small class="prize-kind">${k.box==='legendary'?'מראה אגדי':k.box==='rare'?'מראה נדיר':'מראה חדש'}</small><b>${c.name} · ${k.name}</b>${button||(worn?'<span class="prize-worn">לובש עכשיו ✓</span>':`<button class="button secondary" data-wear="${p.creature}:${p.skin}">ללבוש עכשיו</button>`)}</div>`;}
   if(p.type==='frame'){const f=FRAMES.find(x=>x.id===p.frame),id=isUnlocked(profile,profile.selected)?profile.selected:'maimi',on=profile.frame===f.id;
     return `<div class="prize${choice?' choice':''}"><div class="prize-art"><article class="tcard frame-sample frame-${f.id}"><canvas id="prize-${i}" aria-hidden="true"></canvas></article></div><small class="prize-kind">${f.tier==='legendary'?'מסגרת אגדית':f.tier==='rare'?'מסגרת נדירה':'מסגרת חדשה'}</small><b>מסגרת ${f.name}</b>${button||(on?'<span class="prize-worn">על הקלפים ✓</span>':`<button class="button secondary" data-frame-on="${f.id}">לשים על הקלפים</button>`)}</div>`;}
+  if(p.type==='hat'){const h=rules.hatById?.(p.hat),id=isUnlocked(profile,profile.selected)?profile.selected:'maimi',w=rules.hatsOf?.(profile,id)||{},on=w.head===p.hat||w.face===p.hat,tier=h?.tier||'common';
+    return `<div class="prize hat-prize tier-${tier}${choice?' choice':''}" style="--c:${CREATURES[id].color}"><div class="prize-art"><canvas id="prize-${i}" aria-hidden="true"></canvas><span class="prize-hat">${hatPic(p.hat)}</span></div><small class="prize-kind">${tier==='legendary'?'כובע אגדי!':tier==='rare'?'כובע נדיר!':'כובע חדש!'}</small><b>${esc(h?.name||'')}</b>${button||(on?`<span class="prize-worn">על ${CREATURES[id].name} ✓</span>`:`<button class="button secondary" data-hat-on="${p.hat}">ללבוש עכשיו</button>`)}</div>`;}
   const c=CREATURES[p.id];
   return `<div class="prize${choice?' choice':''}" style="--c:${c.color}"><div class="prize-art"><canvas id="prize-${i}" aria-hidden="true"></canvas></div><small class="prize-kind">יצור חדש!</small><b>${c.name}</b>${button}</div>`;
 }
-function prizePortrait(p,i){const id=p.type==='look'?p.creature:p.type==='frame'?(isUnlocked(profile,profile.selected)?profile.selected:'maimi'):p.id;livePortrait('prize-'+i,id,{skin:p.type==='look'?p.skin:skinOf(profile,id)});}
+function prizePortrait(p,i){const id=p.type==='look'?p.creature:p.type==='frame'||p.type==='hat'?(isUnlocked(profile,profile.selected)?profile.selected:'maimi'):p.id;
+  // A hat prize shows the chosen creature already wearing it (in its own slot).
+  const hats=p.type==='hat'?{...(rules.hatsOf?.(profile,id)||{}),[rules.hatById?.(p.hat)?.slot||'head']:p.hat}:hatsFor(id);livePortrait('prize-'+i,id,{skin:p.type==='look'?p.skin:skinOf(profile,id),hats});}
 function renderBoxes(){
   const waiting=boxesWaiting(profile),pending=profile.box.pending,result=boxUI.result,showing=result||pending;
   $('boxes-meter').innerHTML=sparkMeter(profile.box.sparks);
@@ -1068,6 +1322,7 @@ function renderBoxes(){
     document.querySelectorAll('[data-choose]').forEach(el=>el.onclick=()=>{const p=chooseBoxPrize(profile,+el.dataset.choose);if(!p)return;persist();sound.reveal(true);boxUI.result={tier:'gold',prizes:[p,...(boxUI.result?.prizes||[])]};renderBoxes();renderBoxStrip();});
     document.querySelectorAll('[data-wear]').forEach(el=>el.onclick=()=>{const [id,skin]=el.dataset.wear.split(':');if(chooseSkin(profile,id,skin)){persist();sound.click();renderBoxes();}});
     document.querySelectorAll('[data-frame-on]').forEach(el=>el.onclick=()=>{profile.frame=el.dataset.frameOn;persist();sound.click();renderBoxes();});
+    document.querySelectorAll('[data-hat-on]').forEach(el=>el.onclick=()=>{const id=isUnlocked(profile,profile.selected)?profile.selected:'maimi',h=el.dataset.hatOn,w=rules.hatsOf?.(profile,id)||{};if(w.head!==h&&w.face!==h&&rules.wearHat?.(profile,id,h)){persist();hatSound(profile,id,h);renderBoxes();}});
   }
   const more=boxesWaiting(profile)>0&&!pending&&!!result;
   $('box-actions').innerHTML=(more?`<button class="button primary" id="box-next">לתיבה הבאה!${boxesWaiting(profile)>1?` <small>עוד ${boxesWaiting(profile)}</small>`:''}</button>`:'')+(pending?'':`<button class="button ${more?'secondary':'primary'}" id="box-play">לקרב!</button>`);
@@ -1148,10 +1403,12 @@ function renderVersus(){
     $('versus-who-'+k).textContent=vsName(n);
     $('versus-players-'+k).innerHTML=[...players.players.map(p=>p.id),'guest'].map(pid=>{const p=findPlayer(pid),taken=pid!=='guest'&&versus.players[1-n]===pid;return `<button class="vs-player${pid===versus.players[n]?' chosen':''}" data-vs-player="${n}:${pid}" ${taken?'disabled':''} aria-pressed="${pid===versus.players[n]}"><b>${esc(p?playerName(p):'אורח')}</b></button>`;}).join('');
     $('versus-keys-'+k).textContent=touch?(n?'אגודל בצד ימין של המסך':'אגודל בצד שמאל של המסך'):(n?'חצים · Enter · Shift ימני':'W A S D · רווח · E');
-    $('versus-name-'+k).textContent=c.name;$('versus-name-'+k).style.color=c.dark;livePortrait('versus-portrait-'+k,id,{skin:vsSkin(n,id)});
+    $('versus-name-'+k).textContent=c.name;$('versus-name-'+k).style.color=c.dark;const pp=vsProfile(n);livePortrait('versus-portrait-'+k,id,{skin:vsSkin(n,id),hats:pp?hatsFor(id,pp):null});
+    {const own=pp&&HAT_LIST().length?rules.ownedHats?.(pp)||[]:[],w=pp?rules.hatsOf?.(pp,id)||{}:{},bare=!w.head&&!w.face;$('versus-hats-'+k).hidden=!own.length;
+      $('versus-hats-'+k).innerHTML=own.length?`<button type="button" class="hat-option none${bare?' chosen':''}" data-vs-hat="${n}:none" aria-pressed="${bare}"><b>בלי</b></button>`+own.map(h=>{const on=w.head===h.id||w.face===h.id;return `<button type="button" class="hat-option${on?' chosen':''}" data-vs-hat="${n}:${h.id}" aria-pressed="${on}" aria-label="${esc(h.name)}" title="${esc(h.name)}">${hatPic(h.id)}</button>`;}).join(''):'';}
     $('versus-hearts-'+k).innerHTML=[0,1,2].map(i=>`<button class="vs-heart${i<=h?' on':''}" data-vs-heart="${n}:${i}" aria-label="${i+1} לבבות" aria-pressed="${i===h}">♥</button>`).join('')+`<small>${h?'עוד '+h*25+'% חיים':'חיים רגילים'}</small>`;
     $('versus-fighters-'+k).innerHTML=ids.map(f=>`<button class="fighter-chip${f===id?' chosen':''}" data-vs-fighter="${n}:${f}" aria-pressed="${f===id}" style="--c:${CREATURES[f].color}"><canvas id="vs-chip-${k}-${f}" aria-hidden="true"></canvas><b>${CREATURES[f].name}</b></button>`).join('');
-    for(const f of ids)livePortrait(`vs-chip-${k}-${f}`,f,{skin:vsSkin(n,f)});}
+    for(const f of ids)livePortrait(`vs-chip-${k}-${f}`,f,{skin:vsSkin(n,f),hats:pp?hatsFor(f,pp):null});}
   const coop=versus.kind==='coop';
   $('vs-kind').innerHTML=[['vs','נגד','bolt'],['coop','ביחד נגד ענק','duo'],['online','משני טלפונים','target']].map(([k,t,i])=>`<button class="vs-kind-btn${versus.kind===k?' chosen':''}" data-vs-kind="${k}" aria-pressed="${versus.kind===k}">${icon(i)}${t}</button>`).join('');
   $('versus-title').innerHTML=coop?'ביחד <em>נגד</em> ענק':'חבר <em>נגד</em> חבר';document.querySelector('.versus-vs').textContent=coop?'+':'VS';
@@ -1160,6 +1417,7 @@ function renderVersus(){
   $('versus-modes').innerHTML=coop?COOP_GIANTS.map(g=>`<button class="vs-mode giant${g===versus.giant?' chosen':''}" data-coop-giant="${g}" aria-pressed="${g===versus.giant}"><canvas id="giant-${g}" aria-hidden="true"></canvas><b>${CREATURES[g].name}</b><small>${CREATURES[g].role}</small></button>`).join(''):VS_MODES.map(m=>`<button class="vs-mode${m.id===versus.mode?' chosen':''}" data-vs-mode="${m.id}" aria-pressed="${m.id===versus.mode}">${icon(m.icon)}<b>${m.name}</b><small>${m.text}</small></button>`).join('');
   document.querySelectorAll('[data-vs-player]').forEach(el=>el.onclick=()=>{const [n,pid]=el.dataset.vsPlayer.split(':');versus.players[+n]=pid;sound.click();renderVersus();});
   document.querySelectorAll('[data-vs-fighter]').forEach(el=>el.onclick=()=>{const [n,f]=el.dataset.vsFighter.split(':');versus.ids[+n]=f;sound.click();renderVersus();});
+  document.querySelectorAll('[data-vs-hat]').forEach(el=>el.onclick=()=>{const [n,h]=el.dataset.vsHat.split(':'),i=+n,pp=vsProfile(i);if(!pp||!rules.wearHat?.(pp,versus.ids[i],h==='none'?null:h))return;const pid=versus.players[i];if(pid===players.active)persist();else saveProfile(playerStorage(pid),pp);hatSound(pp,versus.ids[i],h);renderVersus();});
   document.querySelectorAll('[data-vs-heart]').forEach(el=>el.onclick=()=>{const [n,i]=el.dataset.vsHeart.split(':').map(Number);versus.hearts[n]=i;sound.click();renderVersus();});
   document.querySelectorAll('[data-vs-mode]').forEach(el=>el.onclick=()=>{versus.mode=el.dataset.vsMode;sound.click();renderVersus();});
   if(coop)for(const g of COOP_GIANTS)livePortrait('giant-'+g,g);
@@ -1170,16 +1428,18 @@ function renderVersus(){
 }
 const versusRoundLabel=()=>versus.wins.every(n=>n===VS_WINS-1)?'סיבוב ההכרעה':'סיבוב '+versus.round;
 function startVersus(fresh=false){
-  if(!art)return;if(fresh)Object.assign(versus,{wins:[0,0],round:1,catchup:[0,0]});
+  if(!art)return;if(fresh)Object.assign(versus,{wins:[0,0],round:1,catchup:[0,0],cardsUsed:[],card:null});
   mode='versus';cupFinal=false;touchVersus=matchMedia('(pointer:coarse)').matches;
   const arena=({lava:'fire',wind:'wind',ball:'sea'})[versus.mode]||VS_ARENAS[Math.floor(Math.random()*VS_ARENAS.length)];
-  match=makeMatch({player:versus.ids[0],rival:versus.ids[1],level:'champion',seed:Date.now()+Math.floor(Math.random()*1e5),mode:versus.mode||null,arena,versus:true,hearts:versus.hearts.map((h,i)=>Math.min(2,h+versus.catchup[i])),...(sim.wonderOptions?.(profile)||{})});
+  // The comeback card the loser of the last round flipped is used once, in this round. It took the place of the old catch-up heart.
+  const card=versus.card||null,pp=[vsProfile(0),vsProfile(1)];versus.card=null;
+  match=makeMatch({player:versus.ids[0],rival:versus.ids[1],level:'champion',seed:Date.now()+Math.floor(Math.random()*1e5),mode:versus.mode||null,arena,versus:true,hearts:versus.hearts.map(h=>Math.min(2,h)),ccard:card,hats:pp.map(vsHats),labs:pp.map(vsLabs),comeback:true,...(sim.wonderOptions?.(profile)||{})});
   match.roundLabel=versusRoundLabel();
   const [a,b]=match.actors,skinA=vsSkin(0,a.id);let skinB=vsSkin(1,b.id);match.names=[vsName(0),vsName(1)];
   // The same creature on both sides: player two wears night colours so the two are easy to tell apart.
   if(a.id===b.id&&skinA===skinB)skinB=skinA==='night'?'ice':'night';
-  renderer.setMatch(match,[skinA,skinB],{local:0});clearInput();accumulator=0;sound.versus=true;sound.online=false;resetBattleFx();
-  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');document.body.classList.add('versus-play');sound.unlock();sound.setScene('battle');sound.resume();sound.setLocalSide?.(0);sound.setMusicRate?.(1);
+  renderer.setMatch(match,[skinA,skinB],{local:0});clearInput();accumulator=0;sound.versus=true;sound.online=false;resetBattleFx();callsStart(match,{rematch:versus.round>1});
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');document.body.classList.add('versus-play');sound.unlock();sound.setScene('battle',{track:musicFor(match)});sound.resume();sound.setLocalSide?.(0);sound.setMusicRate?.(1);
   $('player-name').textContent=a.spec.name;document.querySelector('.player-info .fighter-lines span').textContent=vsName(0);$('rival-name').textContent=b.spec.name;$('rival-level').textContent=vsName(1);
   $('player-symbol').innerHTML=icon(a.spec.specialIcon);$('rival-symbol').innerHTML=icon(b.spec.specialIcon);
   $('match-label').textContent='חבר נגד חבר';$('round-label').textContent=match.roundLabel+' · '+versus.wins.join(' : ');
@@ -1195,11 +1455,12 @@ function startVersus(fresh=false){
 function startCoop(){
   if(!art)return;mode='coop';cupFinal=false;touchVersus=matchMedia('(pointer:coarse)').matches;
   const L=COOP_LEVELS[versus.coopLevel]||COOP_LEVELS.normal,g=versus.giant,arena=({fireguard:'fire',seaguard:'sea',windguard:'wind',tehomon:'sea'})[g]||'castle';
-  match=makeMatch({player:versus.ids[0],rival:g,level:L.level,giantRival:true,arena,seed:Date.now()+Math.floor(Math.random()*1e5),coop:{partner:versus.ids[1],hpMul:L.hp,hearts:versus.hearts}});
+  const pp=[vsProfile(0),vsProfile(1)];
+  match=makeMatch({player:versus.ids[0],rival:g,level:L.level,giantRival:true,arena,seed:Date.now()+Math.floor(Math.random()*1e5),coop:{partner:versus.ids[1],hpMul:L.hp,hearts:versus.hearts},hats:[vsHats(pp[0]),null,vsHats(pp[1])],labs:[vsLabs(pp[0]),null,vsLabs(pp[1])]});
   const [a,b,c]=match.actors,skinA=vsSkin(0,a.id);let skinC=vsSkin(1,c.id);if(a.id===c.id&&skinA===skinC)skinC=skinA==='night'?'ice':'night';
   // Both children are human to the sound (side 2 always is); the giant is not, so its super never chimes like a child's.
-  match.names=[vsName(0),'',vsName(1)];renderer.setMatch(match,[skinA,null,skinC],{local:0});clearInput();accumulator=0;sound.versus=!!match.versus;sound.online=false;resetBattleFx();
-  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');document.body.classList.add('versus-play');sound.unlock();sound.setScene('battle');sound.resume();sound.setLocalSide?.(0);sound.setMusicRate?.(1);
+  match.names=[vsName(0),'',vsName(1)];renderer.setMatch(match,[skinA,null,skinC],{local:0});clearInput();accumulator=0;sound.versus=!!match.versus;sound.online=false;resetBattleFx();callsStart(match,{guardian:true});
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());showView('battle');document.body.classList.add('versus-play');sound.unlock();sound.setScene('battle',{track:musicFor(match)});sound.resume();sound.setLocalSide?.(0);sound.setMusicRate?.(1);
   $('player-name').textContent=a.spec.name;document.querySelector('.player-info .fighter-lines span').textContent=vsName(0);$('rival-name').textContent=b.spec.name;$('rival-level').textContent='ענק · '+L.name;
   $('player-symbol').innerHTML=icon(a.spec.specialIcon);$('rival-symbol').innerHTML=icon(b.spec.specialIcon);
   $('match-label').textContent='ביחד נגד ענק';$('round-label').textContent=vsName(0)+' ו'+vsName(1)+' נגד '+b.spec.name;
@@ -1233,16 +1494,17 @@ function finishVersusRound(){
   const w=match.winner;clearInput();sessionTick();
   // A Wonder seen in a friend battle goes into each player's Star Book on this device.
   versus.players.forEach((pid,i)=>{if(pid==='guest'||(i===1&&versus.players[0]===pid))return;const pp=pid===players.active?profile:readProfile(playerStorage(pid));if(!rules.recordWonder?.(pp,match))return;if(pid===players.active)persist();else saveProfile(playerStorage(pid),pp);});
-  if(w>=0){versus.wins[w]++;versus.catchup[1-w]=Math.min(2,versus.catchup[1-w]+1);versus.catchup[w]=0;}
+  const cards=typeof rules.dealComebackCards==='function';
+  if(w>=0){versus.wins[w]++;if(!cards){versus.catchup[1-w]=Math.min(2,versus.catchup[1-w]+1);versus.catchup[w]=0;}}
   versus.round++;const done=versus.wins.some(n=>n>=VS_WINS),[a,b]=match.actors;
   const title=w<0?'תיקו!':done?'ניצחון ל'+vsName(w)+'!':'הסיבוב ל'+vsName(w)+'!';
-  const sub=done?'איזה קרב! עוד אחד?':w<0?'אף אחד לא לקח את הסיבוב. עוד סיבוב!':'עוד לב ♥ ל'+vsName(1-w)+' בסיבוב הבא.';
+  const sub=done?'איזה קרב! עוד אחד?':w<0?'אף אחד לא לקח את הסיבוב. עוד סיבוב!':cards?'':'עוד לב ♥ ל'+vsName(1-w)+' בסיבוב הבא.';
   if(done){versus.players.forEach((pid,i)=>{if(pid==='guest'||(i===1&&versus.players[0]===pid))return;const pp=pid===players.active?profile:readProfile(playerStorage(pid));addSparks(pp,i===w?2:1);refreshDaily(pp,dayKey(),{seed:pid,friends:true,storyLeft:!!currentStep(pp)});progressDaily(pp,{friend:true});if(pid===players.active)persist();else saveProfile(playerStorage(pid),pp);});}
-  $('result-content').innerHTML=`${done?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${done?'gold':''}">${icon(done?'trophy':w<0?'shield':'star')}</div><span class="result-kicker">חבר נגד חבר</span><h2 class="result-title"></h2><div class="result-score versus-score"><div><strong>${versus.wins[0]}</strong><span></span></div><span>:</span><div><strong>${versus.wins[1]}</strong><span></span></div></div><p></p>`;
+  $('result-content').innerHTML=`${done?'<div class="confetti">'+Array.from({length:24},(_,i)=>`<i style="left:${i*4.2}%;animation-delay:${i*.13}s;animation-duration:${2+i%3}s"></i>`).join('')+'</div>':''}<div class="result-icon ${done?'gold':''}">${icon(done?'trophy':w<0?'shield':'star')}</div><span class="result-kicker">חבר נגד חבר</span><h2 class="result-title"></h2><div class="result-score versus-score" dir="ltr"><div><strong>${versus.wins[0]}</strong><span></span></div><span>:</span><div><strong>${versus.wins[1]}</strong><span></span></div></div><p></p>`;
   document.querySelector('#result-content .result-title').textContent=title;document.querySelector('#result-content > p').textContent=sub;
   document.querySelectorAll('#result-content .versus-score div span').forEach((el,i)=>{el.textContent=vsName(i)+' · '+match.actors[i].spec.name;});
   if(done&&versus.players.some(p=>p!=='guest'))$('result-content').insertAdjacentHTML('beforeend','<p class="result-tip">כל שחקן קיבל ניצוצות לתיבת הכוכב, וגם מי שהפסיד.</p>');
-  const rest=done&&campfireDue(),next={label:done?'עוד קרב!':'ל'+versusRoundLabel()+'!',battle:true,go:()=>startVersus(done)};
+  const rest=done&&campfireDue(),next={label:done?'עוד קרב!':'ל'+versusRoundLabel()+'!',battle:true,go:!done&&w>=0&&cards?()=>openComebackCards(1-w,{onDone:()=>startVersus(false)}):()=>startVersus(done)};
   plainResult({voice:done?'voice-victory':null,primary:rest?{label:'מנוחה ליד המדורה',icon:'campfire',go:()=>{match=null;showView('campfire');}}:next,
     secondary:rest?{label:'עוד קרב',battle:true,go:next.go}:{label:'החלפת יצורים',go:leaveBattle}});
 }
@@ -1251,6 +1513,8 @@ let frameErrors=0;
 // ------------------------------------------------------------------ the show around a battle: slow motion, cue chips, the finale
 // Slow motion only for moments a child makes (a super, a Power Form, the final blow): never online, never on a device that asks for calm motion.
 const CALM=matchMedia('(prefers-reduced-motion: reduce)');
+// An upright phone: the mission pill sits on the stands above the oval, so it fades only when a creature really walks under it.
+const UPRIGHT=matchMedia('(orientation:portrait) and (max-width:620px)');
 let slows=[],cueNow=null,cueNext=null,cueAt=-9,cueLast=null,finaleUntil=0,lastMoment=[],impactArm=[],segSeen=[];const flashTimers=new Map();
 function slowmo(scale,real,ease=.12){if(match?.online||CALM.matches)return;slows.push({scale,until:clock+real,ease});}
 // The slowest moment wins; each one eases back to full speed over its last fraction of a second.
@@ -1269,8 +1533,9 @@ function resetCue(){cueNow=cueNext=null;cueAt=-9;const el=$('match-cue');if(el){
 // numberTop: damage numbers stay below the HUD band and the cue chip row (one chip high) under the clock.
 function measureHud(){if(!renderer)return;const c=$('arena').getBoundingClientRect(),t=document.querySelector('.battle-top')?.getBoundingClientRect(),q=$('cue-row')?.getBoundingClientRect();renderer.hudBottom=t?.height&&c.height?Math.max(0,Math.round(t.bottom-c.top)):0;
   renderer.numberTop=c.height?Math.max(renderer.hudBottom,q?Math.round(q.top-c.top+28):0):0;}
-function resetBattleFx(){slows=[];lastMoment=[];impactArm=[];segSeen=[];finaleUntil=0;resetCue();const w=$('wonder-chip');if(w){w.hidden=true;w.dataset.id='';}
-  for(const id of ['special-button','special-button-2'])$(id).classList.remove('pop','pip-pop','deny','form-ready','in-form','can-form');requestAnimationFrame(measureHud);}
+function resetBattleFx(){slows=[];lastMoment=[];impactArm=[];segSeen=[];finaleUntil=0;resetCue();const w=$('wonder-chip');if(w){w.hidden=true;w.dataset.id='';w.classList.remove('endless');}
+  for(const id of ['special-button','special-button-2']){$(id).classList.remove('pop','pip-pop','deny','form-ready','in-form','can-form','has-copy');delete $(id).dataset.copy;$(id).style.removeProperty('--c2');}
+  $('mode-banner')._html=null;document.querySelector('#battle .rival-info')?.classList.remove('paint-in');requestAnimationFrame(measureHud);}
 function flash(el,cls,ms=400){if(!el)return;const key=el.id+' '+cls;el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);clearTimeout(flashTimers.get(key));flashTimers.set(key,setTimeout(()=>el.classList.remove(cls),ms));}
 function uiSound(kind){if(sound.uiClick)sound.uiClick(kind);else if(kind==='deny')sound.tone(196,.14,'sine',.05,-50);else if(kind==='segment')sound.tone(988,.035,'triangle',.03);}
 // The super button of a child on this device: this phone's child, or player two on a shared screen.
@@ -1284,39 +1549,87 @@ function clockCenter(){const c=$('arena').getBoundingClientRect(),k=document.que
 // creature, a puff for a beaten computer rival, and a losing child's creature that sits, dusts itself off and bounces up.
 // A push-in only toward a child's win over the computer: never on a losing child, never between friends.
 function startFinale(){const m=match;finaleUntil=clock;sound.setMusicRate?.(1);if(!m)return;
+  // Two phones: whoever lost this round may pick a comeback card for the next one.
+  if(m.online&&online){online.cardFor=m.winner>=0?1-m.winner:-1;online.card=null;}
   const single=!m.versus&&!m.coop&&!m.online,rival=m.actors[1],freed=m.winner===0&&!m.versus&&(sim.isShadowed?sim.isShadowed(m):!m.coop&&(!!m.wild||!!m.story&&!m.mirror&&!m.friendly));let d=0;
   // On a phone of its own, only the child who won celebrates; a shared screen celebrates any child's win.
-  if(m.reason==='knockout'&&m.winner>=0&&humanSide(m.winner)&&(!m.online||m.winner===localSide())){renderer.confetti?.();sound.confetti?.();}
+  if(['knockout','hill','gates'].includes(m.reason)&&m.winner>=0&&humanSide(m.winner)&&(!m.online||m.winner===localSide())){renderer.confetti?.();sound.confetti?.();}
   if(freed){const short=(sim.finaleViews?.(profile,rival.id)??0)>=3;d=renderer.liberate?.(1,clockCenter(),{short})||0;sound.liberationTicks?.({gap:short?.03:.05});sim.recordFinaleView?.(profile,rival.id);}
   else if(m.winner===0&&!m.versus)d=renderer.loserPuff?.(1)||0;
   if(single&&m.winner===1){d=renderer.sitUp?.(0)||0;sound.loseBounce?.({delay:d*.7});}
   if(single&&m.winner===0){const t=freed?rival:m.actors[0];renderer.cinematic(t.x,t.y-(freed?80:70),freed?1.35:1.5,freed?d+.4:1.9);}
   finaleUntil=clock+d;}
 function finaleLeft(){return Math.max(0,Math.round((finaleUntil-clock)*1000));}
+// ------------------------------------------------------------------ wave 2: the music, the announcer, comeback cards over the link
+// The battle's music: the Two Tracks have their own; a spectacle guardian's second stage plays the boss loop.
+function musicFor(m){return m?.spectacle?.stage===2?'boss':m?.arena==='tracks'?'tracks':'battle';}
+// A little faster while a child here shines with the comeback star (1.15) or while a Wonder is on (1.08).
+function musicRate(){const m=match;if(!m)return 1;const L=localSide();return m.actors.some(a=>(a.star||0)>0&&(m.online?a.side===L:humanSide(a.side)))?1.15:m.wonder?.state==='active'?1.08:1;}
+// The announcer: '3-2-1' only for the first battle of a session and for a guardian (never a quick rematch), 'קדימה!' at the end of
+// every countdown, 'סופר!' for the first super a child here makes, 'צורת עוצמה!' and 'פלא!'. The sound keeps two voices from overlapping.
+let calls={speak:false,label:null,first:true,super:false,said:[],fx:[]};
+const countdownWord=cd=>cd>.3?Math.ceil(cd-.3):0;
+// The Little Shadow's intro line gives way as the battle starts, so '3-2-1' and 'קדימה!' are heard and nobody talks over the fight.
+function callsStart(m,{rematch=false,guardian=false}={}){const fresh=typeof sessionFresh==='function'?sessionFresh():true;sound.endLines?.();calls={speak:!rematch&&(fresh||guardian),label:null,first:true,super:false,said:[],fx:[]};if(calls.speak&&m?.status==='countdown')m.countdown=Math.max(m.countdown,3.3);}
+function announce(word){calls.said.push(word);sound.announce?.(word);}
+// Follows the number the arena shows: 3, 2, 1, then 'קדימה!' (also after a goal's short kick-off countdown; the numbers only the first time).
+function callsTick(){const m=match;if(!m||m.status==='finished')return;const n=m.status==='countdown'?countdownWord(m.countdown):m.status==='playing'?0:calls.label;if(n===calls.label)return;calls.label=n;
+  if(n===0){calls.first=false;announce('go');}else if(calls.speak&&calls.first&&n<=3)announce(String(n));}
+// Comeback cards between two phones: the host keeps a card for its next start; the guest sends its pick to the host.
+function onlineCard(card){const o=online;if(!o?.connected||!card||!(sim.COMEBACK_CARDS||[]).includes(card.id))return false;if(o.role==='host'){if(o.cardFor!==0)return false;o.card={side:0,id:card.id};return true;}onlineSend({type:'card',id:card.id});return true;}
+// The host's next battle waits for the friend's card only when the friend lost the last round and has not picked yet.
+function onlineCardReady(){const o=online;return !o||o.role!=='host'||o.cardFor!==1||!!o.card;}
+// A Wonder's or card's picture under the clock: its own icon when this page has it, else the sparkle.
+const iconOr=(name,or='sparkle')=>name&&document.getElementById('i-'+name)?name:or;
+const CCARD_ICON={super:'bolt',crystal:'sparkle',decoy:'pair',speed:'arrow',heart:'heart'};
+// Hats and Lab designs of a player on this device, for a friend battle (a guest player has none).
+const vsHats=pp=>pp?sim.hatMap?.(pp)||pp.hats?.worn||null:null,vsLabs=pp=>pp?sim.labMap?.(pp)||pp.lab||null:null;
 function frame(timestamp){
   try{frameBody(timestamp);}catch(error){if(frameErrors++<5)console.error('frame',error);window.__LEAGUE_LAST_ERROR__=String(error?.stack||error);}
   requestAnimationFrame(frame);
 }
 // Every battle event: its sound first, then what the child sees. Words only as a cue chip under the clock.
-function battleEvent(e){const n=sound.effect(e),L=localSide(),t=e.type,vs=!!match.versus,same=vs&&!match.online,nm=side=>match.online?(match.names?.[side]||''):match.coop?vsName(side===2?1:0):vsName(side),foeOfLocal=side=>match.coop?side===1:side!==L;
+function battleEvent(e){const n=sound.effect(e),L=localSide(),t=e.type,vs=!!match.versus,same=vs&&!match.online,nm=side=>match.online?(match.names?.[side]||''):match.coop?vsName(side===2?1:0):vsName(side),foeOfLocal=side=>match.coop||match.allied?side===1:side!==L;
+  // A child on this device: this phone's child, or either child on a shared screen (never the computer's ally).
+  const mine=side=>side===L||!match.online&&humanSide(side);
   if(t==='hit'){if(humanSide(e.side))renderer.shake=Math.max(renderer.shake,e.side===L?2.2:.8);
     if(n===5&&e.by>=0&&humanSide(e.by))renderer.burst?.(e.x,e.y,'inkstar');
     // The first landed hit of a child's super prints two linocut frames (the renderer keeps them rare).
     if(e.special&&e.by>=0&&impactArm[e.by]!=null&&match.time-impactArm[e.by]<=.6){impactArm[e.by]=null;renderer.impactFrame?.();}}
   else if(t==='quake')renderer.shake=Math.max(renderer.shake,5);
   else if(t==='special'){const s=e.side,mega=!!e.mega;
+    // The computer's ally in the pair race: a small moment of its own, never slow motion and never the rival's warning stroke.
+    if(s===2&&match.allied){renderer.superMoment?.(2,e.kind,{full:false});sound.superMoment?.(2,{full:false});}
     // A full moment (slow motion and the cut-in) at most every 5 s per child; the Power Form's MEGA super always gets one (its own slow motion came with 'form').
     // Two children against one giant share those 5 s, and their slow motion is lighter, so the battle never feels stuck.
-    if(humanSide(s)){const k=match.coop?'team':s,full=mega||clock-(lastMoment[k]??-9)>=5;if(full&&!mega)slowmo(match.coop?.5:.25,.3);if(full)lastMoment[k]=clock;renderer.superMoment?.(s,e.kind,{full,mega});sound.superMoment?.(s,{full,mega});impactArm[s]=match.time;}
+    else if(humanSide(s)){const k=match.coop?'team':s,full=mega||clock-(lastMoment[k]??-9)>=5;if(full&&!mega)slowmo(match.coop?.5:.25,.3);if(full)lastMoment[k]=clock;renderer.superMoment?.(s,e.kind,{full,mega});sound.superMoment?.(s,{full,mega});impactArm[s]=match.time;
+      if(mine(s)&&!calls.super){calls.super=true;announce('super');}}
     else{renderer.rivalSuper?.(s);sound.rivalSwell?.(s);}}
   else if(t==='super-ready')flash(superButton(e.side),'pop',400);
   else if(t==='pip')flash(superButton(e.side),'pip-pop',450);
-  else if(t==='form'){renderer.formMoment?.(e.side);if(humanSide(e.side)){slowmo(.15,.45,.2);sound.formBurst?.(e.side,{sting:true});}else sound.formBurst?.(e.side,{sting:false});}
+  else if(t==='form'){renderer.formMoment?.(e.side);if(humanSide(e.side)){slowmo(.15,.45,.2);sound.formBurst?.(e.side,{sting:true});if(mine(e.side))announce('form');}else sound.formBurst?.(e.side,{sting:false});}
   else if(t==='final-blow'){slowmo(.3,1,.2);sound.finalBlow?.();}
   else if(t==='star-lend'){cue('star','הכוכב עוזר',1.6);flash(superButton(e.side),'pip-pop',450);}
   else if(t==='wonder-sprout')cue('seed','זרע פלא');
-  else if(t==='wonder-start'){wonderHUD();sound.setMusicRate?.(1.08);}
-  else if(t==='wonder-end'){wonderHUD();sound.setMusicRate?.(1);}
+  else if(t==='wonder-start'){wonderHUD();sound.setMusicRate?.(musicRate());announce('wonder');}
+  else if(t==='wonder-end'){wonderHUD();sound.setMusicRate?.(musicRate());}
+  // The new Wonders say once what just happened, in a picture and a word.
+  else if(t==='wonder-swap'){if(!match.swapSeen){match.swapSeen=true;cue('swap','החלפה!');}}
+  else if(t==='wonder-firefly'||t==='wonder-shroom'||t==='wonder-kernel'){const k='seen-'+t;if(mine(e.side)&&!match[k]){match[k]=true;cue(...({'wonder-firefly':[iconOr('firefly'),'גחלילית!'],'wonder-shroom':[iconOr('mushroom'),'ריפוי!'],'wonder-kernel':[iconOr('popcorn'),'פופקורן!']})[t]);}}
+  // Copy stars: the first one this child can catch is pointed at; a caught one names whose super it holds now.
+  else if(t==='copy-drop'){if(mine(e.owner)&&!match.copyCued){match.copyCued=true;cue('copy','תפסו!');}}
+  else if(t==='copy'){if(mine(e.side)){cue('copy',CREATURES[e.kind]?.name||'');if(e.side===L&&!match.copyLine&&!Object.keys(profile.mixes||{}).length){match.copyLine=true;sound.line?.('voice-shadow-copy');}}}
+  // The comeback star: a picture under the clock while it falls, and quicker music while it shines. Never named in the result.
+  else if(t==='comeback-fall'){if(mine(e.side))cue('star','כוכב!');}
+  else if(t==='comeback'){if(mine(e.side))sound.setMusicRate?.(musicRate());}
+  else if(t==='comeback-end')sound.setMusicRate?.(musicRate());
+  else if(t==='card'){if(same||e.side===L)cue(iconOr(CCARD_ICON[e.id],'star'),sim.CCARD_WORDS?.[e.id]||'');}
+  // The Land of Two Tracks.
+  else if(t==='hill-warn')cue('shield','הגבעה זזה');
+  else if(t==='gate-open')cue(iconOr('gate','arch'),'שער '+((e.gate|0)+1));
+  else if(t==='bridge-super'){cue('pair','ביחד!');slowmo(.3,.4);}
+  // A spectacle guardian at half life: the battle holds for a breath, the night falls, and the boss music comes in.
+  else if(t==='phase-beat'){sound.setScene?.('battle',{track:'boss'});calls.fx.push('track:boss');sound.setMusicRate?.(musicRate());if(!CALM.matches)renderer.shake=Math.max(renderer.shake,4);}
   else if(t==='lava-warning')cue('flame','הלבה!');
   else if(t==='echo-turn')cue('sound','תורכם');
   else if(t==='echo-again')cue('sound','שוב');
@@ -1334,24 +1647,24 @@ function battleEvent(e){const n=sound.effect(e),L=localSide(),t=e.type,vs=!!matc
   else if(t==='overtime')cue('trophy','גול זהב');
   else if(t==='ball-loose'){if(match.status==='playing'&&(e.side===L||same))cue('spiral','נפלה!');}
   else if(t==='kick-far'){if(e.side===L||same)cue('arrow','קרוב יותר');}
-  else if(t==='swap'){const c=CREATURES[e.id];renderer.swap(e.side,e.id,e.side===0?skinOf(profile,e.id):null);if(e.side===0){$('player-name').textContent=c.name;$('player-symbol').innerHTML=icon(c.specialIcon);$('special-action-icon').innerHTML=icon(c.specialIcon);$('special-action-name').textContent=c.special;$('special-button').style.setProperty('--c',c.color);}else{$('rival-name').textContent=c.name;$('rival-symbol').innerHTML=icon(c.specialIcon);}cue('swap',c.name);}}
+  else if(t==='swap'){const c=CREATURES[e.id];renderer.swap(e.side,e.id,e.side===0?skinOf(profile,e.id):null);if(e.side===0){$('player-name').textContent=c.name;$('player-symbol').innerHTML=icon(c.specialIcon);$('special-action-icon').innerHTML=icon(c.specialIcon);$('special-action-name').textContent=c.special;$('special-button').style.setProperty('--c',c.color);delete $('special-button').dataset.copy;$('special-button').classList.remove('has-copy');}else{$('rival-name').textContent=c.name;$('rival-symbol').innerHTML=icon(c.specialIcon);}cue('swap',c.name);}}
 function frameBody(timestamp){
   if(!frameTime)frameTime=timestamp;const dt=Math.min(.1,(timestamp-frameTime)/1000);frameTime=timestamp;clock+=dt;
   // Creature pictures move on every screen; during a battle only the ones inside an open dialog (the result, a new card).
   if(screen!=='battle'||document.querySelector('dialog[open]'))for(const [canvasId,entry] of portraits){const el=$(canvasId);if(!el){portraits.delete(canvasId);continue;}const open=el.closest('dialog[open]');if(screen==='battle'?!open:!el.offsetParent&&!open)continue;
     const o=entry.opts;entry.wait=(entry.wait||0)+dt;if(o.still&&entry.drawn&&entry.wait<.25)continue;const pdt=entry.wait;entry.wait=0;entry.drawn=true;
-    const locked=!isUnlocked(profile,entry.id);drawPortrait(el,entry.puppet,entry.id,clock,pdt*(o.speed??1),{active:o.roster?entry.id===profile.selected:true,locked:o.roster&&locked,skin:o.roster?(locked?null:skinOf(profile,entry.id)):o.skin,form:!!o.form,clip:o.clip||'idle',glowColor:o.glowColor||null});}
+    const locked=!isUnlocked(profile,entry.id);drawPortrait(el,entry.puppet,entry.id,clock,pdt*(o.speed??1),{active:o.roster?entry.id===profile.selected:true,locked:o.roster&&locked,skin:o.roster?(locked?null:skinOf(profile,entry.id)):o.skin,form:!!o.form,clip:o.clip||'idle',glowColor:o.glowColor||null,hats:o.roster&&locked?null:o.hats||null,lab:o.lab||null});}
   if(screen==='battle'&&match){
     // Slow motion slows the world and its drawing; the clock, the HUD and the screen-space moments stay in real time.
     const ts=timeScale();
-    if(match.online&&online?.role==='guest'){if(match.status==='finished')settleBattle(dt);else coast(match,dt);guestTick(dt);}
+    if(match.online&&online?.role==='guest'){if(match.status==='finished')settleBattle(dt);else coast(match,dt);guestTick(dt);callsTick();}
     else if(match.status==='finished')settleBattle(dt*ts);
     else if(match.status!=='paused'){
       accumulator+=dt*ts;
       while(accumulator>=1/60){tutorialGuard();
         if(match.online){step(match,currentInput(),1/60,online?.remote||{});if(online)online.remote.special=false;}else if(match.versus||match.coop){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,currentInput(),1/60);input.special=false;accumulator-=1/60;
         if(match.online)hostAfterStep();
-        for(const e of match.events)battleEvent(e);
+        callsTick();for(const e of match.events)battleEvent(e);
         if(match.status==='finished'){startFinale();onFinish();break;}
       }
     }
@@ -1390,7 +1703,10 @@ function bindControls(){
   $('pause-dialog').addEventListener('cancel',e=>{e.preventDefault();resumeBattle();});$('result-dialog').addEventListener('cancel',e=>{e.preventDefault();leaveBattle();});
   window.addEventListener('keydown',e=>{
     if(screen!=='battle'||!match)return;
-    if(e.code==='Escape'){if($('help-dialog').open)return;if(match.status==='paused'){e.preventDefault();resumeBattle();}else if(match.status!=='finished'){e.preventDefault();pauseBattle();}return;}
+    if(e.code==='Escape'){if($('help-dialog').open)return;
+      // The friend who joined a two-phone room: Esc opens the honest note, and closes it again.
+      if(match.online&&online?.role==='guest'){e.preventDefault();if($('pause-dialog').open)resumeBattle();else if(match.status!=='finished')pauseBattle(e);return;}
+      if(match.status==='paused'){e.preventDefault();resumeBattle();}else if(match.status!=='finished'){e.preventDefault();pauseBattle();}return;}
     if(document.querySelector('dialog[open]')||match.status==='paused'||match.status==='finished')return;
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyW','KeyA','KeyS','KeyD','KeyE','KeyJ'].includes(e.code)){
       e.preventDefault();keys.add(e.code);if(!e.repeat&&e.code==='KeyE')pressSpecial(0);
@@ -1441,10 +1757,17 @@ function bindStick(zone,joystick,knob,state){
 // Read-only diagnostics. Browser journeys still operate the real controls.
 // Verification only: advance a battle by simulated time and draw one frame, even in a hidden tab.
 // With live=true the battle reads the real controls (sticks, buttons, keys), the way the frame loop does.
-const advance=(seconds,input={},live=false)=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match&&match.status!=='finished';i++){if(match.online&&online?.role==='guest'){coast(match,1/60);guestTick(1/60);continue;}tutorialGuard();if(match.online){step(match,live?currentInput():{fire:true,...input},1/60,online?.remote||{});if(online)online.remote.special=false;hostAfterStep();for(const e of match.events)if(e.type==='finish'){startFinale();onFinish();}continue;}if(live&&(match.versus||match.coop)){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,live?currentInput():{fire:true,...input},1/60);for(const e of match.events)if(e.type==='finish'){startFinale();onFinish();}}updateTutorial(seconds);if(!match)return false;renderer.render(match,1/60,clock+=seconds,1/60);renderHUD();return match.status;};
-window.__LEAGUE__=Object.freeze({advance,online:()=>online?{role:online.role,code:online.code,connected:online.connected,friend:online.friend,wins:online.wins}:null,stick:()=>({x:+input.stickX.toFixed(2),y:+input.stickY.toFixed(2)}),audio:()=>({ctx:sound.ctx?.state||'none',scene:sound.scene,music:Object.fromEntries(Object.entries(sound.music||{}).map(([k,t])=>[k,{paused:t.el.paused,time:+t.el.currentTime.toFixed(1),ready:t.el.readyState,gain:+t.g.gain.value.toFixed(2)}]))}),skip:()=>{if(!match||match.status==='finished')return false;finish(match,0,'test');startFinale();onFinish();return true;},timeScale:()=>+timeScale().toFixed(3),cue:()=>cueLast&&{...cueLast},finale:()=>finaleLeft(),
+const advance=(seconds,input={},live=false)=>{if(!storagePrefix||!match)return false;for(let i=0;i<seconds*60&&match&&match.status!=='finished';i++){if(match.online&&online?.role==='guest'){coast(match,1/60);guestTick(1/60);continue;}tutorialGuard();if(match.online){step(match,live?currentInput():{fire:true,...input},1/60,online?.remote||{});if(online)online.remote.special=false;hostAfterStep();callsTick();for(const e of match.events)battleEvent(e);if(match.status==='finished'){startFinale();onFinish();}continue;}if(live&&(match.versus||match.coop)){const [one,two]=versusInputs();step(match,one,1/60,two);input2.special=false;}else step(match,live?currentInput():{fire:true,...input},1/60);callsTick();for(const e of match.events)if(e.type==='finish'){startFinale();onFinish();}}updateTutorial(seconds);if(!match)return false;renderer.render(match,1/60,clock+=seconds,1/60);renderHUD();return match.status;};
+window.__LEAGUE__=Object.freeze({advance,online:()=>online?{role:online.role,code:online.code,connected:online.connected,friend:online.friend,wins:online.wins}:null,stick:()=>({x:+input.stickX.toFixed(2),y:+input.stickY.toFixed(2)}),audio:()=>({ctx:sound.ctx?.state||'none',scene:sound.scene,music:Object.fromEntries(Object.entries(sound.music||{}).map(([k,t])=>[k,{paused:t.el.paused,time:+t.el.currentTime.toFixed(1),ready:t.el.readyState,gain:+t.g.gain.value.toFixed(2)}]))}),skip:()=>{if(!match||match.status==='finished')return false;finish(match,0,'test');if(match.online&&online?.role==='host')onlineSend({type:'snap',snap:snapshot(match)});startFinale();onFinish();return true;},timeScale:()=>+timeScale().toFixed(3),cue:()=>cueLast&&{...cueLast},finale:()=>finaleLeft(),announce:()=>calls.said.at(-1)||null,announced:()=>[...calls.said],music:()=>({track:match?musicFor(match):null,rate:musicRate()}),show:()=>[...calls.fx],
+  // Verification only: start a battle of a kind (the Wonder of the Day, the story step that is next…), set the next friend round's
+  // comeback card, or pick this phone's card after a two-phone round; without an argument, card() tells what waits.
+  start:m=>{if(!storagePrefix||typeof m!=='string')return false;startBattle(m);return !!match;},versusCard:c=>{if(!storagePrefix)return false;versus.card=c&&(sim.COMEBACK_CARDS||[]).includes(c.id)?{side:c.side===1?1:0,id:c.id}:null;return versus.card;},
+  card:c=>{if(c&&storagePrefix)return onlineCard(c);return online?{card:online.card||null,cardFor:online.cardFor??-1,ready:onlineCardReady()}:null;},
   // Verification only: inject a battle event (a pip, a Wonder, a final blow…) or pre-roll the next battle.
-  event:e=>{if(!storagePrefix||!match||!e||typeof e.type!=='string')return false;battleEvent({...e});renderHUD();return true;},queue:m=>storagePrefix?queueNext(m):null,camera:()=>({scale:+renderer.scale.toFixed(3),offsetX:Math.round(renderer.offsetX),offsetY:Math.round(renderer.offsetY),close:!!renderer.cam,cinematic:!!renderer.punch,size:renderer.size,lite:!!renderer.lite,ema:+(renderer.ema||0).toFixed(4),hud:renderer.hudBottom||0,cutin:(renderer.moments||[]).filter(M=>M.kind==='cutin'&&M.rect).map(M=>({side:M.side,x:Math.round(M.rect.x),y:Math.round(M.rect.y),w:Math.round(M.rect.w),h:Math.round(M.rect.h),corner:!!M.rect.corner}))}),snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,mode:match.mode||null,wonder:match.wonder?{...match.wonder}:null,ending:match.ending?{...match.ending}:null,ball:match.ball?{x:match.ball.x,y:match.ball.y,carrier:match.ball.carrier,score:[...match.ball.score]}:null,wind:match.wind?{holder:match.wind.holder,feathers:match.wind.feathers.map(f=>({x:f.x,y:f.y}))}:null,lava:match.lava?{scale:match.lava.scale,embers:match.lava.embers.map(e=>({x:e.x,y:e.y}))}:null,trio:match.trio?[trioLeft(match,0),trioLeft(match,1)]:null,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,out:a.out||0,feathers:a.feathers||0,power:a.power||0,maxHp:a.spec.hp,superCharge:a.superCharge,form:a.form||0,pips:a.pips||0,canForm:!!a.canForm,formUsed:!!a.formUsed,sz:a.sz||1,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats}})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null}:null})});
+  event:e=>{if(!storagePrefix||!match||!e||typeof e.type!=='string')return false;battleEvent({...e});renderHUD();return true;},queue:m=>storagePrefix?queueNext(m):null,camera:()=>({scale:+renderer.scale.toFixed(3),offsetX:Math.round(renderer.offsetX),offsetY:Math.round(renderer.offsetY),close:!!renderer.cam,cinematic:!!renderer.punch,size:renderer.size,lite:!!renderer.lite,ema:+(renderer.ema||0).toFixed(4),hud:renderer.hudBottom||0,cutin:(renderer.moments||[]).filter(M=>M.kind==='cutin'&&M.rect).map(M=>({side:M.side,x:Math.round(M.rect.x),y:Math.round(M.rect.y),w:Math.round(M.rect.w),h:Math.round(M.rect.h),corner:!!M.rect.corner}))}),snapshot:()=>({screen,mode,profile:JSON.parse(JSON.stringify(profile)),match:match?{status:match.status,challenge:match.challenge,time:match.time,countdown:match.countdown,level:match.level,winner:match.winner,reason:match.reason,mode:match.mode||null,wonder:match.wonder?{...match.wonder}:null,ending:match.ending?{...match.ending}:null,ball:match.ball?{x:match.ball.x,y:match.ball.y,carrier:match.ball.carrier,score:[...match.ball.score]}:null,wind:match.wind?{holder:match.wind.holder,feathers:match.wind.feathers.map(f=>({x:f.x,y:f.y}))}:null,lava:match.lava?{scale:match.lava.scale,embers:match.lava.embers.map(e=>({x:e.x,y:e.y}))}:null,trio:match.trio?[trioLeft(match,0),trioLeft(match,1)]:null,actors:match.actors.map(a=>({id:a.id,side:a.side,x:a.x,y:a.y,hp:a.hp,out:a.out||0,feathers:a.feathers||0,power:a.power||0,maxHp:a.spec.hp,superCharge:a.superCharge,form:a.form||0,pips:a.pips||0,canForm:!!a.canForm,formUsed:!!a.formUsed,sz:a.sz||1,upgrades:[...a.upgrades],boss:a.boss?{...a.boss}:null,stats:{...a.stats},copy:a.copy||null,star:a.star||0,lab:a.lab?{...a.lab}:null})),covers:match.covers.map(c=>({...c})),zones:match.zones.map(z=>({...z})),shots:match.shots.length,shotDetails:match.shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,owner:s.owner})),pickup:match.pickup?{...match.pickup}:null,...wave2Snapshot(match)}:null})});
+// Verification: the wave-2 parts of a battle, as plain data.
+function wave2Snapshot(m){const plain=v=>v==null?null:JSON.parse(JSON.stringify(v));return {copyStars:plain(m.copyStars),comeback:plain(m.comeback),decoy:plain(m.decoy),hill:plain(m.hill),race:plain(m.race),rhythm:plain(m.rhythm),drums:plain(m.drums),spectacle:plain(m.spectacle),
+  wonderX:plain(m.wonderX),hats:plain(m.hats),labs:plain(m.labs),allied:!!m.allied,ccard:plain(m.ccard),copyLog:plain(m.copyLog),arena:m.arena||null,story:m.story||null};}
 async function boot(){
   $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);refreshTodayGoals();buildRoster();renderStoryPanel();bindControls();updateHeader();
     {const q=new URLSearchParams(location.search),code=codeFromText(q.get('join'));if(code){q.delete('join');history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:''));showView('online');joinRoom(code);}else showView(players.players.length>1?'players':'lobby');}$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);

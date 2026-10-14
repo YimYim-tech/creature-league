@@ -214,7 +214,7 @@ body.versus-play #rival-level{color:#ff9aa8}
   .player-faces{flex-wrap:nowrap;overflow-x:auto;padding:3px}.player-faces .fighter-chip{flex:none;width:58px}.player-faces .fighter-chip canvas{width:42px;height:42px}
 }
 /* Friend battle: whose creatures each side plays with. */
-.versus-side{grid-template-areas:"who who" "players players" "art name" "art hearts" "chips chips"}
+.versus-side{grid-template-areas:"who who" "players players" "art name" "art hearts" "hats hats" "chips chips"}.versus-side .versus-hats{grid-area:hats}
 .versus-players{grid-area:players;display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 2px}
 .vs-player{border:2px solid #c9a35d;border-radius:999px;background:#fff6e0;color:var(--ink);padding:3px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 .vs-player.chosen{background:var(--p);border-color:var(--p);color:#fff}
@@ -222,11 +222,26 @@ body.versus-play #rival-level{color:#ff9aa8}
 @media (max-height:600px) and (orientation:landscape){.vs-player{padding:1px 9px;font-size:11px}.versus-players{margin:2px 0 0}}
 /* On a sideways phone the player choice shares the top row with the name, so the whole setup still fits one screen. */
 @media (max-height:600px) and (orientation:landscape){
-  .versus-side{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"who players" "art name" "art hearts" "chips chips"}
+  .versus-side{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"who players" "art name" "art hearts" "hats hats" "chips chips"}
   .versus-keys{display:none}.versus-players{justify-content:flex-end;margin:0}
   .versus-heading h1{font-size:22px}.versus-heading{margin:0 0 4px}
 }
 @media (max-height:600px) and (orientation:landscape){.versus-view{padding:4px 12px 8px}}
+/* A phone on its side (844x390, 750x340): 'יאללה, לקרב!' is on the screen without scrolling. The hats sit beside the hearts, the way
+   back moves up into the heading's row, and the start row stays pinned to the bottom edge if a long hat list still pushes it down. */
+@media (max-height:430px) and (orientation:landscape){
+  .versus-view{position:relative;padding-top:4px}.versus-view>.back-link{position:absolute;top:10px;inset-inline-start:14px;margin:0;z-index:2}
+  .versus-heading{margin:0 0 4px}.versus-heading h1{font-size:24px}
+  .versus-side{grid-template-columns:auto auto minmax(0,1fr);grid-template-areas:"who who players" "art name name" "art hearts hats" "chips chips chips";padding:6px 8px 8px}
+  .versus-pick canvas{width:66px;height:66px}.versus-pick strong{font-size:18px}.versus-hearts{margin:0 0 4px}.versus-hearts small{display:none}
+  .versus-side .versus-hats{grid-area:hats;align-self:start;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;gap:5px;margin:0 0 4px;padding:2px;scrollbar-width:thin}
+  .versus-side .versus-hats .hat-option{width:34px;height:34px;flex:none;border-radius:9px}
+  .versus-fighters .fighter-chip canvas{width:38px;height:38px}
+  .versus-bottom{position:sticky;bottom:0;z-index:5;margin-top:6px;padding:4px 0;background:linear-gradient(#0f263700,#0f2637e6 35%)}
+  #versus-start{min-height:48px;padding:6px 16px;font-size:19px}
+}
+/* On the narrower phone the way back is only its arrow, so it never runs into the heading (the top bar has 'הזירה' too). */
+@media (max-height:430px) and (max-width:800px) and (orientation:landscape){.versus-view>.back-link{font-size:0;padding:2px 6px}.versus-view>.back-link::before{content:'→';font-size:22px;line-height:1}}
 
 /* ------------------------------------------------------------------ star boxes */
 /* The chest: wood with brass bands; silver and gold change the wood and the bands. */
@@ -702,3 +717,174 @@ button.code-pic{border:0;font:inherit;cursor:pointer}
   .campfire-view .guide-face{width:56px}.campfire-view .guide-bubble{padding:6px 12px}.campfire-view .guide-bubble p{font-size:14px}
   #campfire-back{min-height:46px;font-size:17px;margin-bottom:4px}
 }
+/* ---------------------------------------------------------------- wave 2: my creature, my style (meta) */
+/* A painted picture over its line icon: when the file is missing the icon stays. */
+.pic{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1}
+.pic>svg{width:58%;height:58%;opacity:.75}
+.pic>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.pic:has(img)>svg{visibility:hidden}
+/* The Wonder of the Day on the home row: today's sticker and no clock. A Wonder not seen yet is a dark shape and a question mark. */
+.wonder-strip{display:flex;align-items:center;gap:10px;padding:6px 16px 6px 10px;border:0;border-radius:14px;background:#0b1a22b3;color:#f3e6c8;box-shadow:0 0 0 2px #c9a35d66;cursor:pointer;font:inherit}
+.wonder-strip[hidden]{display:none}
+.wonder-strip.fresh{box-shadow:0 0 0 2px var(--gold-hi),0 0 16px #ffcf5a66}
+.wonder-strip .wonder-pic{width:34px;height:34px;flex:none;box-shadow:0 0 0 2px #3a1d0f,0 0 0 3px var(--gold-hi)}
+.wonder-strip .wonder-pic svg{width:20px;height:20px}
+.wonder-strip .wonder-pic.unseen{background:radial-gradient(circle at 40% 35%,#6a614f,#2a2419)}
+.wonder-strip .wonder-pic.unseen img,.wonder-strip .wonder-pic.unseen svg{filter:brightness(0) invert(.18);opacity:.9}
+.wonder-strip .wonder-q{position:absolute;inset:0;display:grid;place-items:center;font:900 22px/1 var(--display);color:#f3e6c8;text-shadow:0 2px 0 #000a}
+.wonder-strip.fresh .wonder-pic{animation:wonder-call 2.4s ease-in-out infinite}
+@keyframes wonder-call{50%{transform:scale(1.12) rotate(-6deg)}}
+@media (max-height:600px) and (orientation:landscape){.home-strips .wonder-strip .wonder-pic{width:26px;height:26px}.home-strips .wonder-strip .wonder-q{font-size:17px}}
+/* Hats: the card dialog's row, the friend-battle row, the prizes and Ron's box. */
+/* In the card window the one-row hat picker comes before the bigger looks, so a new hat is seen without scrolling. */
+.card-dialog-side{display:flex;flex-direction:column}.card-dialog-side>#skin-picker{order:2}.card-dialog-side>#hat-picker{order:1}.card-dialog-side>#card-dialog-play{order:3}
+.hat-picker{margin:10px 0 4px}.hat-picker .micro-label{display:flex;align-items:center;gap:5px}.hat-picker .micro-label svg{width:16px;height:16px}
+.hat-row,.versus-hats{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.versus-hats{justify-content:center;margin:2px 0 6px}.versus-hats[hidden]{display:none}
+.hat-option{position:relative;display:grid;place-items:center;width:54px;height:54px;padding:4px;border-radius:12px;border:1px solid var(--gold-soft);background:#fff8e8;color:var(--ink);cursor:pointer;font:inherit}
+.hat-option.none b{font-size:13px}
+.hat-option.more{width:auto;min-width:54px;padding:4px 8px;background:#fff8e880;border-style:dashed;gap:0}.hat-option.more svg{width:18px;height:18px;color:var(--gold)}.hat-option.more small{font-size:10px;font-weight:700;color:var(--ink-soft)}
+.hat-option.tier-rare{background:radial-gradient(circle,#fff8e8 50%,#d6ebff)}.hat-option.tier-legendary{background:radial-gradient(circle,#fff8e8 50%,#ffe7a8)}
+.hat-option.chosen{box-shadow:0 0 0 2px var(--brick),0 0 0 3px var(--gold-hi)}
+.versus-hats .hat-option{width:42px;height:42px;border-radius:10px}.versus-hats .hat-option.none b{font-size:11px}
+.prize-hat{position:absolute;top:4px;inset-inline-end:4px;width:52px;height:52px;padding:4px;border-radius:50%;background:#fff8e8e6;box-shadow:0 0 0 2px var(--gold),0 3px 6px #0005}
+.hat-prize.tier-legendary .prize-art{box-shadow:0 0 0 2px #ffcf5a,0 0 24px #ffcf5a88}.hat-prize.tier-rare .prize-art{box-shadow:0 0 0 2px #8cc4ff,0 0 18px #8cc4ff66}
+@media (max-height:600px) and (orientation:landscape){.prize-hat{width:40px;height:40px}}
+/* Ron's welcome box: three taps, three hats, one chosen. */
+.hatbox-dialog{width:min(470px,calc(100vw - 24px));text-align:center}
+.hatbox-dialog .dialog-close{z-index:3}
+.hatbox-ron{margin:0 0 4px;padding-inline-end:44px;text-align:right}.hatbox-ron .guide-face{width:70px}.hatbox-ron .guide-bubble p{font-size:15px}
+.hatbox-dialog h2{margin:4px 0 6px}
+.hatbox-chest{margin:18px auto 8px;width:150px;height:126px}
+.hatbox-chest[hidden],.hatbox-hats[hidden],.hatbox-worn[hidden]{display:none}
+.hatbox-hats{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:10px 0 4px}
+.hatbox-hat{display:grid;justify-items:center;gap:4px;width:118px;padding:10px 6px 8px;border-radius:16px;border:0;background:radial-gradient(circle at 50% 40%,#fff,#f1e4c4);box-shadow:0 0 0 2px var(--gold),0 6px 12px #0004;cursor:pointer;font:inherit;color:var(--ink);animation:prize-in .5s cubic-bezier(.3,1.5,.5,1) both;animation-delay:calc(var(--i,0)*.14s)}
+.hatbox-hat .pic{width:84px;height:84px}.hatbox-hat b{font-size:14px}
+.hatbox-hat.tier-rare{box-shadow:0 0 0 2px #6fb6ff,0 0 18px #6fb6ff88,0 6px 12px #0004}
+.hatbox-worn canvas{width:220px;height:200px}
+@media (max-height:600px) and (orientation:landscape){.hatbox-dialog{padding:10px 16px}.hatbox-ron .guide-face{width:48px}.hatbox-ron .guide-bubble{padding:6px 12px}.hatbox-chest{width:120px;height:100px;margin:10px auto 4px}.hatbox-hat{width:104px;padding:6px 4px}.hatbox-hat .pic{width:64px;height:64px}.hatbox-worn canvas{width:170px;height:136px}}
+/* A short phone (750x340): the chosen hat, Ron's words and 'יאללה!' fit without scrolling; the button never hides below the edge. */
+#hatbox-done{position:sticky;bottom:0}
+@media (max-height:400px) and (orientation:landscape){.hatbox-dialog h2{font-size:22px;margin:0 0 2px}.hatbox-ron{margin:0}.hatbox-ron .guide-bubble p{font-size:13px;line-height:1.35}.hatbox-worn canvas{width:150px;height:108px}#hatbox-done{margin-top:4px}}
+/* A phone held upright: the card's hat row shows without scrolling (the sentence under the title goes, as it does sideways). */
+@media (max-width:500px) and (orientation:portrait){.card-dialog-side>p.muted{display:none}}
+@media(prefers-reduced-motion:reduce){.hatbox-hat,.wonder-strip.fresh .wonder-pic{animation:none}}
+/* A card's form side with a Lab design: the creative director's stamp and the mechanic chip. */
+.tcard.form .tcard-emblem{display:inline-flex;align-items:center;gap:3px;width:auto;height:auto;aspect-ratio:auto;padding:1px 8px 1px 5px;border-radius:999px;background:#fff3dce8;color:#7a2615;box-shadow:0 0 0 1.5px #b5402a;transform:rotate(-2deg);font:800 9px/1.3 var(--text);white-space:nowrap}
+.tcard.form .tcard-emblem svg{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:2}
+.tcard.form .tcard-emblem small{font-size:inherit}
+.tcard-mech{position:absolute;bottom:7px;inset-inline-end:7px;display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;background:#1d2a5ae6;color:#fff4dc;font:800 11px/1.35 var(--text);box-shadow:0 0 0 1.5px var(--gold-hi)}
+.tcard-mech svg{width:13px;height:13px;color:var(--gold-hi)}
+.tcard.big.form .tcard-emblem{font-size:10px}.tcard.big .tcard-mech{font-size:12px}
+.tcard-crown.new-design{animation:crown-pulse 1.4s ease-in-out infinite}
+@keyframes crown-pulse{50%{transform:scale(1.2) rotate(-8deg);box-shadow:0 0 0 3px #fff6cf,0 0 26px #ffcf5a}}
+@media(prefers-reduced-motion:reduce){.tcard-crown.new-design{animation:none;box-shadow:0 0 0 3px #fff6cf,0 0 18px #ffcf5a}}
+/* The mix pages of the Star Book. */
+.album-mixes[hidden]{display:none}
+.mix-tabs{display:flex;gap:6px;overflow-x:auto;padding:6px 2px 8px;scrollbar-width:thin}
+.mix-tab{flex:none;display:grid;justify-items:center;padding:5px 12px;border-radius:12px;border:2px solid color-mix(in srgb,var(--c) 55%,#3a1d0f);background:#24160c;color:#f3e6c8;font:inherit;cursor:pointer}
+.mix-tab b{font-size:14px}.mix-tab small{font-size:11px;opacity:.85}
+.mix-tab.some:not(.chosen){box-shadow:0 0 0 1px var(--gold-hi)}
+.mix-tab.chosen{background:var(--gold-hi);color:#24160c;border-color:#3a1d0f}
+.mix-page{margin-top:6px;padding:12px;border-radius:18px;background:var(--grain),var(--parchment);color:var(--ink);box-shadow:var(--frame),0 8px 16px #0006}
+.mix-head{display:flex;align-items:center;gap:10px}.mix-head canvas{width:64px;height:64px}.mix-head h2{margin:0;font:900 24px var(--display);color:var(--ink)}.mix-head h2 b{font-size:18px;color:var(--brick)}
+.mix-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:8px}
+.mix-slot{display:grid;justify-items:center;align-content:start;gap:2px;padding:8px 4px;border-radius:12px;background:#0000000d;text-align:center}
+.mix-slot.got{background:color-mix(in srgb,var(--k) 22%,#fff8e8);box-shadow:0 0 0 1px color-mix(in srgb,var(--k) 60%,#3a1d0f)}
+.mix-pic{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 35%,color-mix(in srgb,var(--k) 40%,#fff),var(--k));color:#1b120a;box-shadow:0 0 0 2px #3a1d0f}
+.mix-pic svg{width:24px;height:24px}
+.mix-slot:not(.got) .mix-pic{background:radial-gradient(circle at 40% 35%,#6a614f,#2a2419);color:#00000059}
+.mix-pic i{position:absolute;inset:0;display:grid;place-items:center;font:900 24px/1 var(--display);font-style:normal;color:#f3e6c8;text-shadow:0 2px 0 #000a}
+.mix-slot b{font:800 13px/1.15 var(--text);color:var(--ink)}.mix-slot small{font-size:11px;color:var(--ink-soft);font-weight:700}.mix-slot:not(.got) small{color:var(--ink-faint)}
+@media (max-height:600px) and (orientation:landscape){.mix-grid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}.mix-pic{width:36px;height:36px}.mix-pic svg{width:20px;height:20px}.mix-head canvas{width:48px;height:48px}.mix-head h2{font-size:20px}}
+/* A new mix: the chip in the result and the card that turns over. */
+.rchip.mix svg{width:20px;height:20px;color:color-mix(in srgb,var(--k,#ffcf5a) 70%,#3a1d0f)}
+.mix-card .mix-art{display:flex;align-items:center;justify-content:center;gap:0;background:radial-gradient(circle at 30% 70%,color-mix(in srgb,var(--c) 45%,transparent),transparent 55%),radial-gradient(circle at 70% 70%,color-mix(in srgb,var(--k) 45%,transparent),transparent 55%),#14202c}
+.mix-card .mix-art canvas{position:relative;inset:auto;width:46%;height:100%}
+.mix-plus{font:900 30px/1 var(--display);color:#fff4dc;text-shadow:0 2px 0 #000a,0 0 12px var(--gold-hi)}
+.mix-card footer{display:flex;justify-content:space-between;align-items:center}
+.mix-spark{display:inline-flex;align-items:center;gap:5px;font-weight:900;color:var(--gold-hi)}.mix-spark i{width:12px;height:12px;transform:rotate(45deg);border-radius:2px;background:linear-gradient(135deg,#fff6cf,#ffcf5a);box-shadow:0 0 8px #ffcf5a}
+/* Comeback cards: each child has a half; the loser's half picks one of three. */
+.ccard-dialog{width:min(860px,calc(100vw - 16px));max-width:none;padding:12px 14px;text-align:center}
+.ccard-kicker{display:block;margin-bottom:6px}
+.ccard-halves{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ccard-half{display:grid;justify-items:center;align-content:start;gap:8px;padding:10px 8px;border-radius:18px;background:#0000000d}
+.ccard-half.picks{background:color-mix(in srgb,var(--gold-hi) 35%,transparent);box-shadow:0 0 0 2px var(--gold)}
+.ccard-who{display:grid;justify-items:center}.ccard-who b{font:900 20px var(--display);color:var(--ink)}.ccard-who small{font-weight:700;color:var(--ink-soft)}
+.ccard-row{display:flex;justify-content:center;gap:10px}
+.ccard{position:relative;display:block;width:clamp(72px,10vw,112px);aspect-ratio:5/7;padding:0;border:0;background:none;cursor:pointer;perspective:700px;touch-action:manipulation}
+.ccard-inner{position:absolute;inset:0;transition:transform .55s cubic-bezier(.3,1.3,.5,1);transform-style:preserve-3d}
+.ccard.flipped .ccard-inner{transform:rotateY(180deg)}
+.ccard-back,.ccard-face{position:absolute;inset:0;display:grid;place-items:center;border-radius:12px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:0 0 0 2px #3a1d0f,0 6px 12px #0005}
+.ccard-back{background:linear-gradient(160deg,#2f6fc0,#16386e);color:#fff4dc}
+.ccard-back .pic{position:absolute;inset:0;width:auto;aspect-ratio:auto}.ccard-back .pic>img{object-fit:cover}
+.ccard-face{transform:rotateY(180deg);grid-template-rows:1fr auto;padding:3px;background:radial-gradient(circle at 50% 35%,#fff,#f1e4c4);color:var(--brick)}
+.ccard-face .pic>img{object-fit:cover;border-radius:9px}
+.ccard-face b{font:900 14px var(--display);color:var(--ink);padding:2px 0 3px}
+.ccard.dropped{opacity:.35;transform:scale(.9);transition:opacity .3s,transform .3s}
+.ccard.picked{transform:scale(1.1);transition:transform .3s}
+.ccard.idle{cursor:default}.ccard:focus-visible{outline:3px solid var(--gold-hi);outline-offset:3px;border-radius:14px}.ccard:focus:not(:focus-visible){outline:0}
+.ccard-hint{margin:0;font-weight:800;color:var(--ink-soft);font-size:15px}
+.online-ccards{display:grid;justify-items:center;gap:6px;margin:8px 0}
+@media (max-width:620px) and (orientation:portrait){.ccard-halves{grid-template-columns:1fr}.ccard{width:80px}}
+@media (max-height:600px) and (orientation:landscape){.ccard-dialog{padding:8px 10px}.ccard{width:min(96px,calc((100dvh - 150px) * .714))}.ccard-who b{font-size:17px}
+  /* Inside the two-phone result the cards share the window with the title, the score and the buttons. */
+  .online-ccards{margin:4px 0;gap:4px}.online-ccards .ccard{width:min(96px,calc((100dvh - 262px) * .714))}}
+/* A lost round on a phone on its side: the Wonder chip moves under the score (the empty side), so the cards and both buttons fit. */
+@media (max-height:580px) and (orientation:landscape){#result-content:has(.online-ccards) .result-score{grid-row:2}#result-content:has(.online-ccards) .result-chips-plain{grid-column:2;grid-row:3;align-self:center;justify-content:center;margin:0}}
+@media(prefers-reduced-motion:reduce){.ccard-inner,.ccard.dropped,.ccard.picked{transition:none}}
+/* The Lab (?lab): one row per creature, the moving form on one side and the three choices on the other. */
+.lab-view{padding-bottom:20px}
+.lab-heading{display:grid;gap:4px;margin:6px 0 12px}.lab-heading .eyebrow svg{width:16px;height:16px;vertical-align:-3px}
+.lab-heading p{color:#dccfb0;max-width:720px;margin:0}
+.lab-credit{justify-self:start;padding:3px 12px;border-radius:999px;background:#fff3dce6;color:#7a2615;font-weight:800;font-size:13px;box-shadow:0 0 0 1.5px #b5402a;transform:rotate(-2deg)}
+.lab-credit:empty{display:none}
+.lab-list{display:grid;gap:14px}
+.lab-row{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:14px;align-items:center;padding:12px;border-radius:18px;background:var(--grain),var(--parchment);color:var(--ink);box-shadow:var(--frame),0 8px 16px #0006}
+.lab-row.ready{box-shadow:var(--frame),0 0 0 8px color-mix(in srgb,var(--c) 40%,transparent),0 8px 16px #0006}
+.lab-stage{position:relative;display:grid;justify-items:center;border-radius:14px;background:radial-gradient(circle at 50% 60%,color-mix(in srgb,var(--c) 30%,transparent),transparent 70%)}
+.lab-stage canvas{width:100%;height:210px}
+.lab-stage b{font:900 22px var(--display);color:var(--ink);margin-top:-6px}
+.lab-saved{position:absolute;top:6px;inset-inline-start:6px;display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;background:#4f7d3a;color:#fff;font-weight:800;font-size:12px}
+.lab-saved[hidden]{display:none}.lab-saved svg{width:13px;height:13px}
+.lab-picks{display:grid;gap:10px;min-width:0}
+.lab-options{display:grid;grid-template-columns:repeat(3,minmax(0,120px));gap:10px}
+.lab-option{aspect-ratio:1;padding:6px;border-radius:16px;border:0;background:radial-gradient(circle at 50% 45%,#fff,#efe1bd);box-shadow:0 0 0 1.5px var(--gold-soft),0 4px 8px #0003;cursor:pointer;color:var(--c)}
+.lab-option.chosen{box-shadow:0 0 0 3px var(--c),0 0 0 5px var(--gold-hi),0 6px 14px #0004;transform:translateY(-2px)}
+.lab-names{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lab-name{padding:6px 12px;border-radius:999px;border:1.5px solid var(--gold-soft);background:#fff8e8;color:var(--ink);font:700 15px var(--text);cursor:pointer}
+.lab-name.chosen{background:color-mix(in srgb,var(--c) 30%,#fff8e8);border-color:var(--c);box-shadow:0 0 0 1px var(--c)}
+.lab-name-input{flex:1 1 120px;min-width:0;max-width:210px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--gold-soft);background:#fffdf6;color:var(--ink);font:700 15px var(--text)}
+.lab-mechs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:460px}
+.lab-mech{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:14px;border:0;background:#fff8e8;box-shadow:0 0 0 1.5px var(--gold-soft),0 3px 6px #0002;color:var(--ink);font:800 16px var(--text);cursor:pointer;text-align:right}
+.lab-mech svg{width:28px;height:28px;color:var(--brick)}
+.lab-mech.chosen{background:color-mix(in srgb,var(--c) 28%,#fff8e8);box-shadow:0 0 0 3px var(--c)}
+.lab-actions{position:sticky;bottom:8px;z-index:3;display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;padding:8px;border-radius:16px;background:#0b1a22e0;box-shadow:0 0 0 2px #c9a35d66}
+.lab-actions .play-big{min-height:48px;margin:0}
+.lab-status{color:#dccfb0;font-weight:700}
+@media (max-height:600px) and (orientation:landscape){.lab-row{grid-template-columns:140px 1fr;padding:8px;gap:10px}.lab-stage canvas{height:140px}.lab-options{grid-template-columns:repeat(3,minmax(0,78px));gap:8px}.lab-mech{font-size:14px;padding:6px 10px}.lab-mech svg{width:22px;height:22px}.lab-name{font-size:13px;padding:4px 10px}.lab-heading{margin:2px 0 8px}.lab-heading h1{font-size:26px}.lab-actions{padding:4px 8px;bottom:4px}.lab-actions .play-big{min-height:40px;font-size:18px;padding:4px 26px}}
+@media(max-width:620px) and (orientation:portrait){.lab-row{grid-template-columns:1fr}.lab-stage canvas{height:170px}.lab-options{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* The beat bridge of the Two Tracks: the drum, four lights and the bridge of light. */
+.bridge-beat{position:absolute;left:3%;right:3%;bottom:6%;width:94%;height:72%;pointer-events:none}
+.bridge-beat[hidden]{display:none}
+.bridge-arc.under-light{opacity:0}
+.bridge-pads.beats{align-items:center;gap:16px}
+.beat-pad{position:relative;display:grid;place-items:center;width:clamp(96px,16vw,132px);aspect-ratio:1;border:0;border-radius:50%;padding:0;background:radial-gradient(circle at 40% 35%,#ffe1a6,#c26a24);box-shadow:0 0 0 3px #3a1d0f,0 10px 18px #0007;cursor:pointer;color:#3a1d0f;touch-action:manipulation}
+.beat-pad.painted{background:none;box-shadow:none}
+.beat-pad img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.beat-pad .drum-on{opacity:0}
+.beat-pad.beat .drum-on{animation:drum-lit .5s ease-out}
+.beat-pad>svg{width:52%;height:52%}
+.beat-pad.beat{animation:drum-thump .3s ease-out}
+.beat-pad.tap{animation:drum-tap .18s ease-out}
+.beat-pad:disabled{cursor:default;opacity:1;filter:saturate(.7) brightness(.88)}
+.beat-dots{display:flex;gap:8px}.beat-dots i{width:16px;height:16px;border-radius:50%;background:#0006;box-shadow:0 0 0 2px #e9cf8c}
+.beat-dots i.on{background:#ffcf5a;box-shadow:0 0 0 2px #fff6cf,0 0 12px #ffcf5a}
+@keyframes drum-lit{0%{opacity:1}100%{opacity:0}}
+@keyframes drum-thump{30%{transform:scale(1.07)}}
+@keyframes drum-tap{50%{transform:scale(.93)}}
+@media (max-height:600px) and (orientation:landscape){.beat-pad{width:84px}.beat-dots i{width:13px;height:13px}}
+@media(prefers-reduced-motion:reduce){.beat-pad.beat,.beat-pad.tap{animation:none}}
+/* The day's signposts: the crown and today's sticker as goal pictures. */
+.goal-pic .crown-art{width:44px;height:44px;object-fit:contain}
+.goal-sticker{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;overflow:hidden}.goal-sticker img{width:100%;height:100%;object-fit:cover}.goal-sticker.unseen img{filter:brightness(0) invert(.18)}

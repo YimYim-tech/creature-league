@@ -86,17 +86,37 @@ export const STEPS = [
     intro:'האבנים משמיעות מנגינה. תקשיבו טוב, ואז תדרכו עליהן באותו הסדר. שכחתם? עצרו רגע: אוזנב שומע לפני כולם, והוא יראה לכם.',
     easier:'הפעם ההדים קצת יותר שקטים. אתם יכולים!',
     after:'ההדים נעלמו. בפעם הראשונה בעמק, קול שנשלח מצד אחד הגיע באמת לצד השני.'},
-  {id:'echo-guard', chapter:2, island:'echo', kind:'guardian', rival:'kashevet', level:'rookie', life:.7, rivalLife:1.05, title:'קשבת',
+  // Slauz's slow stones took a resting thumb past 80 s against Kashevet (one fight in five): she has a little less life against him.
+  {id:'echo-guard', chapter:2, island:'echo', kind:'guardian', rival:'kashevet', level:'rookie', life:.7, rivalLife:1, kidLife:{slauz:.88}, title:'קשבת', spectacle:true,
     intro:'קשבת לא בודקת מי הכי חזק. היא בודקת אם אנחנו יודעים לעצור ולהקשיב. כשהאבן על החזה שלה מאירה, התרחקו!',
     after:'היא שמעה אותנו. עכשיו היא מוכנה לפתוח את הדרך, והיא מצטרפת לנבחרת!'},
   {id:'echo-bridge', chapter:2, island:'echo', kind:'bridge', notes:[0,2,1],
     intro:'זה גשר הקול. משני צדי התהום מחכים לשמוע. הקשיבו לשלושת הצלילים, והקישו אותם באותו הסדר.',
     after:'כשהגשר חזר, נשמעה משני צדיו אותה מילה: "שמעתי". והמחבר הראשון נכנס לשבר המסכה!'},
   // ---- The Land of Two Tracks: together, at the same pace. Its first step is the fast tiger the kids asked for.
-  {id:'tracks-chase', chapter:2, island:'tracks', kind:'free', rival:'zankor', level:'rookie', flee:true,
+  // kidLife: Havzuk's blink lands right beside the running tiger (the chase was over in 13 s), and Slauz's slow stones need a little less.
+  {id:'tracks-chase', chapter:2, island:'tracks', kind:'free', rival:'zankor', level:'rookie', flee:true, kidLife:{havzuk:1.7, slauz:.9},
     intro:'זנקור הוא הנמר הכי מהיר בכל העולמות. מאז שהגשר נחתך הוא רק רץ לבד, ולא מסתכל אחורה. הוא לא יחכה לכם: תפסו אותו בקליעים!',
     after:'תפסתם אותו! זנקור עצר, ובפעם הראשונה הסתכל אחורה. הנמר המהיר בנבחרת!'},
+  // Then: hold a hill against one who never gives up, race through gates that open only together, meet the deer of the beat,
+  // and tap the bridge back to the same beat. Freeing Tzadon on his hill makes the race a friendly one.
+  {id:'tracks-hill', chapter:2, island:'tracks', kind:'mission', mode:'hill', opponent:'tzadon', rival:'tzadon', level:'rookie',
+    intro:'צעדון אף פעם לא מוותר על גבעת השריון שלו. עמדו לבד בתוך הטבעת כדי לצבור נקודות, ושימו לב: היא זזה!',
+    easier:'הפעם צעדון קצת עייף. אתם יכולים!',
+    after:'צעדון גילה שאפשר להתחרות ולהישאר חברים. הוא בנבחרת, והוא אף פעם לא מוותר!'},
+  {id:'tracks-race', chapter:2, island:'tracks', kind:'mission', mode:'race', opponent:'tzadon', ally:'zankor', level:'rookie',
+    intro:'השערים כאן נפתחים רק כשמגיעים אליהם ביחד. זנקור רגיל לרוץ לבד, אז היום הוא רץ איתכם: חכו זה לזה בכל שער!',
+    easier:'הפעם הצללים קצת יותר איטיים. אתם יכולים!',
+    after:'בפעם הראשונה זנקור חיכה למישהו בשער. ככה מגיעים רחוק יותר, ביחד!'},
+  {id:'tracks-guard', chapter:2, island:'tracks', kind:'guardian', rival:'rhythmdeer', level:'rookie', life:1, rivalLife:1.25, title:'אייל הקצב', spectacle:true, rhythm:true,
+    intro:'אייל הקצב תוקף רק בקצב של המטוטלות, ובין פעימה לפעימה החזה שלו נפתח: שם פוגעים. בחצי השני הקצב מהיר יותר!',
+    after:'אייל הקצב שמע אותנו ועצר את המטוטלות. עכשיו הוא מצטרף לנבחרת, ומחכה לבנות איתנו את גשר הקצב!'},
+  {id:'tracks-bridge', chapter:2, island:'tracks', kind:'bridge', beats:4, bpm:100,
+    intro:'זה גשר הקצב. הקשיבו לארבע הפעימות, ואז הקישו איתן ביחד, בדיוק בקצב.',
+    after:'הגשר נדלק, והמחבר השני נכנס לשבר המסכה. זנקור הגיע ראשון, ואז הסתובב וחזר בשביל צעדון.'},
 ];
+// The Little Shadow's other lines: the first copied super ever ('you listened so well', chapter 2's theme).
+export const SHADOW_LINES = Object.freeze({copy:'הקשבתם כל כך טוב, שלמדתם כוח של מישהו אחר! ככה בונים גשרים.'});
 
 // Story cards: not fighters, but part of the album.
 export const STORY_CARDS = {
@@ -147,9 +167,11 @@ export function missionLevel(profile, step) {
 export function missionStars(step, m) {
   if (m.winner !== 0) return 0;
   if (step.mode === 'lava') {const a = m.actors[0], left = a.hp / a.spec.hp; return left >= .5 ? 3 : left >= .25 ? 2 : 1;}
-  if (step.mode === 'ball') {const lead = m.ball.score[0] - m.ball.score[1]; return lead >= 4 ? 3 : lead >= 2 ? 2 : 1;}
+  if (step.mode === 'ball') {const lead = m.ball.score[0] - m.ball.score[1]; return lead >= 3 ? 3 : lead >= 2 ? 2 : 1;}
   if (step.mode === 'trio') return trioLeft(m, 0);
   if (step.mode === 'echo') {const r = m.echo.songs[1]; return r === 0 ? 3 : r === 1 ? 2 : 1;}
+  if (step.mode === 'hill') {const lead = m.hill.points[0] - m.hill.points[1]; return lead >= 15 ? 3 : lead >= 8 ? 2 : 1;}
+  if (step.mode === 'race') {const r = m.race.rival; return r <= 1 ? 3 : r <= 3 ? 2 : 1;}
   return m.time < 35 ? 3 : m.time < 60 ? 2 : 1;
 }
 // Every battle step earns one to three stars: missions by how well the goal went, fights by the life left.
@@ -183,20 +205,27 @@ export function makeStoryMatch(profile, options = {}) {
   if (replay || friendlyStep(profile, step)) m.friendly = true;
   return m;
 }
+// A creature whose blows reach only close by meets the story's rivals with a little less life: with a resting thumb, Tzadon's
+// fight with the Rhythm Deer ran past the clock (his stomps rarely reach a guardian that keeps its distance).
+const SLOW_KIDS = Object.freeze({tzadon:.8});
 function buildStoryMatch(profile, step, options, replay) {
   const player = isUnlocked(profile, profile.selected) ? profile.selected : 'maimi';
   // A first attempt plays as tuned: a Wonder seed sprouts only in a replay, and story rivals never grow a Power Form.
   // The reflection is as strong as the child: with the child's form unlocked it gets formRival more life.
   const forms = options.forms ?? [formUnlocked(profile, player), false];
-  options = {...options, wonder:!!replay && !!options.wonder, forms, life:step.life || 1, rivalLife:(step.rivalLife || 1) * (forms[0] ? step.formRival || 1 : 1)};
+  options = {...options, wonder:!!replay && !!options.wonder, forms, life:step.life || 1, rivalLife:(step.rivalLife || 1) * (forms[0] ? step.formRival || 1 : 1) * (SLOW_KIDS[player] || 1) * (step.kidLife?.[player] || 1)};
   if (step.kind === 'mission') return makeMatch({...options, player, rival:step.opponent, level:missionLevel(profile, step), story:step.id, arena:step.island, mode:step.mode,
     team:step.mode === 'trio' ? trioTeam(profile, options.team) : null, rivalTeam:step.rivals || null,
     // The freed friend who helps only comes when it really is in the team, and never as the creature playing.
     buddy:step.buddy && isUnlocked(profile, step.buddy) && step.buddy !== player ? step.buddy : null,
     // Playing the friend who hears first: then the stones themselves hum the next note when the child waits.
-    echoHint:!!step.buddy});
+    echoHint:!!step.buddy,
+    // The pair race: a friend runs at the child's side (another one when the child plays it), and until the bridge of light was
+    // built once, it supers right after the child's first super to show how.
+    ...(step.ally ? {ally:step.ally !== player ? step.ally : 'havzuk', allyScript:!profile.tracks?.taught} : {})});
   const rival = step.kind === 'mirror' ? player : step.rival;
-  return makeMatch({...options, player, rival, level:missionLevel(profile, step), story:step.id, arena:step.island, giant:step.kind === 'guardian', mirror:step.kind === 'mirror', hide:!!step.hide, flee:!!step.flee});
+  return makeMatch({...options, player, rival, level:missionLevel(profile, step), story:step.id, arena:step.island, giant:step.kind === 'guardian', mirror:step.kind === 'mirror', hide:!!step.hide, flee:!!step.flee,
+    spectacle:!!step.spectacle, rhythm:!!step.rhythm});
 }
 // Called after a finished story match. Returns what changed, for the screens to celebrate.
 export function recordStory(profile, m) {
@@ -208,7 +237,8 @@ export function recordStory(profile, m) {
   const stars = stepStars(step, m);
   if (stars) profile.missionStars[step.id] = Math.max(profile.missionStars[step.id] || 0, stars);
   let released = null;
-  if (step.kind !== 'mission' && WILD.includes(step.rival) && !isUnlocked(profile, step.rival)) {profile.unlocked.push(step.rival); profile.newCards.push(step.rival); released = step.rival;}
+  // Whoever a step names as its rival is freed by winning it, a mission's rival too (Tzadon on his hill).
+  if (WILD.includes(step.rival) && !isUnlocked(profile, step.rival)) {profile.unlocked.push(step.rival); profile.newCards.push(step.rival); released = step.rival;}
   const lit = (step.kind === 'guardian' || step.kind === 'mirror') && ISLANDS.some(i => i.id === step.island) ? step.island : null;
   return {step, released, lit, stars};
 }

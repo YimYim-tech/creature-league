@@ -27,11 +27,13 @@ export function formDots(toGo,total){const n=Math.max(1,Math.floor(total)||1),le
 export function wonderPage(list,seen){return (Array.isArray(list)?list:[]).filter(w=>w&&w.id).map(w=>{const n=Math.max(0,Math.min(9999,Math.floor(Number(seen?.[w.id])||0)));return {id:w.id,name:w.name,icon:w.icon,color:w.color,sticker:w.sticker,count:n,seen:n>0};});}
 // The five creatures played most, the one just played first.
 export function mostPlayed(creatures,ids,first=null,n=5){const order=[...ids].sort((a,b)=>(creatures?.[b]?.played||0)-(creatures?.[a]?.played||0));const top=first&&ids.includes(first)?[first,...order.filter(id=>id!==first)]:order;return top.slice(0,n);}
-export const HISTORY_LABEL={cup:'גביע החופים',wild:'קרב פרא',story:'מסע השרשרת',league:'ליגה',tower:'מגדל המסכה',versus:'חבר נגד חבר',coop:'ביחד נגד ענק',online:'חבר משני טלפונים',quick:'אימון'};
+export const HISTORY_LABEL={cup:'גביע החופים',wild:'קרב פרא',story:'מסע השרשרת',league:'ליגה',tower:'מגדל המסכה',versus:'חבר נגד חבר',coop:'ביחד נגד ענק',online:'חבר משני טלפונים',quick:'אימון',wonder:'הפלא של היום'};
 export const historyLabel=(mode,challengeTitle)=>mode==='challenge'?challengeTitle:HISTORY_LABEL[mode]||'אימון';
 // A painted arena for the thumbnail on the "one more" button; the coast when there is none.
-const PAINTED=['wind','sea','fire','mirror','castle','echo'],STAND_IN={tracks:'wind'};
+// The Land of Two Tracks is painted too; until its painting is on a phone, a page picture falls back to the wind island.
+const PAINTED=['wind','sea','fire','mirror','castle','echo','tracks'],STAND_IN={tracks:'wind'};
 export const arenaPicture=a=>{const id=PAINTED.includes(a)?a:STAND_IN[a];return id?'./art/gen/arena-'+id+'.jpg':'./art/2026-09-15__Coastal-Arena__Background__v01__FINAL.png';};
+export const arenaFallback=a=>arenaPicture(STAND_IN[a]||null);
 // The two-thumb hold of the Power Form ritual: it fills while held, and drains twice as fast when let go.
 // A step back in time (a first frame older than the opening) counts as no time: nobody's hold grows by itself.
 export const holdStep=(p,held,dt)=>{dt=Math.max(0,+dt||0);return held?p+dt:Math.max(0,p-dt*2);};
@@ -40,3 +42,22 @@ export const holdStep=(p,held,dt)=>{dt=Math.max(0,+dt||0);return held?p+dt:Math.
 export const pressWakes=({at,shownAt,lastUp=0,held=0})=>held===0&&at>=shownAt+WAKE_MS&&at>=lastUp+WAKE_MS;
 // Hebrew for one creature follows that creature; everything for the children stays plural.
 export const byGender=(c,male,female)=>c?.female?female:male;
+// ------------------------------------------------------------------ wave 2: my creature, my style
+// The announcer counts 3-2-1 only for the first battle of a session: a session with a battle in it is not fresh.
+export const freshSession=(s,now)=>!(sessionLive(s,now)?.battles>0);
+// The Lab's file for the repository: one a month, lab-YYYY-MM.json.
+export const labFileName=(date=new Date())=>'lab-'+date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'.json';
+// A Lab row while it is being chosen: the saved design, or nothing picked yet. Ready when it has a picture and a mechanic.
+export function labDraft(saved,options,names){const i=options.indexOf(saved?.option);return {option:i>=0?saved.option:null,name:i>=0?(saved.name||names[i]||''):'',mech:i>=0?saved.mech||null:null};}
+export const labReady=d=>!!(d?.option&&d.mech);
+// Changing the picture also changes the name, unless the name was typed by hand (then it stays).
+export function labPick(draft,option,options,names){const before=options.indexOf(draft.option),typed=!!draft.name&&!names.includes(draft.name)&&before>=0;const i=options.indexOf(option);
+  return {...draft,option:i>=0?option:draft.option,name:typed?draft.name:(names[i]||draft.name)};}
+// The mix pages of the Star Book: one page per creature on the team, a slot for every creature whose super it can copy.
+export function mixPages(team,mixes,copyable){return team.map(id=>{const kinds=Array.isArray(mixes?.[id])?mixes[id]:[],slots=copyable.filter(k=>k!==id);
+  return {id,slots:slots.map(kind=>({kind,got:kinds.includes(kind)})),got:slots.filter(k=>kinds.includes(k)).length,total:slots.length};});}
+// The beat bridge: a tap counts when it lands near a beat of the playing part (from the first playing beat on), once per beat.
+// The window is forgiving but never the whole beat, so the taps still follow the drum.
+export const beatWindow=period=>Math.min(.3,period*.35);
+export function beatJudge(t,{period,from=0,used=[],win=beatWindow(period)}={}){if(!(period>0)||!Number.isFinite(t))return -1;const n=Math.round(t/period);
+  return n>=from&&Math.abs(t-n*period)<=win&&!used.includes(n)?n:-1;}

@@ -71,6 +71,31 @@ body.battle-active #match-toast{top:8px;right:12px;left:auto;transform:none;max-
 #special-button.deny,#special-button-2.deny{animation:super-deny .36s ease-out}
 @keyframes super-deny{20%{transform:translateX(-5px) rotate(-5deg)}40%{transform:translateX(5px) rotate(4deg)}60%{transform:translateX(-3px) rotate(-2deg)}80%{transform:translateX(2px)}}
 
+/* ------------------------------------------------------------------ wave 2 */
+/* A caught copy star: the copied super's picture on a disc of its colour, and a charge ring in both colours. */
+#special-button.has-copy::before,#special-button-2.has-copy::before{
+  background:conic-gradient(#3a1d0f 0 5deg,transparent 5deg 115deg,#3a1d0f 115deg 125deg,transparent 125deg 235deg,#3a1d0f 235deg 245deg,transparent 245deg 355deg,#3a1d0f 355deg),
+    conic-gradient(var(--c2,#ffd23a) 0 calc(var(--charge,0) * .5turn),var(--c,#f2b134) 0 calc(var(--charge,0) * 1turn),#fbf3e1aa 0)}
+#special-button.has-copy #special-action-icon,#special-button-2.has-copy #special-action-icon-2{display:grid;place-items:center;width:36px;height:36px;margin:0 auto;border-radius:50%;background:color-mix(in srgb,var(--c2,#ffd23a) 72%,#fff8e6);color:#2a1d11;
+  box-shadow:0 0 0 2.5px var(--c,#f2b134),0 0 0 4px #3a1d0f}
+#special-button.has-copy #special-action-icon svg,#special-button-2.has-copy #special-action-icon-2 svg{width:22px;height:22px;stroke-width:2.2}
+/* A spectacle guardian's life bar paints itself in while its ink rises in the countdown. */
+#battle .rival-info.paint-in .health-track i{animation:bar-paint var(--paint,2.8s) cubic-bezier(.5,0,.3,1) both}
+#battle .rival-info.paint-in .fighter-symbol,#battle .rival-info.paint-in .fighter-lines b{animation:ink-in var(--paint,2.8s) ease-out both}
+@keyframes bar-paint{0%,40%{clip-path:inset(0 0 0 100%)}100%{clip-path:inset(0)}}
+@keyframes ink-in{0%,35%{opacity:0}100%{opacity:1}}
+/* The Wonder of the Day lasts to the end: its chip has no ring to empty. */
+#wonder-chip.endless .wonder-ring{display:none}
+/* The armour hill: the one standing alone in the ring is marked. */
+#battle .mode-banner .mb-score.mb-hold{padding:0 5px;border-radius:7px;background:#ffd23a33;box-shadow:0 0 0 2px currentColor}
+#battle .mode-banner .mb-side small{font:800 11px/1 var(--display,'Frank Ruhl Libre',serif);opacity:.85}
+/* The wind mission's hold count: a tile on the painted stands beside the score, above the arena's oval. */
+#battle .hold-count{top:8px;left:calc(50% + 136px);min-width:52px;padding:0 12px;font-size:28px;line-height:36px;border-radius:16px}
+/* The first-fight lesson: one line in the HUD band at the top, on the side of the control it talks about. Never over the arena's floor. */
+#battle .tutorial{top:10px;bottom:auto;left:auto;right:auto;transform:none;max-width:none;white-space:nowrap;font-size:17px;line-height:1.25;padding:5px 14px;border-radius:999px;animation:none}
+#battle .tutorial[data-step="0"]{left:12px}
+#battle .tutorial[data-step="1"],#battle .tutorial[data-step="2"]{right:12px}
+
 /* ------------------------------------------------------------------ sideways phones */
 @media (max-height:600px) and (orientation:landscape){
   /* The HUD band is pinned by left and right; style.css's full width under 760 px would push the pause button off the edge. */
@@ -86,10 +111,13 @@ body.battle-active #match-toast{top:8px;right:12px;left:auto;transform:none;max-
   body.battle-active #battle .mode-banner .mb-score{font-size:17px}
   body.battle-active #battle .mode-banner svg{width:15px;height:15px}
   body.battle-active #match-toast{top:max(5px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));font-size:12px;padding:2px 10px}
-  /* The first-fight lesson: a small note beside the control it talks about, at the bottom edge, not in the middle of the arena. */
-  body.battle-active .tutorial{font-size:15px;line-height:1.25;padding:6px 12px;white-space:normal;width:max-content;max-width:200px;text-align:center}
-  body.battle-active .tutorial.touch[data-step="0"]{left:calc(max(6px,env(safe-area-inset-left)) + 118px);right:auto;bottom:max(12px,env(safe-area-inset-bottom));transform:none}
-  body.battle-active .tutorial.touch[data-step="1"],body.battle-active .tutorial.touch[data-step="2"]{left:auto;right:calc(max(6px,env(safe-area-inset-right)) + 146px);bottom:max(12px,env(safe-area-inset-bottom));transform:none}
+  /* The first-fight lesson: one line in the HUD band, on the side of the control it talks about (the pause button is on the left). */
+  body.battle-active #battle .tutorial{top:max(5px,env(safe-area-inset-top));font-size:15px;padding:3px 12px}
+  body.battle-active #battle .tutorial[data-step="0"]{left:calc(max(8px,env(safe-area-inset-left)) + 40px)}
+  body.battle-active #battle .tutorial[data-step="1"],body.battle-active #battle .tutorial[data-step="2"]{right:max(10px,env(safe-area-inset-right))}
+  /* The wind mission's hold count: a small tile in the HUD band beside the clock, outside the arena's oval. */
+  body.battle-active #battle .hold-count{top:max(5px,env(safe-area-inset-top));left:calc(50% + 96px);min-width:42px;padding:0 10px;font-size:22px;line-height:26px;border-radius:13px;
+    box-shadow:0 0 0 2px #3a1d0f,0 0 0 3px #f2c14e,0 4px 8px #0007}
 }
 /* A short phone (750x340): a smaller chip, well above the arena floor. */
 @media (max-height:360px) and (orientation:landscape){
@@ -105,6 +133,16 @@ body.battle-active #match-toast{top:8px;right:12px;left:auto;transform:none;max-
   .arena-frame .arena-tip{display:none}
   .match-cue{font-size:13px;padding:1px 9px 1px 8px}
   .match-cue svg{width:14px;height:14px}
+  /* A mission's score pill sits on the painted stands at the top edge, above the oval, and fades when a creature walks under it. */
+  #battle .mode-banner{top:3px;padding:1px 10px;gap:7px;transition:opacity .2s}
+  #battle .mode-banner .mb-side{font-size:14px}
+  #battle .mode-banner .mb-score{font-size:15px}
+  #battle .mode-banner svg{width:14px;height:14px}
+  #battle .mode-banner.hud-fade{opacity:.28}
+  #battle .hold-count{top:3px;left:calc(50% + 104px);min-width:34px;padding:0 8px;font-size:18px;line-height:22px;border-radius:11px;box-shadow:0 0 0 2px #3a1d0f,0 0 0 3px #f2c14e,0 3px 6px #0007}
+  #battle .tutorial{top:4px;font-size:13px;padding:2px 10px}
+  #battle .tutorial[data-step="0"]{left:6px}
+  #battle .tutorial[data-step="1"],#battle .tutorial[data-step="2"]{right:6px}
 }
 @media (prefers-reduced-motion:reduce){
   #battle .mode-banner .mb-closing{animation:none}
