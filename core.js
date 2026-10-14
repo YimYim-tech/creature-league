@@ -1,5 +1,7 @@
 // The simulation is independent of the browser. Positions are feet on the arena floor.
 import {cleanUpgrades,buildSpec,UPGRADE_IDS} from './upgrades.js';
+import {WONDERS,WONDER_IDS,WONDER_TIMES,wonderById,setupWonder,stepWonder} from './wonders.js';
+export {WONDERS,WONDER_IDS,WONDER_TIMES,wonderById};
 export const WORLD = { width: 1280, height: 720, cx: 640, cy: 395, rx: 536, ry: 251 };
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const CREATURES = Object.freeze({
@@ -17,7 +19,7 @@ export const CREATURES = Object.freeze({
   fireguard: { id:'fireguard', magic:90, name:'שומר האש', element:'אש', role:'אריה הלבה', color:'#ff8a2a', dark:'#8a2c0a', hp:235, speed:230, damage:19, interval:.48, shotSpeed:560, armor:.1, radius:28, height:118, specialCooldown:7.5, special:'שאגת להבה', specialIcon:'flame', description:'שאגת אש קדימה: שורפת מיד את מי שמולו ומשאירה רצפה בוערת.', tip:'השאגה קצרה: התקרבו ליריב לפני שאתם שואגים.', number:'43', rarity:'אגדי', facesLeft:true, shotRadius:10, aiRange:240, specialRange:260 },
   zoharon: { id:'zoharon', magic:95, name:'זוהרון', element:'אור', role:'דרקון הכוכבים', color:'#ffc23a', dark:'#8a5a0a', hp:215, speed:250, damage:15, interval:.38, shotSpeed:720, armor:.06, radius:27, height:120, specialCooldown:7, special:'מטר כוכבים', specialIcon:'star', description:'מטר כוכבים נופל סביב היריב, אחד אחרי השני. כל כוכב מסמן עיגול זהוב לפני שהוא נוחת.', tip:'הפעילו את המטר כשהיריב עומד במקום או ליד הקיר: קשה לברוח מכל הכוכבים.', number:'44', rarity:'אגדי', facesLeft:true, aiRange:300, specialRange:560, star:true },
   kokhavit: { id:'kokhavit', magic:95, name:'כוכבית', element:'אור', role:'אילת הבדולח', color:'#ffe27a', dark:'#7a6418', hp:200, speed:275, damage:12, interval:.32, shotSpeed:700, armor:.04, radius:25, height:126, specialCooldown:7, special:'לב של אור', specialIcon:'shield', description:'מחזירה לעצמה חיים ומקבלת מגן אור שבולע את שתי הפגיעות הבאות.', tip:'שמרו את הסופר לרגע שהחיים יורדים. המגן עוצר גם את הסופר של היריב.', number:'45', rarity:'אגדי', facesLeft:true, aiRange:280, specialRange:2000, star:true, female:true },
-  // Chapter 2: the Echo Valley, and the tiger of the Land of Two Tracks (Michael asked for a fast tiger and for birds that fly).
+  // Chapter 2: the Echo Valley, and the tiger of the Land of Two Tracks (a fast tiger and birds that fly, as the kids asked).
   ozenav: { id:'ozenav', magic:80, name:'אוזנב', element:'קול', role:'שומע לפני כולם', color:'#3fc6c9', dark:'#0f5e66', hp:165, speed:282, damage:11, interval:.3, shotSpeed:680, armor:.02, radius:22, height:92, specialCooldown:7, special:'שומע לפני כולם', specialIcon:'ear', description:'האוזניים הענקיות שלו שומעות כל קליע שמתקרב. לכמה שניות הקליעים מחטיאים אותו, והוא זז מהר יותר.', tip:'הפעילו כשהיריב יורה עליכם הרבה: הקליעים יחטיאו, ובינתיים אתם תוקפים.', number:'49', rarity:'נדיר', facesLeft:true, aiRange:330, specialRange:600 },
   rishrush: { id:'rishrush', magic:85, name:'רשרוש', element:'קול', role:'פטפטן מצלצל', color:'#d78bd8', dark:'#6b2f78', hp:175, speed:262, damage:11, interval:.32, shotSpeed:640, armor:.03, radius:23, height:96, specialCooldown:7, special:'עוד פעם!', specialIcon:'bell', description:'הפעמונים שלו מצלצלים ומאירים, ואז עיגול של צלילים עף לכל הכיוונים. רגע אחר כך: עוד פעם!', tip:'כשהפעמונים מצלצלים, הצלילים עוד רגע יוצאים. התקרבו ליריב לפני כן: מקרוב יותר צלילים פוגעים.', number:'50', rarity:'נדיר', facesLeft:true, flies:true, tell:.6, aiRange:240, specialRange:330 },
   kashevet: { id:'kashevet', magic:95, name:'קשבת', element:'קול', role:'שומרת עמק ההדים', color:'#9fb8ff', dark:'#24306b', hp:275, speed:232, damage:15, interval:.42, shotSpeed:600, armor:.1, radius:28, height:128, specialCooldown:8, special:'שקט מוחלט', specialIcon:'muted', description:'האבן על החזה שלה מאירה, ואז יוצא גל של שקט: מי שהגל פוגע בו לא יכול לירות לרגע.', tip:'כשהאבן על החזה מאירה, התרחקו: הגל מגיע עוד רגע. מי שמחוץ לגל ממשיך לירות.', number:'51', rarity:'אגדי', facesLeft:true, female:true, flies:true, guardian:true, tell:.7, phase2:true, aiRange:280, specialRange:270 },
@@ -28,13 +30,43 @@ export const CREATURES = Object.freeze({
   tlaor: { id:'tlaor', magic:90, name:'טלאור', element:'טבע', role:'תופר האור', color:'#ffaa4a', dark:'#7a3d0c', hp:205, speed:256, damage:14, interval:.4, shotSpeed:620, armor:.08, radius:24, height:104, specialCooldown:8, special:'תפר אור', specialIcon:'sparkle', description:'תופר בחוטי אור את האבנים השבורות בזירה, מתקן את עצמו ומקבל שריון לרגע.', tip:'חכו שהאבנים יישברו והחיים ירדו, ואז תפרו הכל בבת אחת.', number:'48', rarity:'אגדי', facesLeft:true, box:true, aiRange:240, specialRange:2000 },
   galgalor: { id:'galgalor', magic:65, name:'גלגל אור', element:'אנרגיה', role:'מבולגן בכוונה', color:'#7fe8ff', dark:'#1f7f9c', hp:165, speed:265, damage:11, interval:.3, shotSpeed:620, armor:0, radius:22, height:84, specialCooldown:7, special:'פיצוץ אנרגיה', specialIcon:'sparkle', description:'שחרור אנרגיה לכל הכיוונים: עשרה קליעים בבת אחת.', tip:'קפצו לאמצע הקרב ושחררו את הפיצוץ קרוב ליריב.', number:'05', rarity:'רגיל', wobble:.13, aiRange:220, specialRange:260 },
 });
+// dodge: how near a shot must come before the rival steps aside (0: never). lead: how far ahead it aims.
+// kick: how close to the goal it kicks the pearl. wonderChase: how often it runs for a Wonder seed.
+// In a full-length battle (not a mission): life scales BATTLE_HP, and pace slows the rival's fire and aim, because
+// a long fight rewards whoever is steadier and the computer never gets tired.
 export const LEVELS = {
-  beginner:{name:'מתחילים',subtitle:'צעד ראשון בליגה',reaction:.62,fireScale:2.8,aimError:.36,speedScale:.72,specialDelay:5},
-  rookie:{name:'חימום', subtitle:'לומדים את הזירה', reaction:.50, fireScale:2.2, aimError:.27, speedScale:.80, specialDelay:4},
-  challenger:{name:'אתגר', subtitle:'כבר יודעים להתחמק', reaction:.30, fireScale:1.65, aimError:.18, speedScale:.92, specialDelay:2.5},
-  veteran:{name:'ותיקים', subtitle:'כמעט אלופים', reaction:.25, fireScale:1.45, aimError:.14, speedScale:.96, specialDelay:1.8},
-  champion:{name:'אלופים', subtitle:'היריב לא מוותר', reaction:.20, fireScale:1.25, aimError:.105, speedScale:1, specialDelay:1},
+  beginner:{name:'מתחילים',subtitle:'צעד ראשון בליגה',reaction:.62,fireScale:2.8,aimError:.36,speedScale:.72,specialDelay:5,dodge:0,lead:0,kick:.7,wonderChase:.15,life:1.4,pace:1},
+  rookie:{name:'חימום', subtitle:'לומדים את הזירה', reaction:.50, fireScale:2.2, aimError:.27, speedScale:.80, specialDelay:4,dodge:75,lead:0,kick:.8,wonderChase:.25,life:1.4,pace:1},
+  challenger:{name:'אתגר', subtitle:'כבר יודעים להתחמק', reaction:.30, fireScale:1.65, aimError:.18, speedScale:.92, specialDelay:2.5,dodge:150,lead:.55,kick:1,wonderChase:.45,life:1.05,pace:1.3},
+  veteran:{name:'ותיקים', subtitle:'כמעט אלופים', reaction:.25, fireScale:1.45, aimError:.14, speedScale:.96, specialDelay:1.8,dodge:150,lead:.55,kick:1,wonderChase:.65,life:.95,pace:1.35},
+  champion:{name:'אלופים', subtitle:'היריב לא מוותר', reaction:.20, fireScale:1.25, aimError:.105, speedScale:1, specialDelay:1,dodge:150,lead:.55,kick:1,wonderChase:.65,life:.9,pace:1.35},
 };
+// ------------------------------------------------------------------ battle pacing, families, Power Form, final blow
+// A battle is a little story, not a few seconds: everyone has more life, and supers hit harder to match.
+// Missions keep their own pacing (they have goals), and co-op keeps its giant's own life.
+// Hide-and-seek and the chase have their own clock: the rival is hidden or running, so it needs less life.
+// A guardian grown huge keeps less of its extra life in a long battle. Supers fill slower there (BATTLE_SHARE).
+// Two friends both fire at a person's full pace (no computer slowing down), so a friend battle gets VERSUS_HP more life:
+// about half a minute, long enough for a Wonder and a Power Form on both sides.
+// A rival that heals, hears every shot or shuts itself in a ring of water gets less of the battle life outside the story, where
+// each step tunes its own: with three or four times the life, such a kit ground on to the clock against a slow-shooting starter.
+export const RIVAL_LIFE=Object.freeze({kokhavit:.75,ozenav:.8,tlaor:.85,seaguard:.85});
+export const BATTLE_HP=+(globalThis.process?.env?.BATTLE_HP||3.5),SUPER_HIT=+(globalThis.process?.env?.SUPER_HIT||1.75),HIDE_HP=.45,FLEE_HP=.3,GIANT_HP=1.6,GIANT_BATTLE_HP=1.25,VERSUS_HP=+(globalThis.process?.env?.VERSUS_HP||2.2);
+// A shot keeps the attack pose long enough for the strike to show; the renderer sees a new shot as attack rising.
+export const ATTACK_SHOT=.3;
+export const isHuman=(m,side)=>side!==1||!!m.versus;
+// Story and wild losers are freed from the shadow at the end.
+export const isShadowed=m=>!m.versus&&!m.coop&&(!!m.wild||!!m.story&&!m.mirror&&!m.friendly);
+// Splats and sounds come in eight families of elements.
+export const FAMILIES=['water','spark','stone','fire','light','nature','sound','wind'];
+export const FAMILY=Object.freeze({'מים':'water','חשמל':'spark','אנרגיה':'spark','עוצמה':'stone','רעד':'stone','אש':'fire','אור':'light','כוכב':'light','טבע':'nature','קול':'sound','היפנוט':'sound','רוח':'wind','מהירות':'wind'});
+export const familyOf=id=>FAMILY[CREATURES[id]?.element]||'stone';
+// The Power Form: a creature that has grown with its child (level 3) earns it again in every battle with two landed supers.
+export const FORM_LEVEL=3,FORM_PIPS=2,FORM_TIME=20,FORM_SIZE=1.15,FORM_CHARGE=1.5,FINALE_SIM=.35;
+export const formUnlocked=(p,id)=>creatureLevel(p,id)>=FORM_LEVEL;
+export const formWinsToGo=(p,id)=>formUnlocked(p,id)?0:Math.ceil((LEVEL_XP[FORM_LEVEL-1]-creatureXp(p,id))/XP_WIN);
+// The card's form side: a little more power, a super that comes back sooner.
+export const formSpec=c=>({...c,damage:c.damage*1.15,specialCooldown:c.specialCooldown/1.5});
 export const CUP = [
   {title:'רבע הגמר', rival:'havzuk', level:'rookie', club:'ניצוצי החוף'},
   {title:'חצי הגמר', rival:'maimi', level:'challenger', club:'גלי הטורקיז'},
@@ -53,7 +85,7 @@ export function wildLevel(profile){const n=releasedCount(profile);return n<2?'ro
 export function makeWildMatch(profile,rival,options={}) {
   if(!WILD.includes(rival)||isUnlocked(profile,rival))return null;
   const player=isUnlocked(profile,profile.selected)?profile.selected:'maimi';
-  return makeMatch({...options,player,rival,level:wildLevel(profile),wild:rival});
+  return makeMatch({...options,forms:options.forms??[formUnlocked(profile,player),false],player,rival,level:wildLevel(profile),wild:rival});
 }
 // Skins are earned by winning with a creature. Nothing is ever bought.
 export const SKINS=[
@@ -87,7 +119,7 @@ export function journeyView(profile) {
 export function makeChallengeMatch(profile,options={}) {
   if(!challengeUnlocked(profile))return null;
   const build=profile.lastBuild||{player:profile.selected,upgrades:[]};
-  return makeMatch({...options,player:build.player,upgrades:build.upgrades,rival:CHALLENGE.rival,level:CHALLENGE.level,challenge:CHALLENGE.id});
+  return makeMatch({...options,forms:options.forms??[formUnlocked(profile,build.player),false],player:build.player,upgrades:build.upgrades,rival:CHALLENGE.rival,level:CHALLENGE.level,challenge:CHALLENGE.id});
 }
 const length=(x,y)=>Math.hypot(x,y);
 const norm=(x,y)=>{const d=length(x,y)||1;return {x:x/d,y:y/d};};
@@ -161,7 +193,11 @@ function stepEcho(m,dt){const E=m.echo;
       // A child who missed hears the tune again; the rival keeps what it already sang.
       if(a.side===0){E.phase='listen';E.t=0;E.note=-1;event(m,'echo-again');return;}}}
   // A freed friend who hears first: when the child stops and waits, it walks to the next stone and sits on it.
-  const B=E.buddy,p=m.actors[0];if(!B)return;const input=m.lastInput||{},idle=Math.abs(input.moveX||0)+Math.abs(input.moveY||0)<.15;B.idle=idle?B.idle+dt:0;
+  const B=E.buddy,p=m.actors[0],input=m.lastInput||{},idle=Math.abs(input.moveX||0)+Math.abs(input.moveY||0)<.15;
+  // The child plays the one who hears first: when it stops and waits, the next stone hums its note.
+  if(!B){if(!E.selfHint)return;E.idle=idle?(E.idle||0)+dt:0;const want=E.song[E.progress[0]],key=E.progress[0]+':'+E.songs.join();E.hint=E.idle>2&&want!=null&&!(p.out>0)?want:-1;
+    if(E.hint>=0&&E.hinted!==key){E.hinted=key;event(m,'echo-note',{stone:want,i:-1,hint:true});event(m,'echo-hint',{stone:want});}return;}
+  B.idle=idle?B.idle+dt:0;
   const want=E.song[E.progress[0]],hinting=B.idle>2&&want!=null&&!(p.out>0),goal=hinting?E.stones[want]:{x:p.x-48*p.facing,y:p.y+26};
   if(hinting&&B.hint!==E.progress[0]+':'+E.songs.join()){B.hint=E.progress[0]+':'+E.songs.join();event(m,'buddy-hint',{stone:want});}
   const q=length(goal.x-B.x,goal.y-B.y);if(q>4){const n=norm(goal.x-B.x,goal.y-B.y),sp=Math.min(q,(hinting?320:280)*dt);B.x+=n.x*sp;B.y+=n.y*sp;B.moving=true;B.facing=n.x>0?1:-1;}else B.moving=false;
@@ -171,8 +207,10 @@ function stepEcho(m,dt){const E=m.echo;
 function stepRespawns(m,dt,onKo){
   for(const a of m.actors){
     if(a.out>0){a.out-=dt;if(a.out<=0){a.out=0;a.hp=a.spec.hp;a.x=SPAWN[a.side].x;a.y=SPAWN[a.side].y;a.invincible=1.5;event(m,'respawn',{side:a.side});}continue;}
-    if(a.hp<=0){onKo(a);a.out=2.5;a.hp=0;event(m,'ko',{side:a.side});}}
+    if(a.hp<=0){onKo(a);knockOut(m,a,2.5);}}
 }
+// A creature that falls in a respawning mode leaves for a moment: a puff, dizzy stars and its fading shape.
+function knockOut(m,a,out){effect(m,'ko',a.x,a.y,{side:a.side,id:a.id,color:a.spec.color,facing:a.facing});a.out=out;a.hp=0;event(m,'ko',{side:a.side,x:a.x,y:a.y});}
 function kickBall(m,a,big){const B=m.ball;if(B.carrier!==a.side||B.carryTime<.22)return;
   B.carrier=-1;B.noPick[a.side]=.45;const sp=big?1050:740;B.vx=Math.cos(a.aim)*sp;B.vy=Math.sin(a.aim)*sp*.85;B.x=a.x+Math.cos(a.aim)*(a.radius+18);B.y=a.y+Math.sin(a.aim)*(a.radius+18);
   a.attack=.2;event(m,'kick',{side:a.side,big});if(big)effect(m,'big-kick',a.x,a.y,{color:a.spec.color});}
@@ -194,10 +232,11 @@ function stepBall(m,dt){const B=m.ball;
   const od=length((B.x-WORLD.cx)/(WORLD.rx-14),(B.y-WORLD.cy)/(WORLD.ry-10));
   if(od>1){const nx=(B.x-WORLD.cx)/(WORLD.rx*WORLD.rx),ny=(B.y-WORLD.cy)/(WORLD.ry*WORLD.ry),n=norm(nx,ny);B.x=WORLD.cx+(B.x-WORLD.cx)/od;B.y=WORLD.cy+(B.y-WORLD.cy)/od;const dot=B.vx*n.x+B.vy*n.y;if(dot>0){B.vx-=1.6*dot*n.x;B.vy-=1.6*dot*n.y;}}
 }
-function stepTrio(m,dt){const T=m.trio;
+function stepTrio(m,dt){const T=m.trio,last=[0,1].map(side=>m.actors[side].hp<=0&&T.idx[side]>=2);
+  if(last[0]||last[1]){finish(m,last[0]&&last[1]?-1:last[0]?1:0,'trio');return;}
   for(let side=0;side<2;side++){const a=m.actors[side];if(a.hp>0)continue;
-    if(T.idx[side]>=2){finish(m,1-side,'trio');return;}
-    T.idx[side]++;const next=actor(T.teams[side][T.idx[side]],side);next.x=SPAWN[side].x;next.y=SPAWN[side].y;next.invincible=1.5;next.power=0;next.out=0;
+    T.idx[side]++;const next=actor(T.teams[side][T.idx[side]],side);next.x=SPAWN[side].x;next.y=SPAWN[side].y;next.invincible=1.5;next.power=0;next.out=0;next.canForm=a.canForm;
+    if(side===0&&m.boost){const k=m.boost;next.spec={...next.spec,hp:Math.round(next.spec.hp*(1+k)),damage:Math.round(next.spec.damage*(1+k))};next.hp=next.spec.hp;}
     m.actors[side]=next;m.shots=m.shots.filter(s=>s.owner!==1-side);effect(m,'swap',next.x,next.y,{color:next.spec.color});event(m,'swap',{side,id:next.id,left:2-T.idx[side]});}
 }
 export const trioLeft=(m,side)=>m.trio?2-m.trio.idx[side]+(m.actors[side].hp>0?1:0):0;
@@ -212,7 +251,7 @@ function stepMode(m,dt){
   if(m.lava){const L=m.lava;L.scale=lavaScale(m.time);
     if(m.time>1&&m.time<4&&!L.warned){L.warned=true;event(m,'lava-warning');}
     for(const a of m.actors){if(a.hp<=0)continue;
-      if(ovalDistance(a.x,a.y)>L.scale){a.burn=(a.burn||0)-dt;if(a.burn<=0){a.burn=.33;damage(m,a,3,null,{special:true});effect(m,'burn',a.x,a.y,{color:'#ff7a2c'});}}}
+      if(ovalDistance(a.x,a.y)>L.scale){a.burn=(a.burn||0)-dt;if(a.burn<=0){a.burn=.33;damage(m,a,3,null,{special:true,fam:'fire'});effect(m,'burn',a.x,a.y,{color:'#ff7a2c'});}}}
     for(const c of m.covers)if(c.hp<=0&&!c.dropped){c.dropped=true;L.embers.push({x:c.x,y:c.y,age:0});event(m,'ember-drop');}
     if(m.time>=L.nextEmber){L.nextEmber=m.time+20;const ang=m.random()*Math.PI*2,r=m.random()*L.scale*.6;L.embers.push({x:WORLD.cx+Math.cos(ang)*WORLD.rx*r,y:WORLD.cy+Math.sin(ang)*WORLD.ry*r,age:0});event(m,'ember-drop');}
     for(const e of L.embers){e.age+=dt;if(ovalDistance(e.x,e.y)>L.scale){const k=L.scale*.9/ovalDistance(e.x,e.y);e.x=WORLD.cx+(e.x-WORLD.cx)*k;e.y=WORLD.cy+(e.y-WORLD.cy)*k;}
@@ -220,13 +259,13 @@ function stepMode(m,dt){
     L.embers=L.embers.filter(e=>!e.taken);
     if(m.time>=L.next){L.next=m.time+(m.time>30?3.5:4.5);const target=m.actors[m.random()<.5?0:1],spot=m.random()<.6?{x:target.x,y:target.y}:{x:WORLD.cx+(m.random()-.5)*WORLD.rx*L.scale,y:WORLD.cy+(m.random()-.5)*WORLD.ry*L.scale};L.eruptions.push({...spot,r:72,delay:1.2,age:0});}
     for(const e of L.eruptions){e.age+=dt;if(!e.done&&e.age>=e.delay){e.done=true;m.waves.push({kind:'blast',visual:true,owner:-1,x:e.x,y:e.y,age:0,r:e.r,life:.5,hit:[]});event(m,'blast',{side:-1});
-      for(const a of m.actors)if(a.hp>0&&a.invincible<=0&&length(a.x-e.x,a.y-e.y)<e.r+a.radius)damage(m,a,18,null,{special:true,pushX:Math.sign(a.x-e.x||1)*30});}}
+      for(const a of m.actors)if(a.hp>0&&a.invincible<=0&&length(a.x-e.x,a.y-e.y)<e.r+a.radius)damage(m,a,18,null,{special:true,fam:'fire',pushX:Math.sign(a.x-e.x||1)*30});}}
     L.eruptions=L.eruptions.filter(e=>e.age<e.delay+.6);
   }
   if(m.wind){const W=m.wind;
     for(const a of m.actors){
       if(a.out>0){a.out-=dt;if(a.out<=0){a.out=0;a.hp=a.spec.hp;a.x=a.side?995:285;a.y=420;a.invincible=1.5;event(m,'respawn',{side:a.side});}continue;}
-      if(a.hp<=0){dropFeathers(m,a,a.feathers);a.out=2.5;a.hp=0;effect(m,'blown',a.x,a.y,{color:'#cfffff'});event(m,'ko',{side:a.side});}}
+      if(a.hp<=0){dropFeathers(m,a,a.feathers);effect(m,'blown',a.x,a.y,{color:'#cfffff'});knockOut(m,a,2.5);}}
     if(m.time>=W.next&&W.feathers.length<8){W.next=m.time+3;const ang=m.random()*Math.PI*2;W.feathers.push({x:WORLD.cx,y:WORLD.cy,vx:Math.cos(ang)*90,vy:Math.sin(ang)*70,age:0});event(m,'feather-spawn');}
     for(const f of W.feathers){f.age+=dt;const drag=Math.max(0,1-dt*1.6);f.vx*=drag;f.vy*=drag;f.x+=f.vx*dt;f.y+=f.vy*dt;
       if(ovalDistance(f.x,f.y)>.92){const k=.92/ovalDistance(f.x,f.y);f.x=WORLD.cx+(f.x-WORLD.cx)*k;f.y=WORLD.cy+(f.y-WORLD.cy)*k;f.vx*=-.4;f.vy*=-.4;}
@@ -249,7 +288,6 @@ function modeGoal(m,a,p,d){
     for(const e of L.eruptions)if(!e.done&&length(a.x-e.x,a.y-e.y)<e.r+a.radius+30){const q=norm(a.x-e.x||.01,a.y-e.y);return {x:q.x*2.5,y:q.y*2.5,keep:.3};}
     let best=null;for(const e of L.embers){const dist=length(e.x-a.x,e.y-a.y);if(a.power<MAX_POWER&&(dist<d*.9||dist<420)&&(!best||dist<best.dist))best={e,dist};}
     if(best){const q=norm(best.e.x-a.x,best.e.y-a.y);return {x:q.x*2,y:q.y*2,keep:.35};}
-    if(L.scale<.9){const target=m.covers.find(c=>c.hp>0&&a.power<MAX_POWER);if(target&&m.level!=='rookie'){/* shooting covers is left to the normal aim */}}
     return null;}
   if(m.ball){const B=m.ball;
     if(B.carrier===1){const G=GOALS[0],q=norm(G.x-a.x,G.y-a.y);return {x:q.x*2.4,y:q.y*2.4,keep:.25};}
@@ -275,12 +313,13 @@ function modeGoal(m,a,p,d){
 function actor(id,side,ids=[]) {
   if(!CREATURES[id])throw new Error('Unknown creature');
   const upgrades=cleanUpgrades(ids),spec=buildSpec(CREATURES[id],upgrades);
-  return {id,side,spec,upgrades,x:side===0?285:995,y:420,hp:spec.hp,radius:spec.radius,fireCd:0,specialCd:0,superCharge:0,invincible:0,guard:0,stun:0,slow:0,root:0,windup:0,hit:0,attack:0,moveX:0,moveY:0,facing:side===0?1:-1,aim:side===0?0:Math.PI,
-    stats:{shots:0,hits:0,damage:0,blocked:0,specials:0,dodges:0,healed:0,weakHits:0},trail:[]};
+  return {id,side,spec,upgrades,x:side===0?285:995,y:420,hp:spec.hp,radius:spec.radius,fireCd:0,superCharge:0,invincible:0,guard:0,stun:0,slow:0,root:0,windup:0,hit:0,attack:0,moveX:0,moveY:0,facing:side===0?1:-1,aim:side===0?0:Math.PI,
+    canForm:false,pips:0,form:0,formUsed:false,superSeq:0,landedSeq:0,megaPending:false,windupSurge:false,formTell:false,sz:1,baseSpec:null,nearAt:-9,
+    stats:{shots:0,hits:0,damage:0,blocked:0,specials:0,dodges:0,healed:0,weakHits:0}};
 }
 // A friend battle: two people share one screen, so both sides play by the same rules and nothing is saved.
 export const HEART_BONUS=.25;
-export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0],boost=0,giantRival=false,run=null,coop=null,hide=false,flee=false,buddy=null}={}) {
+export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date.now(),upgrades=[],boss=false,challenge=null,wild=null,story=null,giant=false,mirror=false,arena=null,mode=null,team=null,rivalTeam=null,versus=false,hearts=[0,0],boost=0,giantRival=false,run=null,coop=null,hide=false,flee=false,buddy=null,echoHint=false,forms=[false,false,false],wonder=false,wonderPrefer=[],wonderAvoid=null,life=1,rivalLife=1}={}) {
   if(!LEVELS[level])throw new Error('Unknown difficulty');
   if(versus){boss=false;challenge=null;wild=null;story=null;giant=false;mirror=false;upgrades=[];boost=0;if(mode==='trio')mode=null;}
   if(giantRival)giant=true;
@@ -289,12 +328,18 @@ export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date
   if(teamIds){if(teamIds[0].length<3||teamIds[1].length<3)throw new Error('A trio needs three creatures');player=teamIds[0][0];rival=teamIds[1][0];upgrades=[];}
   const enemy=actor(rival,1);
   // An island guardian is the same creature, grown huge by the shadow.
-  if(giant){enemy.spec={...enemy.spec,hp:Math.round(enemy.spec.hp*1.6),height:enemy.spec.height*1.3,radius:Math.round(enemy.spec.radius*1.25),damage:Math.round(enemy.spec.damage*1.1)};enemy.hp=enemy.spec.hp;enemy.radius=enemy.spec.radius;enemy.giant=true;}
+  if(giant){enemy.spec={...enemy.spec,hp:Math.round(enemy.spec.hp*(MODES[mode]||coop&&!versus?GIANT_HP:GIANT_BATTLE_HP)),height:enemy.spec.height*1.3,radius:Math.round(enemy.spec.radius*1.25),damage:Math.round(enemy.spec.damage*1.1)};enemy.hp=enemy.spec.hp;enemy.radius=enemy.spec.radius;enemy.giant=true;}
   if(boss&&rival==='slauz')enemy.boss={phase:'guard',timer:3.8,angle:Math.PI,hit:false};
-  const match={id:seed+'-'+player+'-'+rival,random:seeded(seed),level,challenge:challenge===CHALLENGE.id?challenge:null,wild:WILD.includes(wild)&&wild===rival?wild:null,story:typeof story==='string'?story:null,arena:typeof arena==='string'?arena:null,mirror:!!mirror,actors:[actor(player,0,upgrades),enemy],time:0,duration:90,countdown:2.3,status:'countdown',winner:null,
+  const scale=MODES[mode]||(coop&&!versus)?1:+(BATTLE_HP*(versus?VERSUS_HP:(LEVELS[level].life||1)*clamp(+life||1,.3,3))*(hide&&!versus?HIDE_HP:1)*(flee&&!versus?FLEE_HP:1)).toFixed(3),me=actor(player,0,upgrades);
+  // The battle's own life: more of it, so a fight has a beginning, a middle and an end.
+  // rivalLife: a story step can give its rival a little more or less of it, to tune one guardian.
+  for(const a of [me,enemy]){const k=scale*(a===enemy&&scale!==1&&!versus?clamp(+rivalLife||1,.5,3)*(story?1:RIVAL_LIFE[a.id]||1):1);if(k!==1){a.spec={...a.spec,hp:Math.round(a.spec.hp*k)};a.hp=a.spec.hp;}}
+  const match={id:seed+'-'+player+'-'+rival,random:seeded(seed),level,challenge:challenge===CHALLENGE.id?challenge:null,wild:WILD.includes(wild)&&wild===rival?wild:null,story:typeof story==='string'?story:null,arena:typeof arena==='string'?arena:null,mirror:!!mirror,actors:[me,enemy],time:0,hpScale:scale,superHit:scale>1?SUPER_HIT:1,superShare:scale>1?BATTLE_SHARE:SUPER_SHARE,pace:scale>1&&!versus?LEVELS[level].pace||1:1,ending:null,lent:false,wonder:null,duration:90,countdown:2.3,status:'countdown',winner:null,
     shots:[],waves:[],zones:[],effects:[],events:[],nextId:0,pickup:null,pickupAt:12,ai:{timer:0,angle:0,strafe:1,strafeTime:0,moveX:0,moveY:0,aimX:0,aimY:0,fire:false,special:false},
     covers:[{x:449,y:350,r:35,hp:80,maxHp:80},{x:831,y:440,r:35,hp:80,maxHp:80},{x:650,y:237,r:28,hp:65,maxHp:65},{x:630,y:555,r:28,hp:65,maxHp:65}].map((c,i)=>({...c,...(challenge===CHALLENGE.id?{collapseAt:5+i*4}:{})}))};
   match.teamIds=teamIds;
+  // Who may grow into a Power Form: friends always, both of them; otherwise as the caller decides.
+  match.forms=[0,1,2].map(i=>versus||!!coop&&i!==1||!!forms?.[i]);match.actors.forEach(a=>{a.canForm=match.forms[a.side];});
   if(run&&!versus)applyRun(match,run);
   if(coop&&!versus)setupCoop(match,coop);
   {const k=clamp(+boost||0,0,.5);if(k){const a=match.actors[0];a.spec={...a.spec,hp:Math.round(a.spec.hp*(1+k)),damage:Math.round(a.spec.damage*(1+k))};a.hp=a.spec.hp;match.boost=k;}}
@@ -305,29 +350,46 @@ export function makeMatch({player='maimi',rival='slauz',level='rookie',seed=Date
   if(hide&&!versus)match.hide={seen:0,still:0,x:match.actors[1].x,y:match.actors[1].y};
   if(flee&&!versus)match.flee=true;
   if(buddy&&match.echo&&CREATURES[buddy])match.echo.buddy={id:buddy,x:200,y:470,idle:0,on:-1,facing:1,moving:false};
+  if(echoHint&&match.echo&&!match.echo.buddy){match.echo.selfHint=true;match.echo.hint=-1;}
+  // A Wonder seed sprouts in an ordinary battle only: never in a mission, a boss fight, hide-and-seek, the chase or co-op.
+  if(wonder&&!match.mode&&!match.coop&&!hide&&!flee&&!match.challenge&&!teamIds&&!enemy.boss)setupWonder(match,{seed,prefer:wonderPrefer,avoid:wonderAvoid});
   return match;
 }
 function event(m,type,data={}) {m.events.push({type,...data});}
 function effect(m,type,x,y,data={}) {m.effects.push({type,x,y,age:0,...data});}
-function damage(m,a,raw,source,{pushX=0,pushY=0,special=false,hitAngle=null}={}) {
+// fam: the splat family of a hit with no creature behind it (lava 'fire', meteor 'light').
+function damage(m,a,raw,source,{pushX=0,pushY=0,special=false,hitAngle=null,fam=null}={}) {
   if(a.hp<=0)return;
+  // After the final blow nothing lands any more: no dodge to count and no 'evade' word over the slow ending.
+  if(m.ending)return;
   if(a.invincible>0){a.stats.dodges++; effect(m,'evade',a.x,a.y,{color:'#ffffff'});return;}
-  if(a.lightShield>0){a.lightShield--;a.stats.blocked+=raw;effect(m,'light-block',a.x,a.y,{color:'#fff3b0'});event(m,'light-block',{side:a.side,left:a.lightShield});return;}
+  // The light shield stops shots from creatures; a super goes through it, and burning ground and falling rocks do not use it up.
+  if(a.lightShield>0&&source&&!special){a.lightShield--;a.stats.blocked+=raw;effect(m,'light-block',a.x,a.y,{color:'#fff3b0'});event(m,'light-block',{side:a.side,left:a.lightShield});return;}
   const exposed=a.boss?.phase==='recover',front=a.boss&&['guard','windup'].includes(a.boss.phase)&&hitAngle!=null&&Math.cos(hitAngle-a.boss.angle)>Math.cos(1.05);
   if(source?.power)raw*=1+.12*source.power;
+  if(special&&source)raw*=m.superHit||1;
   if(m.wind&&special&&a.feathers>0&&a.invincible<=0)dropFeathers(m,a,1);
   if(m.ball&&m.ball.carrier===a.side&&a.invincible<=0){m.ball.hits++;if(special||m.ball.hits>=BALL_TUNE.fumble)looseBall(m,a,320);else event(m,'ball-hit',{side:a.side,hits:m.ball.hits});}
   const reduction=exposed?0:front?.8:a.guard>0?.72:a.spec.armor,amount=raw*(exposed?1.5:1)*(1-reduction),actual=Math.min(a.hp,amount);
   a.stats.blocked+=Math.max(0,raw-amount);a.hp=Math.max(0,a.hp-amount);a.hit=.17;a.calm=0;if(source)source.calm=0;
-  if(source&&source.side!=null&&!special&&amount>0)chargeSuper(m,source,amount/((CREATURES[a.id]?.hp||a.spec.hp)*SUPER_SHARE));
+  if(source&&source.side!=null&&!special&&amount>0)chargeSuper(m,source,amount/((CREATURES[a.id]?.hp||a.spec.hp)*(m.superShare||SUPER_SHARE)));
   if(front)effect(m,'guard-block',a.x,a.y,{color:'#ffe5a7'});
   if(exposed&&source){source.stats.weakHits++;effect(m,'weak-hit',a.x,a.y,{color:'#95ffe0'});}
   if(source){source.stats.damage+=actual;if(!special)source.stats.hits++;}
   // In the lava ring a hit never pushes a creature toward the lava.
   if(m.lava&&ovalDistance(a.x+pushX,a.y+pushY)>ovalDistance(a.x,a.y)){pushX=0;pushY=0;}
   a.x+=pushX;a.y+=pushY;confine(a);resolveCover(m,a);
-  effect(m,'hit',a.x,a.y,{color:a.spec.color,amount:Math.round(actual)});event(m,'hit',{side:a.side,amount:actual});
+  // A super that lands on a rival lights one pip toward the Power Form: one per super, however many it hits.
+  if(special&&source&&amount>0&&source.side!==a.side)landPip(m,source);
+  const by=source?.side??-1,f=source?familyOf(source.id):fam||'stone';
+  effect(m,'hit',a.x,a.y,{color:a.spec.color,amount:Math.round(actual),by,fam:f,special:!!special,form:source?.form>0,side:a.side});event(m,'hit',{side:a.side,by,fam:f,amount:actual,special:!!special,x:a.x,y:a.y});
 }
+// One pip per super toward the Power Form. A child's super that helps instead of hitting (a heal, a shield, quick ears) earns its pip
+// when it is used (helpPip); a computer rival with such a super never grows a form, so rival forms stay as rare as they were.
+const helpPip=(m,a)=>{if(isHuman(m,a.side))landPip(m,a);};
+function landPip(m,a){if(!a.canForm||a.formUsed||a.form>0||a.landedSeq===a.superSeq)return;
+  a.landedSeq=a.superSeq;a.pips=Math.min(FORM_PIPS,a.pips+1);event(m,'pip',{side:a.side,pips:a.pips});
+  if(a.pips>=FORM_PIPS){a.superCharge=1;event(m,'form-ready',{side:a.side});}}
 function resolveCover(m,a) {
   // Birds fly over the stones.
   if(a.spec.flies){confine(a);return;}
@@ -337,41 +399,58 @@ function resolveCover(m,a) {
 }
 function move(m,a,x,y,dt,scale=1) {
   const n=length(x,y)>1?norm(x,y):{x,y};const speed=a.spec.speed*scale*(a.hear>0?1.2:1)*(a.slow>0?.55:1)*(a.windup>0?.2:1)*(a.root>0?0:1)*(m.ball?.carrier===a.side?BALL_TUNE.carry:1);
-  a.moveX=n.x;a.moveY=n.y;a.x+=n.x*speed*dt;a.y+=n.y*speed*dt*.8;confine(a);resolveCover(m,a);
+  a.moveX=n.x;a.moveY=n.y;const ice=m.wonderFx?.ice,ox=a.x,oy=a.y;
+  // On ice the feet slide: speed builds up and dies down slowly. The Wonder's owner keeps its grip for a moment.
+  if(ice&&!(ice.grip?.side===a.side&&m.time<ice.grip.until)&&!(a.root>0)){const k=Math.min(1,dt*2.5);a.vx=(a.vx||0)+(n.x*speed*1.1-(a.vx||0))*k;a.vy=(a.vy||0)+(n.y*speed*1.1-(a.vy||0))*k;a.x+=a.vx*dt;a.y+=a.vy*dt*.8;}
+  else{a.x+=n.x*speed*dt;a.y+=n.y*speed*dt*.8;}
+  confine(a);resolveCover(m,a);if(dt>0){a.vx=(a.x-ox)/dt;a.vy=(a.y-oy)/(dt*.8);}
 }
 export function shoot(m,a,angle,scale=1) {a.calm=0;
   if(a.fireCd>0||a.windup>0||a.hp<=0||a.silence>0||a.dash)return false;
-  const s=a.spec;a.fireCd=s.interval*scale;a.attack=.16;a.aim=angle;if(Math.abs(Math.cos(angle))>.12)a.facing=Math.cos(angle)>0?1:-1;
+  const s=a.spec;a.fireCd=s.interval*scale;a.attack=Math.max(a.attack,ATTACK_SHOT);a.aim=angle;if(Math.abs(Math.cos(angle))>.12)a.facing=Math.cos(angle)>0?1:-1;
   const scatter=a.upgrades.includes('scatter'),fan=s.spread===3;
   const offsets=fan?(scatter?[-.4,-.2,0,.2,.4]:[-.22,0,.22]):scatter?[-.19,0,.19]:[0],wobble=s.wobble?(m.random()-.5)*2*s.wobble:0;
   for(const offset of offsets){const aim=angle+offset+wobble;
-    m.shots.push({id:++m.nextId,owner:a.side,x:a.x+Math.cos(aim)*(a.radius+9),y:a.y+Math.sin(aim)*(a.radius+9),vx:Math.cos(aim)*s.shotSpeed,vy:Math.sin(aim)*s.shotSpeed,r:s.shotRadius||7,damage:scatter?Math.round(s.damage*.6):s.damage,life:s.shotLife||1.65,color:s.color,kind:a.id});a.stats.shots++;
-  }event(m,'shoot',{kind:a.id,side:a.side});return true;
+    m.shots.push({id:++m.nextId,owner:a.side,x:a.x+Math.cos(aim)*(a.radius+9),y:a.y+Math.sin(aim)*(a.radius+9),vx:Math.cos(aim)*s.shotSpeed,vy:Math.sin(aim)*s.shotSpeed,r:(s.shotRadius||7)*(a.form>0?FORM_SIZE:1),damage:scatter?Math.round(s.damage*.6):s.damage,life:(s.shotLife||1.65)*(m.wonderFx?.ice?1.35:1),color:s.color,kind:a.id});a.stats.shots++;
+  }event(m,'shoot',{kind:a.id,side:a.side,fam:familyOf(a.id)});return true;
 }
 export function useSpecial(m,a,input={}) {
   if(a.windup>0||a.hp<=0||a.silence>0||a.tellT>0||a.dash)return false;
   // Some supers warn first: bells ring, a stone glows. Then the power comes out.
   if(a.spec.tell&&!a.releasing){a.tellT=a.spec.tell;a.attack=.3;effect(m,'tell',a.x,a.y,{kind:a.id,color:a.spec.color,life:a.spec.tell});event(m,'tell',{kind:a.id,side:a.side});return true;}
-  a.stats.specials++;a.attack=.4;const surge=a.upgrades.includes('surge');
+  // The power really comes out now. A super right after the Power Form is its MEGA version (the 'surge' one).
+  a.stats.specials++;a.attack=.4;a.superSeq++;const mega=!!a.megaPending,surge=a.upgrades.includes('surge')||mega;a.megaPending=false;
   if(a.id==='maimi') {
     m.waves.push({kind:'wave',owner:a.side,x:a.x,y:a.y,angle:a.aim,age:0,speed:470,r:surge?105:74,damage:surge?46:34,push:surge?110:65,life:1.15,hit:[]});
   } else if(a.id==='havzuk') {
-    let n=norm(input.moveX||0,input.moveY||0);if(!input.moveX&&!input.moveY)n={x:Math.cos(a.aim),y:Math.sin(a.aim)};
+    let n=norm(input.moveX||0,input.moveY||0),steps=18;if(!input.moveX&&!input.moveY)n={x:Math.cos(a.aim),y:Math.sin(a.aim)};
+    // The computer blinks toward its rival and lands just beside it, so the burst can reach.
+    if(!isHuman(m,a.side)){const t=foeOf(m,a),d=length(t.x-a.x,t.y-a.y);n=norm(t.x-a.x,(t.y-a.y)/.8);steps=clamp(Math.round((d-a.radius-t.radius-60)/10),0,18);}
     const start={x:a.x,y:a.y};a.invincible=.38;
     // Sweep the blink in small steps so solid cover cannot be crossed.
-    for(let i=0;i<18;i++){a.x+=n.x*10;a.y+=n.y*8;confine(a);resolveCover(m,a);}
+    for(let i=0;i<steps;i++){a.x+=n.x*10;a.y+=n.y*8;confine(a);resolveCover(m,a);}
     effect(m,'blink',a.x,a.y,{from:start,color:a.spec.color});
     m.waves.push({kind:'electric',owner:a.side,x:a.x,y:a.y,age:0,r:surge?170:125,damage:surge?46:32,life:.55,hit:[]});
-  } else if(a.id==='slauz'){a.windup=surge?.85:.6;a.guard=a.windup+2;effect(m,'charge',a.x,a.y,{owner:a.side,color:a.spec.color});}
-  else wildSpecial(m,a,surge);
-  event(m,'special',{kind:a.id,side:a.side});return true;
+  } else if(a.id==='slauz'){a.windup=surge?.85:.6;a.windupSurge=surge;a.guard=a.windup+2;effect(m,'charge',a.x,a.y,{owner:a.side,color:a.spec.color});}
+  else wildSpecial(m,a,surge,input);
+  event(m,'special',{kind:a.id,side:a.side,fam:familyOf(a.id),mega});return true;
 }
+// Nothing stops a super right now: not a windup, silence, a warning already ringing or a dash.
+const superFree=a=>!(a.windup>0||a.hp<=0||a.silence>0||a.tellT>0||a.dash);
+// The Power Form: a painted cocoon, a short moment nothing can hurt, then the MEGA super.
+function transform(m,a,input){
+  a.formUsed=true;a.formTell=false;a.pips=0;a.form=FORM_TIME;a.invincible=Math.max(a.invincible,1);a.megaPending=true;
+  effect(m,'cocoon',a.x,a.y,{side:a.side,kind:a.id,color:a.spec.color});event(m,'form',{side:a.side,kind:a.id,x:a.x,y:a.y});
+  if(useSpecial(m,a,input)){a.superCharge=0;event(m,'super',{side:a.side});}
+}
+// A healing super gives back a little less of a long battle than a damaging super takes from it, so a healer cannot hold out to the clock.
+const healShare=m=>m.hpScale>1?clamp((m.superHit||1)/m.hpScale/1.4,.18,1):1;
 // Where a placed power lands: on the opponent, but never further than its reach.
 function landing(m,a,reach){const t=foeOf(m,a),d=Math.min(reach,length(t.x-a.x,t.y-a.y));return {x:a.x+Math.cos(a.aim)*d,y:a.y+Math.sin(a.aim)*d*.8};}
-function wildSpecial(m,a,surge) {
+function wildSpecial(m,a,surge,input={}) {
   const t=foeOf(m,a),dir={x:Math.cos(a.aim),y:Math.sin(a.aim)};
   if(a.id==='lohatan'){
-    m.shots.push({id:++m.nextId,owner:a.side,x:a.x+dir.x*(a.radius+12),y:a.y+dir.y*(a.radius+12),vx:dir.x*430,vy:dir.y*430,r:17,damage:20,life:1.3,color:a.spec.color,kind:'fireball',explode:{r:surge?140:105,damage:surge?42:30}});
+    m.shots.push({id:++m.nextId,owner:a.side,x:a.x+dir.x*(a.radius+12),y:a.y+dir.y*(a.radius+12),vx:dir.x*430,vy:dir.y*430,r:17,damage:20,life:1.3,color:a.spec.color,kind:'fireball',special:true,explode:{r:surge?140:105,damage:surge?42:30}});
   } else if(a.id==='tehomon'){
     const p=landing(m,a,420);m.zones.push({owner:a.side,kind:'vortex',x:p.x,y:p.y,r:surge?125:95,age:0,life:3,pulse:.2,damage:surge?9:7});
   } else if(a.id==='zikuk'){
@@ -406,22 +485,22 @@ function wildSpecial(m,a,surge) {
     for(let i=0;i<n;i++){const ang=i*2.4+m.random()*.6,rr=i?50+(i*29)%45:0,delay=.7+i*.2;m.zones.push({owner:a.side,kind:'star',x:p.x+Math.cos(ang)*rr,y:p.y+Math.sin(ang)*rr*.8,r:surge?62:54,age:0,life:delay+.35,delay,done:false,damage:surge?16:14});}
   } else if(a.id==='kokhavit'){
     // A heart of light: life comes back, and a shield swallows the next hits.
-    const amount=Math.min(a.spec.hp-a.hp,a.spec.hp*(surge?.4:.3));a.hp+=amount;a.stats.healed+=amount;
-    a.lightShield=surge?3:2;a.lightShieldTime=8;effect(m,'heal',a.x,a.y,{amount,color:'#fff3b0'});event(m,'heal',{side:a.side,amount});
+    const amount=Math.min(a.spec.hp-a.hp,a.spec.hp*(surge?.4:.3)*healShare(m));a.hp+=amount;a.stats.healed+=amount;
+    a.lightShield=surge?3:2;a.lightShieldTime=8;effect(m,'heal',a.x,a.y,{amount,color:'#fff3b0'});event(m,'heal',{side:a.side,amount});helpPip(m,a);
   } else if(a.id==='chutal'){
     // A thread of light: it catches the rival and pulls it close.
-    m.shots.push({id:++m.nextId,owner:a.side,x:a.x+dir.x*(a.radius+10),y:a.y+dir.y*(a.radius+10),vx:dir.x*920,vy:dir.y*920,r:13,damage:surge?20:14,life:.62,color:a.spec.color,kind:'thread',pull:true});
+    m.shots.push({id:++m.nextId,owner:a.side,x:a.x+dir.x*(a.radius+10),y:a.y+dir.y*(a.radius+10),vx:dir.x*920,vy:dir.y*920,r:13,damage:surge?20:14,life:.62,color:a.spec.color,kind:'thread',special:true,pull:true});
   } else if(a.id==='hedanon'){
     // A sound wave where the rival stands, and its echo a moment later, a little wider.
     const p=landing(m,a,480);for(const [delay,k] of [[.2,1],[.8,1.3]])m.zones.push({owner:a.side,kind:'echo',x:p.x,y:p.y,r:(surge?100:84)*k,age:0,life:delay+.35,delay,done:false,damage:surge?24:18});
   } else if(a.id==='tlaor'){
     // Stitches of light: broken stones are sewn back, the fox mends itself and its patches hold for a moment.
     for(const c of m.covers)if(c.hp<c.maxHp&&!c.reef&&c.collapseAt==null){c.hp=c.maxHp;effect(m,'stitch',c.x,c.y,{color:'#ffd27a'});}
-    const amount=Math.min(a.spec.hp-a.hp,a.spec.hp*(surge?.32:.24));a.hp+=amount;a.stats.healed+=amount;a.guard=Math.max(a.guard,surge?2.4:1.8);
-    effect(m,'stitch',a.x,a.y,{color:'#ffd27a'});effect(m,'heal',a.x,a.y,{amount,color:'#ffd27a'});event(m,'heal',{side:a.side,amount});
+    const amount=Math.min(a.spec.hp-a.hp,a.spec.hp*(surge?.32:.24)*healShare(m));a.hp+=amount;a.stats.healed+=amount;a.guard=Math.max(a.guard,surge?2.4:1.8);
+    effect(m,'stitch',a.x,a.y,{color:'#ffd27a'});effect(m,'heal',a.x,a.y,{amount,color:'#ffd27a'});event(m,'heal',{side:a.side,amount});helpPip(m,a);
   } else if(a.id==='ozenav'){
     // Huge ears: for a moment every shot that comes is heard in time and misses, and the feet are quick.
-    a.hear=surge?4:3;effect(m,'hear',a.x,a.y,{color:a.spec.color});
+    a.hear=surge?4:3;effect(m,'hear',a.x,a.y,{color:a.spec.color});helpPip(m,a);
   } else if(a.id==='rishrush'){
     // A ring of bell notes, and its echo a moment later, between the first ones.
     const n=surge?10:8;for(const [delay,off] of [[0,0],[.55,Math.PI/n]])m.zones.push({owner:a.side,kind:'bells',x:a.x,y:a.y,age:0,life:delay+.05,delay,done:false,n,off,damage:surge?12:10});
@@ -430,14 +509,14 @@ function wildSpecial(m,a,surge) {
     m.waves.push({kind:'silence',owner:a.side,x:a.x,y:a.y,age:0,r:surge?285:240,damage:surge?16:12,silence:surge?3:2.4,push:30,life:.7,hit:[]});
   } else if(a.id==='zankor'){
     // The tiger's dash: across the arena like lightning, hitting whoever is in the way.
-    const t=surge?.42:.34;a.dash={t,vx:dir.x*1150,vy:dir.y*920,hit:[],damage:surge?40:30};a.invincible=Math.max(a.invincible,t+.06);effect(m,'pounce',a.x,a.y,{color:a.spec.color});
+    // Running away in the chase, the tiger dashes the way it is fleeing, never into the child.
+    let d=dir;if(m.flee&&!isHuman(m,a.side)){const away=norm(a.x-t.x||.01,a.y-t.y);d=input.moveX||input.moveY?norm(input.moveX||0,input.moveY||0):away;}
+    const dur=surge?.42:.34;a.dash={t:dur,vx:d.x*1150,vy:d.y*920,hit:[],damage:surge?40:30};a.invincible=Math.max(a.invincible,dur+.06);effect(m,'pounce',a.x,a.y,{color:a.spec.color});
   } else if(a.id==='galgalor'){
     const n=surge?14:10;for(let i=0;i<n;i++){const ang=a.aim+i*Math.PI*2/n;
-      m.shots.push({id:++m.nextId,owner:a.side,x:a.x+Math.cos(ang)*(a.radius+8),y:a.y+Math.sin(ang)*(a.radius+8),vx:Math.cos(ang)*560,vy:Math.sin(ang)*560,r:8,damage:surge?13:12,life:1.1,color:a.spec.color,kind:'galgalor'});}
+      m.shots.push({id:++m.nextId,owner:a.side,x:a.x+Math.cos(ang)*(a.radius+8),y:a.y+Math.sin(ang)*(a.radius+8),vx:Math.cos(ang)*560,vy:Math.sin(ang)*560,r:8,damage:surge?13:12,life:1.1,color:a.spec.color,kind:'galgalor',special:true});}
   }
 }
-const TRAIL={ozenav:'water',rishrush:'electric',kashevet:'electric',zankor:'fire',chutal:'water',hedanon:'electric',tlaor:'fire',zoharon:'electric',kokhavit:'electric',windguard:'electric',seaguard:'water',fireguard:'fire',maimi:'water',tehomon:'water',tzlilon:'water',havzuk:'electric',zikuk:'electric',galgalor:'electric',lohatan:'fire',slauz:'shield',retetoz:'shield',shorshu:'shield'};
-export const trailKind=id=>TRAIL[id]||'shield';
 function stepBoss(m,a,dt) {
   const b=a.boss,p=m.actors[0];b.timer-=dt;a.moveX=0;a.moveY=0;
   if(b.timer<=0){
@@ -452,7 +531,7 @@ function stepBoss(m,a,dt) {
     if(Math.abs(delta)<.25&&d<700)shoot(m,a,b.angle,LEVELS[m.level].fireScale*1.3);
   }else if(b.phase==='charge'){
     const old={x:a.x,y:a.y};a.moveX=Math.cos(b.angle);a.moveY=Math.sin(b.angle);a.x+=a.moveX*760*dt;a.y+=a.moveY*760*dt*.8;confine(a);
-    for(const c of m.covers)if(c.hp>0&&segmentCircle(old.x,old.y,a.x,a.y,c.x,c.y,c.r+a.radius)!=null){c.hp=0;effect(m,'stone',c.x,c.y,{color:'#e9c790'});event(m,'cover',{broken:true});}
+    for(const c of m.covers)if(c.hp>0&&segmentCircle(old.x,old.y,a.x,a.y,c.x,c.y,c.r+a.radius)!=null){c.hp=0;effect(m,'stone',c.x,c.y,{color:'#e9c790'});event(m,'cover',{broken:true,x:c.x,y:c.y});}
     if(!b.hit&&segmentCircle(old.x,old.y,a.x,a.y,p.x,p.y,p.radius+a.radius)!=null){b.hit=true;damage(m,p,32,a,{special:true,pushX:Math.cos(b.angle)*65,pushY:Math.sin(b.angle)*50});}
   }
   a.aim=b.angle;a.facing=Math.cos(b.angle)>0?1:-1;
@@ -467,57 +546,86 @@ function aiInput(m,dt) {
   // The tiger chase: it keeps far away and only sometimes turns to shoot.
   if(m.flee)toward=d<430?-1.15:d>620?.35:0;
   let mx=n.x*toward-n.y*.65*ai.strafe,my=n.y*toward+n.x*.65*ai.strafe;
+  // Running away near the wall, the tiger slides along it instead of pressing into it.
+  if(m.flee&&toward<0){const ox=(a.x-WORLD.cx)/WORLD.rx,oy=(a.y-WORLD.cy)/WORLD.ry,od=length(ox,oy);
+    if(od>.7){const k=(od-.7)/.3*2.2,t=norm(-oy*WORLD.rx,ox*WORLD.ry),sd=Math.sign(t.x*(a.x-p.x)+t.y*(a.y-p.y))||ai.strafe;mx+=t.x*sd*k-ox/od*k*.9;my+=t.y*sd*k-oy/od*k*.9;}}
   if(m.pickup&&a.hp<a.spec.hp*.7){const q=norm(m.pickup.x-a.x,m.pickup.y-a.y);mx=q.x;my=q.y;}
   // React to approaching projectiles; the easier opponent only responds late.
-  for(const s of m.shots)if(s.owner!==1&&length(s.x-a.x,s.y-a.y)<(m.level==='rookie'?75:150)){
+  for(const s of m.shots)if(s.owner!==1&&length(s.x-a.x,s.y-a.y)<level.dodge){
     const cross=s.vx*(a.y-s.y)-s.vy*(a.x-s.x),avoid=norm(-s.vy,s.vx);mx+=avoid.x*Math.sign(cross||1)*1.4;my+=avoid.y*Math.sign(cross||1)*1.4;
   }
   if(!a.spec.flies)for(const c of m.covers)if(c.hp>0){const ax=a.x-c.x,ay=a.y-c.y,dist=length(ax,ay),r=c.r+a.radius+45;
     if(dist<r){const push=(r-dist)/45;mx+=ax/(dist||1)*push*2;my+=ay/(dist||1)*push*2;}}
   const goal=modeGoal(m,a,p,d);if(goal){mx=mx*goal.keep+goal.x;my=my*goal.keep+goal.y;}
+  // A rival that decided to race for the Wonder seed runs for it, still dodging a little.
+  if(m.wonder?.chase&&m.wonder.state==='ready'){const q=norm(m.wonder.x-a.x,m.wonder.y-a.y);mx=mx*.3+q.x;my=my*.3+q.y;}
   const move=norm(mx,my);ai.moveX=move.x;ai.moveY=move.y;
-  const lead=m.level==='rookie'?0:d/a.spec.shotSpeed*.55;
-  const angle=Math.atan2(dy+p.moveY*p.spec.speed*lead*.8,dx+p.moveX*p.spec.speed*lead)+(m.random()-.5)*level.aimError*2;
+  const lead=d/a.spec.shotSpeed*level.lead;
+  const angle=Math.atan2(dy+p.moveY*p.spec.speed*lead*.8,dx+p.moveX*p.spec.speed*lead)+(m.random()-.5)*level.aimError*(m.pace||1)*2;
   ai.aimX=a.x+Math.cos(angle)*500;ai.aimY=a.y+Math.sin(angle)*500;ai.fire=d<760&&!(p.out>0)&&(!m.flee||m.random()<.4);
-  if(m.ball?.carrier===1){const G=GOALS[0],gd=length(G.x-a.x,G.y-a.y);ai.aimX=G.x;ai.aimY=G.y+(m.random()-.5)*G.half;ai.fire=gd<BALL_TUNE.aiKick*(m.level==='rookie'?.8:1);ai.special=gd<BALL_TUNE.aiKick*1.5&&gd>BALL_TUNE.aiKick&&a.superCharge>=1;}
   ai.special=m.time>level.specialDelay&&d<(a.spec.specialRange||300)&&d>(a.spec.specialMin||0)&&p.stun<=0&&(!['kokhavit','tlaor'].includes(a.id)||a.hp<a.spec.hp*.75);
+  // Carrying the pearl: a normal kick close to the goal, the big kick only from a little further out.
+  if(m.ball?.carrier===1){const G=GOALS[0],gd=length(G.x-a.x,G.y-a.y);ai.aimX=G.x;ai.aimY=G.y+(m.random()-.5)*G.half;ai.fire=gd<BALL_TUNE.aiKick*level.kick;ai.special=gd<BALL_TUNE.aiKick*1.5&&gd>BALL_TUNE.aiKick&&a.superCharge>=1;}
   if(m.calm){ai.fire=false;ai.special=false;}return ai;
 }
 // Like Brawl Stars: after a few calm seconds without hitting or being hit, health refills.
-export const REGEN_DELAY=3,REGEN_RATE=.13,AIM_HELP=1.35;
-export const SUPER_SHARE=+(globalThis.process?.env?.SUPER_SHARE||.33),SUPER_PASSIVE=+(globalThis.process?.env?.SUPER_PASSIVE||30);
-function chargeSuper(m,a,amount){if(!a||a.hp<=0)return;if(a.upgrades?.includes('quick'))amount*=1.35;amount*=(CREATURES[a.id]?.specialCooldown||1)/(a.spec.specialCooldown||1);const before=a.superCharge||0;a.superCharge=Math.min(1,before+amount);if(before<1&&a.superCharge>=1)event(m,'super-ready',{side:a.side});}
+// In a long battle a child's slow shot (slower than SLOW_SHOT) gets a little more aim help, up to 1.4 times more: there a quick
+// rival kept stepping out of its way until the clock ran out. Missions keep the plain help.
+export const REGEN_DELAY=3,REGEN_RATE=.13,AIM_HELP=1.35,SLOW_SHOT=560;
+const aimHelp=(m,s)=>AIM_HELP*(m.hpScale>1?clamp(SLOW_SHOT/(Math.hypot(s.vx,s.vy)||SLOW_SHOT),1,1.4):1);
+// SUPER_SHARE: how much of a rival's card life a creature must hit for one super (missions); BATTLE_SHARE in long battles.
+export const SUPER_SHARE=+(globalThis.process?.env?.SUPER_SHARE||.33),BATTLE_SHARE=+(globalThis.process?.env?.BATTLE_SHARE||1.2),SUPER_PASSIVE=+(globalThis.process?.env?.SUPER_PASSIVE||30);
+// Each creature's own super time counts: a quick super (6 on the card) fills sooner than a strong one (9).
+export const SUPER_REF=7,STORM_CHARGE=2;
+function chargeSuper(m,a,amount){if(!a||a.hp<=0)return;if(a.upgrades?.includes('quick'))amount*=1.35;amount*=SUPER_REF/(a.spec.specialCooldown||SUPER_REF);
+  // The storm doubles everyone's super (three times tilted the battle toward the computer's stronger supers).
+  if(a.form>0)amount*=FORM_CHARGE;if(m.wonderFx?.storm)amount*=STORM_CHARGE;fillSuper(m,a,amount);}
+function fillSuper(m,a,amount){if(!a||a.hp<=0)return;const before=a.superCharge||0;a.superCharge=Math.min(1,before+amount);if(before<1&&a.superCharge>=1)event(m,'super-ready',{side:a.side});}
 function regenerate(a,dt){a.calm=(a.calm||0)+dt;a.regen=0;if(a.hp>0&&!(a.out>0)&&a.hp<a.spec.hp&&a.calm>=REGEN_DELAY){a.hp=Math.min(a.spec.hp,a.hp+a.spec.hp*REGEN_RATE*dt);a.regen=1;}}
 function stepActor(m,a,input,dt,scale=1) {
   regenerate(a,dt);if(!(a.out>0)&&m.status==='playing')chargeSuper(m,a,dt/SUPER_PASSIVE*(a.phase2?2:1));
-  for(const key of ['fireCd','specialCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);
+  for(const key of ['fireCd','invincible','guard','stun','slow','root','hit','attack'])a[key]=Math.max(0,a[key]-dt);
   for(const key of ['hear','silence'])if(a[key]>0)a[key]=Math.max(0,a[key]-dt);
-  if(a.tellT>0){a.tellT-=dt;if(a.tellT<=0){a.tellT=0;if(a.hp>0&&!(a.out>0)){a.releasing=true;useSpecial(m,a,input);a.releasing=false;}}}
+  if(a.form>0){a.form=Math.max(0,a.form-dt);if(a.form<=0)event(m,'form-end',{side:a.side});}
   if(a.lightShieldTime>0){a.lightShieldTime-=dt;if(a.lightShieldTime<=0)a.lightShield=0;}
+  // The last blow has landed: everyone holds still while it sinks in.
+  if(m.ending){if(a.tellT>0)a.tellT=Math.max(0,a.tellT-dt);a.moveX=0;a.moveY=0;return;}
+  if(a.tellT>0){a.tellT-=dt;if(a.tellT<=0){a.tellT=0;if(a.hp>0&&!(a.out>0))releaseTell(m,a,input);}}
   if(a.out>0){a.moveX=0;a.moveY=0;return;}
-  if(a.stun>0){a.moveX=0;a.moveY=0;return;}
+  // A creature that fell and does not come back stays down.
+  if(a.hp<=0||a.stun>0){a.moveX=0;a.moveY=0;return;}
   if(a.boss){stepBoss(m,a,dt);return;}
-  if(a.windup>0){a.windup-=dt;if(a.windup<=0){const surge=a.upgrades.includes('surge');m.waves.push({kind:'quake',owner:a.side,x:a.x,y:a.y,age:0,r:surge?235:182,damage:surge?65:46,life:.7,hit:[]});event(m,'quake',{side:a.side});}}
-  if(a.stun>0)return;
+  if(a.windup>0){a.windup-=dt;if(a.windup<=0){const surge=a.windupSurge;m.waves.push({kind:'quake',owner:a.side,x:a.x,y:a.y,age:0,r:surge?235:182,damage:surge?65:46,life:.7,hit:[]});event(m,'quake',{side:a.side});}}
   if(a.dash){const d=a.dash,old={x:a.x,y:a.y};d.t-=dt;a.x+=d.vx*dt;a.y+=d.vy*dt;confine(a);resolveCover(m,a);const n=norm(d.vx,d.vy);a.moveX=n.x;a.moveY=n.y;
     for(const t of foesOf(m,a))if(!(t.out>0)&&t.hp>0&&!d.hit.includes(t.side)&&segmentCircle(old.x,old.y,a.x,a.y,t.x,t.y,t.radius+a.radius)!=null){d.hit.push(t.side);damage(m,t,d.damage,a,{special:true,pushX:n.x*70,pushY:n.y*55});}
     if(d.t<=0)a.dash=null;return;}
   move(m,a,input.moveX||0,input.moveY||0,dt,scale);
   if(input.aimX!=null)a.aim=Math.atan2(input.aimY-a.y,input.aimX-a.x);
   else if(m.hide&&a.side===0&&m.hide.seen<=0)a.aim=Math.atan2(m.hide.y-a.y,m.hide.x-a.x);
-  else {const target=foeOf(m,a),distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*(human(m,a)?.45:.72),speed=target.spec.speed*(target.side&&!m.versus?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
+  else {const target=foeOf(m,a),distance=length(target.x-a.x,target.y-a.y),lead=distance/a.spec.shotSpeed*(isHuman(m,a.side)?.45:.72),speed=target.spec.speed*(target.side&&!m.versus?LEVELS[m.level].speedScale:1);a.aim=Math.atan2(target.y+target.moveY*speed*lead*.8-a.y,target.x+target.moveX*speed*lead-a.x);}
   if(Math.abs(Math.cos(a.aim))>.15)a.facing=Math.cos(a.aim)>0?1:-1;
   if(m.ball&&m.ball.carrier===a.side){
     if(input.aimX==null){const G=GOALS[1-a.side];a.aim=Math.atan2(G.y-a.y,G.x-a.x);a.facing=Math.cos(a.aim)>0?1:-1;}
     if(input.special&&a.superCharge>=1&&m.ball.carryTime>=.22){a.superCharge=0;kickBall(m,a,true);}
     else if(input.fire){const G=GOALS[1-a.side];if(length(G.x-a.x,G.y-a.y)<BALL_TUNE.kickRange)kickBall(m,a,false);else if(!a.farHint){a.farHint=true;event(m,'kick-far',{side:a.side});}}
     return;}
-  if(input.special&&a.superCharge>=1&&useSpecial(m,a,input)){a.superCharge=0;event(m,'super',{side:a.side});}
-  if(input.fire)shoot(m,a,a.aim,human(m,a)?1:LEVELS[m.level].fireScale);
+  if(input.special&&a.superCharge>=1&&superFree(a)){
+    // Two landed supers fill the star crown: the next press grows the Power Form. A computer rival warns first.
+    if(a.canForm&&!a.formUsed&&a.pips>=FORM_PIPS){if(isHuman(m,a.side))transform(m,a,input);else formTell(m,a);}
+    // A child's super that lights the second pip at once (a beam, a heal) leaves the charge full: the crown is ready to press.
+    else{const pips=a.pips;if(useSpecial(m,a,input)){if(!(a.pips>pips&&a.pips>=FORM_PIPS&&isHuman(m,a.side)))a.superCharge=0;event(m,'super',{side:a.side});}}}
+  if(input.fire)shoot(m,a,a.aim,isHuman(m,a.side)?1:LEVELS[m.level].fireScale*(m.pace||1));
 }
-// The child always plays side 0; in a friend battle side 1 is a person too and gets the same help.
+// Gold eyes and a bell for a second (a creature that already warns keeps its own warning time), then the rival's Power Form.
+function formTell(m,a){a.formTell=true;a.tellT=Math.min(1,a.spec.tell||1);a.attack=.3;effect(m,'tell',a.x,a.y,{kind:'form',color:'#ffd23a',life:a.tellT});event(m,'tell',{kind:'form',side:a.side});}
+// The warning is over: the power comes out. Silenced or hypnotized meanwhile, the super is not lost: it waits, full.
+function releaseTell(m,a,input){
+  if(a.formTell){a.formTell=false;if(!(a.stun>0))transform(m,a,input);return;}
+  if(a.silence>0||a.stun>0){fillSuper(m,a,1);return;}
+  a.releasing=true;useSpecial(m,a,input);a.releasing=false;
+}
+// The child always plays side 0; in a friend battle side 1 is a person too and gets the same help (isHuman).
 // In a co-op battle a second child plays side 2, on the same team as side 0.
-const human=(m,a)=>a.side!==1||!!m.versus;
 export const foesOf=(m,a)=>m.coop?(a.side===1?m.actors.filter(x=>x.side!==1):[m.actors[1]]):[m.actors[1-a.side]];
 // The rival to aim at: the only one, or the nearest one still in the fight.
 export function foeOf(m,a){const list=foesOf(m,a);if(list.length===1)return list[0];let best=null,bd=Infinity;for(const f of list){if(f.out>0||f.hp<=0)continue;const d=length(f.x-a.x,f.y-a.y);if(d<bd){bd=d;best=f;}}return best||list[0];}
@@ -526,21 +634,29 @@ function updateProjectiles(m,dt) {
     if(m.zones.length){const sw=m.zones.find(z=>z.owner!==s.owner&&(z.kind==='vortex'||z.kind==='tidering')&&length(s.x-z.x,s.y-z.y)<z.r);if(sw){s.life=0;effect(m,'stone',s.x,s.y,{color:sw.kind==='vortex'?'#9fc4ff':'#d6f1ff'});continue;}}
     const x=s.x+s.vx*dt,y=s.y+s.vy*dt;s.life-=dt;
     let hit=null,t=2;
-    const helped=s.owner!==1||!!m.versus;
-    for(const target of foesOf(m,m.actors[s.owner])){if(target.out>0)continue;
-      if(target.hear>0){if(!s.missed&&segmentCircle(s.x,s.y,x,y,target.x,target.y,s.r+target.radius)!=null){s.missed=true;target.stats.dodges++;effect(m,'evade',target.x,target.y,{color:'#c9fbff'});}continue;}
-      const tt=segmentCircle(s.x,s.y,x,y,target.x,target.y,(s.r+target.radius)*(helped?AIM_HELP:1));if(tt!=null&&tt<t){hit=target;t=tt;}}
+    const helped=isHuman(m,s.owner);
+    for(const target of foesOf(m,m.actors[s.owner])){if(target.out>0||target.hp<=0)continue;
+      // How close a rival's shot comes to a child: a narrow miss is a dodge (see nearMiss).
+      if(isHuman(m,target.side)){const near=s.near??={};near[target.side]=Math.min(near[target.side]??Infinity,segmentDistance(s.x,s.y,x,y,target.x,target.y));}
+      if(target.hear>0){if(!s.missed&&!m.ending&&segmentCircle(s.x,s.y,x,y,target.x,target.y,s.r+target.radius)!=null){s.missed=true;target.stats.dodges++;effect(m,'evade',target.x,target.y,{color:'#c9fbff'});}continue;}
+      const tt=segmentCircle(s.x,s.y,x,y,target.x,target.y,(s.r+target.radius)*(helped?aimHelp(m,s):1));if(tt!=null&&tt<t){hit=target;t=tt;}}
     if(m.ball&&m.ball.carrier<0){const bt=segmentCircle(s.x,s.y,x,y,m.ball.x,m.ball.y,s.r+16);if(bt!=null&&bt<t){s.life=0;m.ball.vx+=s.vx*.4;m.ball.vy+=s.vy*.4;effect(m,'stone',m.ball.x,m.ball.y,{color:'#d6f1ff'});continue;}}
-    for(const c of m.covers)if(c.hp>0){const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){if(helped){s.chipped??=[];if(!s.chipped.includes(c)){s.chipped.push(c);c.hp=Math.max(0,c.hp-s.damage*.5);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});event(m,'cover',{broken:c.hp===0});}continue;}hit=c;t=ct;}}
+    // The children's shots fly on through a stone and chip it; the computer's shots stop there.
+    for(let i=0;i<m.covers.length;i++){const c=m.covers[i];if(c.hp<=0)continue;const ct=segmentCircle(s.x,s.y,x,y,c.x,c.y,c.r+s.r);if(ct!=null&&ct<t){if(helped){s.chipped??=[];if(!s.chipped.includes(i)){s.chipped.push(i);c.hp=Math.max(0,c.hp-s.damage*.5);chip(m,c,i,s.x+(x-s.x)*ct,s.y+(y-s.y)*ct);}continue;}hit=c;t=ct;}}
     if(hit){s.x+=(x-s.x)*t;s.y+=(y-s.y)*t;s.life=0;if(s.explode)burst(m,s);
       // The thread pulls whoever it catches to just in front of its owner.
       if(s.pull&&hit.side!=null&&hit.invincible<=0&&!hit.boss){const o=m.actors[s.owner],n=norm(hit.x-o.x||.01,hit.y-o.y),gap=o.radius+hit.radius+34,from={x:hit.x,y:hit.y};hit.x=o.x+n.x*gap;hit.y=o.y+n.y*gap*.8;confine(hit);resolveCover(m,hit);hit.slow=Math.max(hit.slow,.9);effect(m,'thread',hit.x,hit.y,{from,to:{x:o.x,y:o.y},color:o.spec.color});event(m,'pull',{side:hit.side});}
-      if(hit.side!=null){damage(m,hit,s.damage,m.actors[s.owner],{special:s.kind!==m.actors[s.owner]?.id&&s.kind!=='blast',hitAngle:Math.atan2(-s.vy,-s.vx),pushX:s.kind==='maimi'?s.vx*.018:0,pushY:s.kind==='maimi'?s.vy*.018:0});}
-      else{hit.hp=Math.max(0,hit.hp-s.damage);effect(m,'stone',s.x,s.y,{color:'#ead2a9'});event(m,'cover',{broken:hit.hp===0});}
-    }else{s.x=x;s.y=y;}
+      if(hit.side!=null){s.hitSide=hit.side;damage(m,hit,s.damage,m.actors[s.owner],{special:!!s.special,hitAngle:Math.atan2(-s.vy,-s.vx),pushX:s.kind==='maimi'?s.vx*.018:0,pushY:s.kind==='maimi'?s.vy*.018:0});}
+      else{hit.hp=Math.max(0,hit.hp-s.damage);chip(m,hit,m.covers.indexOf(hit),s.x,s.y);}
+    }else{s.x=x;s.y=y;
+      // Bouncy shots: a shot leaving the oval bounces back off its edge, once.
+      if(m.wonderFx?.bouncy&&!s.bounced&&ovalDistance(s.x,s.y)>.98){const od=ovalDistance(s.x,s.y),n=norm((s.x-WORLD.cx)/(WORLD.rx*WORLD.rx),(s.y-WORLD.cy)/(WORLD.ry*WORLD.ry)),dot=s.vx*n.x+s.vy*n.y;
+        if(dot>0){s.vx-=2*dot*n.x;s.vy-=2*dot*n.y;s.bounced=true;s.life=Math.max(s.life,.8);s.x=WORLD.cx+(s.x-WORLD.cx)*.98/od;s.y=WORLD.cy+(s.y-WORLD.cy)*.98/od;}}}
   }
   for(const s of m.shots)if(s.explode&&!s.burst&&(s.life<=0||s.x<=40||s.x>=1240||s.y<=85||s.y>=710))burst(m,s);
-  m.shots=m.shots.filter(s=>s.life>0&&s.x>40&&s.x<1240&&s.y>85&&s.y<710);
+  const alive=s=>s.life>0&&s.x>40&&s.x<1240&&s.y>85&&s.y<710;
+  for(const s of m.shots)if(s.near&&!alive(s))nearMiss(m,s);
+  m.shots=m.shots.filter(alive);
   for(const w of m.waves){w.age+=dt;if(w.visual)continue;if(w.kind==='wave'){w.x+=Math.cos(w.angle)*w.speed*dt;w.y+=Math.sin(w.angle)*w.speed*dt;}
     const a=m.actors[w.owner],r=w.kind==='wave'?w.r:w.r*Math.min(1,w.age/.22);
     for(const target of foesOf(m,a))if(!(target.out>0)&&!w.hit.includes(target.side)&&length(target.x-w.x,target.y-w.y)<r+target.radius){
@@ -553,9 +669,13 @@ function updateProjectiles(m,dt) {
     for(let i=0;i<m.covers.length;i++){const c=m.covers[i];if(c.hp>0&&!w.hit.includes('c'+i)&&length(c.x-w.x,c.y-w.y)<r+c.r){w.hit.push('c'+i);c.hp=Math.max(0,c.hp-42);effect(m,'stone',c.x,c.y,{color:'#ead2a9'});}}
   }
   m.waves=m.waves.filter(w=>w.age<w.life);
-  for(const z of m.zones){z.age+=dt;z.pulse-=dt;const a=m.actors[z.owner],targets=foesOf(m,a),isIn=t=>length(t.x-z.x,t.y-z.y)<z.r+t.radius;let pulsed=false;
+  for(const z of m.zones){z.age+=dt;z.pulse-=dt;
+    // A Wonder meteor belongs to nobody (or to the Wonder's owner, whom it spares): it marks its spot, then lands.
+    if(z.kind==='meteor'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'meteorfall',z.x,z.y,{r:z.r,color:'#ffb43a'});event(m,'meteor',{x:z.x,y:z.y});
+      for(const t of m.actors)if(t.side!==z.owner&&t.hp>0&&!(t.out>0)&&t.invincible<=0&&length(t.x-z.x,t.y-z.y)<z.r+t.radius){const n=norm(t.x-z.x||.01,t.y-z.y);damage(m,t,z.damage,null,{special:true,fam:'light',pushX:n.x*30,pushY:n.y*24});}}continue;}
+    const a=m.actors[z.owner];if(!a)continue;const targets=foesOf(m,a),isIn=t=>length(t.x-z.x,t.y-z.y)<z.r+t.radius;let pulsed=false;
     if(z.kind==='echo'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,'echo',z.x,z.y,{color:a.spec.color,r:z.r});for(const target of targets)if(isIn(target)&&target.invincible<=0&&!(target.out>0))damage(m,target,z.damage,a,{special:true});}continue;}
-    if(z.kind==='bells'){if(!z.done&&z.age>=z.delay){z.done=true;const o=m.actors[z.owner];if(o.hp>0&&!(o.out>0)){for(let i=0;i<z.n;i++){const ang=z.off+i*Math.PI*2/z.n;m.shots.push({id:++m.nextId,owner:z.owner,x:o.x+Math.cos(ang)*(o.radius+8),y:o.y+Math.sin(ang)*(o.radius+8)*.8,vx:Math.cos(ang)*520,vy:Math.sin(ang)*420,r:9,damage:z.damage,life:1.05,color:o.spec.color,kind:'bell'});}effect(m,'bells',o.x,o.y,{color:o.spec.color});event(m,'bells',{side:z.owner});}}continue;}
+    if(z.kind==='bells'){if(!z.done&&z.age>=z.delay){z.done=true;const o=m.actors[z.owner];if(o.hp>0&&!(o.out>0)){for(let i=0;i<z.n;i++){const ang=z.off+i*Math.PI*2/z.n;m.shots.push({id:++m.nextId,owner:z.owner,x:o.x+Math.cos(ang)*(o.radius+8),y:o.y+Math.sin(ang)*(o.radius+8)*.8,vx:Math.cos(ang)*520,vy:Math.sin(ang)*420,r:9,damage:z.damage,life:1.05,color:o.spec.color,kind:'bell',special:true});}effect(m,'bells',o.x,o.y,{color:o.spec.color});event(m,'bells',{side:z.owner});}}continue;}
     if(z.kind==='star'||z.kind==='feather'){if(!z.done&&z.age>=z.delay){z.done=true;effect(m,z.kind==='feather'?'featherfall':'starfall',z.x,z.y,{color:z.kind==='feather'?'#cfe0ff':'#ffe27a',r:z.r});for(const target of targets)if(isIn(target)&&target.invincible<=0&&!(target.out>0)){const n=norm(target.x-z.x||.01,target.y-z.y);damage(m,target,z.damage,a,{special:true,pushX:n.x*30,pushY:n.y*24});}}continue;}
     if(z.kind==='roots'){if(!z.done&&z.age>=z.delay){z.done=true;for(const target of targets)if(isIn(target)&&target.invincible<=0){target.root=Math.max(target.root,z.root);damage(m,target,z.damage,a,{special:true});effect(m,'rooted',target.x,target.y,{color:'#9be06a'});}}continue;}
     if(z.kind==='tornado'){z.x+=z.vx*dt;z.y+=z.vy*dt;if(length((z.x-WORLD.cx)/WORLD.rx,(z.y-WORLD.cy)/WORLD.ry)>.93){z.vx*=-.6;z.vy*=-.6;}
@@ -571,13 +691,32 @@ function updateProjectiles(m,dt) {
     if(pulsed)z.pulse=.5;
   }m.zones=m.zones.filter(z=>z.age<z.life);
 }
+// A shot that hits a stone knocks chips off it (the stone wobbles from hitAt).
+function chip(m,c,i,x,y){c.hitAt=m.time;effect(m,'chip',x,y,{color:'#ead2a9',cover:i});event(m,'cover',{broken:c.hp===0,x:c.x,y:c.y});}
+const segmentDistance=(ax,ay,bx,by,px,py)=>{const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy,t=l?clamp(((px-ax)*dx+(py-ay)*dy)/l,0,1):0;return length(ax+dx*t-px,ay+dy*t-py);};
+// A rival's shot that just missed a child: an ink afterimage, a little super, and a dodge on the result. At most one per 2 s.
+export const NEAR_MISS=28,NEAR_EVERY=2;
+function nearMiss(m,s){if(m.ending||s.missed)return;
+  for(const side of Object.keys(s.near)){const t=m.actors[side];if(!t||t.side!==+side||t.side===s.hitSide||t.hp<=0||t.out>0||s.near[side]>=t.radius+NEAR_MISS||m.time-t.nearAt<NEAR_EVERY)continue;
+    t.nearAt=m.time;t.stats.dodges++;event(m,'near-miss',{side:t.side,x:t.x,y:t.y});effect(m,'afterimage',t.x,t.y,{side:t.side,id:t.id,facing:t.facing});chargeSuper(m,t,.05);}}
 function burst(m,s){s.burst=true;const p={x:s.x,y:s.y};
   m.waves.push({kind:'blast',owner:s.owner,x:p.x,y:p.y,age:0,r:s.explode.r,damage:s.explode.damage,push:40,life:.5,hit:[]});
   m.zones.push({owner:s.owner,kind:'fire',x:p.x,y:p.y,r:s.explode.r*.62,age:0,life:2.5,pulse:.3});event(m,'blast',{side:s.owner});}
 export function finish(m,winner,reason='knockout') {
   if(m.status==='finished')return;
-  m.winner=winner;m.reason=reason;m.status='finished';event(m,'finish',{winner});
+  m.winner=winner;m.reason=reason;m.status='finished';event(m,'finish',{winner,reason});
 }
+// After the finish nothing is decided any more, but the picture keeps moving: shots fly out, splats fade.
+export function settle(m,dt) {
+  dt=clamp(dt,0,1/30);m.events=[];
+  for(const e of m.effects)e.age+=dt;m.effects=m.effects.filter(e=>e.age<1);
+  for(const s of m.shots){s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;}m.shots=m.shots.filter(s=>s.life>0&&s.x>40&&s.x<1240&&s.y>85&&s.y<710);
+  for(const w of m.waves){w.age+=dt;if(w.kind==='wave'&&w.speed){w.x+=Math.cos(w.angle)*w.speed*dt;w.y+=Math.sin(w.angle)*w.speed*dt;}}m.waves=m.waves.filter(w=>w.age<w.life);
+  for(const z of m.zones)z.age+=dt;m.zones=m.zones.filter(z=>z.age<z.life);
+  for(const a of m.actors)for(const k of ['hit','attack','invincible','tellT'])if(a[k]>0)a[k]=Math.max(0,a[k]-dt);
+}
+// What a Wonder may touch: wonders.js imports nothing and gets its tools from here.
+const WONDER_API={effect,event,damage,fillSuper,chargeSuper,confine,WORLD,LEVELS};
 export function step(m,input={},dt=1/60,rivalInput=null) {
   dt=clamp(dt,0,1/30);m.events=[];
   for(const e of m.effects)e.age+=dt;m.effects=m.effects.filter(e=>e.age<1);
@@ -600,24 +739,32 @@ export function step(m,input={},dt=1/60,rivalInput=null) {
   // A guardian with a second stage rises at half life: feathers start falling around the child.
   for(const x of m.actors){if(x.giant&&x.spec.phase2&&!x.phase2&&x.hp>0&&x.hp<x.spec.hp*.5){x.phase2=true;x.invincible=Math.max(x.invincible,1.2);x.featherAt=m.time+1.6;effect(m,'rise',x.x,x.y,{color:x.spec.color});event(m,'phase2',{side:x.side,kind:x.id});}
     if(x.phase2&&x.hp>0&&!(x.out>0)&&m.time>=x.featherAt){x.featherAt=m.time+3.4;const t=foeOf(m,x);for(let i=0;i<3;i++){const ang=m.random()*Math.PI*2,rr=i?70+m.random()*60:0,delay=1.05+i*.25;m.zones.push({owner:x.side,kind:'feather',x:t.x+Math.cos(ang)*rr,y:t.y+Math.sin(ang)*rr*.8,r:52,age:0,life:delay+.35,delay,done:false,damage:12});}event(m,'feathers-fall',{side:x.side});}}
+  // A story guardian at half life: the Little Shadow lends his star, and the child's Power Form is one super away.
+  if(m.story&&!m.lent&&b.giant&&b.hp>0&&b.hp<b.spec.hp*.5){m.lent=true;const p=m.actors[0];
+    if(!p.formUsed&&p.hp>0){p.canForm=true;p.pips=Math.max(p.pips,FORM_PIPS-1);effect(m,'star-lend',p.x,p.y,{color:'#ffe27a'});event(m,'star-lend',{side:0});}}
   updateProjectiles(m,dt);
+  if(m.wonder)stepWonder(m,dt,WONDER_API);
   if(m.mode)stepMode(m,dt);
   if(m.status==='finished')return;
   if(!m.pickup&&m.time>=m.pickupAt&&!m.mode){m.pickup={x:640,y:395,life:12};m.pickupAt=m.time+20;event(m,'pickup-ready');}
   if(m.pickup){m.pickup.life-=dt;for(const actor of m.actors)if(m.pickup&&actor.hp>0&&actor.hp<actor.spec.hp&&length(actor.x-m.pickup.x,actor.y-m.pickup.y)<actor.radius+22){
-    const amount=Math.min(30,actor.spec.hp-actor.hp);actor.hp+=amount;actor.stats.healed+=amount;effect(m,'heal',actor.x,actor.y,{amount,color:'#91f5be'});event(m,'heal',{side:actor.side,amount});m.pickup=null;
+    const amount=Math.min(30*(m.superHit||1),actor.spec.hp-actor.hp);actor.hp+=amount;actor.stats.healed+=amount;effect(m,'heal',actor.x,actor.y,{amount,color:'#91f5be'});event(m,'heal',{side:actor.side,amount});m.pickup=null;
   }if(m.pickup?.life<=0)m.pickup=null;}
   if(m.coop){stepCoop(m,dt);return;}
   if(m.ball){if(m.time>=m.duration){const B=m.ball;if(B.score[0]!==B.score[1])finish(m,B.score[0]>B.score[1]?0:1,'time');else if(!B.overtime){B.overtime=true;m.duration+=40;event(m,'overtime');}else{const difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,Math.abs(difference)<.002?-1:difference>0?0:1,'time');}}return;}
   if(m.trio){if(m.time>=m.duration){const l0=trioLeft(m,0),l1=trioLeft(m,1),x=m.actors[0],y=m.actors[1],difference=x.hp/x.spec.hp-y.hp/y.spec.hp;finish(m,l0!==l1?(l0>l1?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
   if(m.echo){if(m.time>=m.duration){const E=m.echo,lead=E.songs[0]-E.songs[1]||E.progress[0]-E.progress[1],difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,lead?(lead>0?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
   if(m.wind){if(m.time>=m.duration){const lead=a.feathers-b.feathers,difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,lead?(lead>0?0:1):Math.abs(difference)<.002?-1:difference>0?0:1,'time');}return;}
-  if(a.hp<=0||b.hp<=0)finish(m,a.hp<=0&&b.hp<=0?-1:a.hp<=0?1:0);
+  // The final blow: the first fighter down freezes, the winner cannot be hurt, and the finish comes a moment later.
+  if(m.ending){if(m.time>=m.ending.at+FINALE_SIM-1e-6)finish(m,m.ending.winner);return;}
+  if(a.hp<=0||b.hp<=0){const winner=a.hp<=0&&b.hp<=0?-1:a.hp<=0?1:0;if(m.mode){finish(m,winner);return;}
+    const loser=winner<0?-1:1-winner,at=loser>=0?m.actors[loser]:{x:(a.x+b.x)/2,y:(a.y+b.y)/2};m.ending={at:m.time,winner,loser};
+    if(winner>=0)m.actors[winner].invincible=Math.max(m.actors[winner].invincible,FINALE_SIM+1);event(m,'final-blow',{winner,loser,x:at.x,y:at.y});}
   else if(m.time>=m.duration){const difference=a.hp/a.spec.hp-b.hp/b.spec.hp;finish(m,Math.abs(difference)<.002?-1:difference>0?0:1,'time');}
 }
 export function resultStats(m) {const a=m.actors[0];return {damage:Math.round(a.stats.damage),blocked:Math.round(a.stats.blocked),accuracy:a.stats.shots?Math.round(a.stats.hits/a.stats.shots*100):0,specials:a.stats.specials,healed:Math.round(a.stats.healed),weakHits:a.stats.weakHits,seconds:Math.round(m.time)};}
 export const STORAGE_KEY='creature-league.v1';
-export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{},box:{sparks:1,earned:0,opened:0,pending:null},looks:{},frames:[],frame:null,league:freshLeague(),tower:{best:0,runs:0,run:null},daily:{day:'',goals:[],bonusDay:''}};}
+export function freshProfile() {return {version:1,selected:'maimi',level:'rookie',sound:true,wins:0,played:0,cups:0,challengeWins:0,bestStreak:0,streak:0,history:[],creatures:{},cup:null,unlocked:[],newCards:[...STARTERS],skins:{},story:{done:0,v:3},storyCards:[],missionStars:{},missionLosses:{},box:{sparks:1,earned:0,opened:0,pending:null},looks:{},frames:[],frame:null,league:freshLeague(),tower:{best:0,runs:0,run:null},daily:{day:'',goals:[],bonusDay:''},forms:{ritual:[],seen:[]},wonders:{seen:{},last:null},finaleViews:{}};}
 export function readProfile(storage) {
   const fresh=freshProfile();try{const data=JSON.parse(storage.getItem(STORAGE_KEY));if(!data||data.version!==1)return fresh;
     for(const key of ['wins','played','cups','challengeWins','bestStreak','streak'])fresh[key]=Number.isFinite(data[key])?clamp(Math.floor(data[key]),0,1e8):0;
@@ -637,9 +784,19 @@ export function readProfile(storage) {
     if(Array.isArray(data.newCards))fresh.newCards=[...new Set(data.newCards.filter(id=>isUnlocked(fresh,id)||fresh.storyCards.includes(id)))];
     for(const id of Object.keys(CREATURES)){const skin=data.skins?.[id];if(typeof skin==='string'&&SKINS.some(s=>s.id===skin))fresh.skins[id]=skin;}
     if(!isUnlocked(fresh,fresh.selected))fresh.selected='maimi';
-    readBoxes(data,fresh);readLeague(data,fresh);readTower(data,fresh);readDaily(data,fresh);
+    readBoxes(data,fresh);readLeague(data,fresh);readTower(data,fresh);readDaily(data,fresh);readStar(data,fresh);
     if(data.lastBuild&&CREATURES[data.lastBuild.player])fresh.lastBuild={player:data.lastBuild.player,upgrades:cleanUpgrades(data.lastBuild.upgrades)};return fresh;
   }catch{return fresh;}
+}
+// Power Forms, Wonders and finales in the save: only known creatures and Wonders, no repeats, counts kept sane.
+const ownId=(table,id)=>typeof id==='string'&&Object.prototype.hasOwnProperty.call(table,id);
+const idList=list=>Array.isArray(list)?[...new Set(list.filter(id=>ownId(CREATURES,id)))].slice(0,64):[];
+const count=n=>Number.isFinite(n)?clamp(Math.floor(n),0,9999):null;
+function readStar(data,fresh){
+  fresh.forms={ritual:idList(data.forms?.ritual),seen:idList(data.forms?.seen)};
+  const seen=data.wonders?.seen;if(seen&&typeof seen==='object')for(const id of WONDER_IDS){const n=count(seen[id]);if(n!=null)fresh.wonders.seen[id]=n;}
+  fresh.wonders.last=WONDER_IDS.includes(data.wonders?.last)?data.wonders.last:null;
+  const views=data.finaleViews;if(views&&typeof views==='object')for(const id of Object.keys(CREATURES)){const n=count(views[id]);if(n!=null)fresh.finaleViews[id]=n;}
 }
 export function saveProfile(storage,profile) {try{storage.setItem(STORAGE_KEY,JSON.stringify(profile));return true;}catch{return false;}}
 export function startCup(profile) {
@@ -743,11 +900,46 @@ export const creatureXp=(profile,id)=>profile.creatures[id]?.xp||0;
 export function creatureLevel(profile,id){const xp=creatureXp(profile,id);let lv=1;while(lv<MAX_LEVEL&&xp>=LEVEL_XP[lv])lv++;return lv;}
 export function levelProgress(profile,id){const level=creatureLevel(profile,id),xp=creatureXp(profile,id);if(level>=MAX_LEVEL)return {level,pct:1,toNext:0};const a=LEVEL_XP[level-1],b=LEVEL_XP[level];return {level,pct:(xp-a)/(b-a),toNext:b-xp};}
 export const levelBoost=(profile,id)=>LEVEL_BONUS*(creatureLevel(profile,id)-1);
+// The first-unlock ritual was shown for this creature (or it was unlocked before rituals existed).
+export function markRitual(profile,id){if(!ownId(CREATURES,id))return false;profile.forms??={ritual:[],seen:[]};if(profile.forms.ritual.includes(id))return false;profile.forms.ritual.push(id);return true;}
+// The child's creature grew into its Power Form in this battle: true the first time for that creature.
+export function recordFormUse(profile,m){const a=m?.actors?.[0];if(!a?.formUsed||!ownId(CREATURES,a.id))return false;profile.forms??={ritual:[],seen:[]};if(profile.forms.seen.includes(a.id))return false;profile.forms.seen.push(a.id);return true;}
+export const finaleViews=(profile,id)=>profile.finaleViews?.[id]||0;
+export function recordFinaleView(profile,id){if(!ownId(CREATURES,id))return 0;profile.finaleViews??={};return profile.finaleViews[id]=clamp(finaleViews(profile,id)+1,0,9999);}
+
+// ------------------------------------------------------------------ the line between two phones
+// The guest checks the host's start before building the battle: a creature, look, mission or Wonder this phone
+// does not know means another version of the game (null), never a half-built battle.
+const ARENA=/^[a-z]{2,12}$/,plain=v=>String(v??'').replace(/[<>&"']/g,'').slice(0,12);
+export function cleanStart(cfg){
+  if(!cfg||typeof cfg!=='object'||!Number.isFinite(+cfg.seed))return null;
+  const ids=Array.isArray(cfg.ids)?cfg.ids.slice(0,2):[];if(ids.length!==2||!ids.every(id=>ownId(CREATURES,id)))return null;
+  const mode=cfg.mode==null?null:ownId(MODES,cfg.mode)?cfg.mode:undefined;if(mode===undefined)return null;
+  const skins=[0,1].map(i=>SKINS.some(s=>s.id===cfg.skins?.[i])?cfg.skins[i]:'base');
+  const names=[0,1].map(i=>plain(cfg.names?.[i])||'חבר'),wins=[0,1].map(i=>Number.isFinite(+cfg.wins?.[i])?Math.max(0,Math.min(999,Math.floor(+cfg.wins[i]))):0);
+  const w=cfg.wonderOpts&&typeof cfg.wonderOpts==='object'?cfg.wonderOpts:{};
+  if(w.wonder&&(Array.isArray(w.wonderPrefer)&&w.wonderPrefer.some(id=>!WONDER_IDS.includes(id))||w.wonderAvoid!=null&&!WONDER_IDS.includes(w.wonderAvoid)))return null;
+  const wonderOpts={wonder:!!w.wonder,wonderPrefer:Array.isArray(w.wonderPrefer)?w.wonderPrefer.filter(id=>WONDER_IDS.includes(id)):[],wonderAvoid:WONDER_IDS.includes(w.wonderAvoid)?w.wonderAvoid:null};
+  return {...cfg,seed:Math.floor(+cfg.seed),mode,arena:typeof cfg.arena==='string'&&ARENA.test(cfg.arena)?cfg.arena:null,ids,names,skins,wins,wonderOpts};
+}
+
+// ------------------------------------------------------------------ Wonder seeds in the Star Book
+// What makeMatch needs from the save: a new save first plays three battles without Wonders; unseen ones come first.
+export const wonderOptions=profile=>({wonder:(profile?.played||0)>=3,wonderPrefer:WONDER_IDS.filter(id=>!(profile?.wonders?.seen?.[id]>0)),wonderAvoid:WONDER_IDS.includes(profile?.wonders?.last)?profile.wonders.last:null});
+// Where a seed may sprout, for screens that want to say so. makeMatch enforces the rest (missions, bosses, co-op, hide, chase).
+export const wonderAllowed=(profile,mode,{replay=false,guard=false}={})=>(profile?.played||0)>=3&&(['quick','league','wild','versus','online'].includes(mode)||mode==='tower'&&!guard||mode==='story'&&!!replay);
+// A Wonder that really started counts in the book. The first sighting of each one gives a spark, once.
+export function recordWonder(profile,m){const W=m?.wonder;if(!W||!WONDER_IDS.includes(W.id)||!(W.started||W.state==='active'||W.state==='done'))return null;
+  profile.wonders??={seen:{},last:null};const seen=profile.wonders.seen,first=!(seen[W.id]>0),n=clamp((seen[W.id]||0)+1,0,9999);seen[W.id]=n;profile.wonders.last=W.id;
+  return {id:W.id,count:n,first,boxes:first?addSparks(profile,1):0};}
 
 // ------------------------------------------------------------------ the league
 // An endless trophy road. The rival's level follows the child, so about six battles in ten are won.
 export const RANKS=[{id:'bronze',name:'ארד',at:0,color:'#c98a4b'},{id:'silver',name:'כסף',at:100,color:'#c8d3de'},{id:'gold',name:'זהב',at:250,color:'#f2c14e'},{id:'diamond',name:'יהלום',at:450,color:'#7fe3ff'},{id:'champion',name:'אלופים',at:700,color:'#ff8a5c'},{id:'legend',name:'אגדה',at:1000,color:'#c69cff'}];
-export const LEAGUE_LEVELS=['beginner','rookie','challenger','veteran','champion'],PRIZE_EVERY=30,LEAGUE_WIN=8,LEAGUE_LOSS=3,LEAGUE_SAFE=60;
+export const LEAGUE_LEVELS=['beginner','rookie','challenger','veteran','champion'],PRIZE_EVERY=30,LEAGUE_WIN=8,LEAGUE_LOSS=3,LEAGUE_SAFE=60,LEAGUE_LIFE=1.2;
+// A training fight (no mission) against a beginner or rookie rival gets the league's extra life, so the Wonder's twelve seconds fit in it.
+// Not from the challenger level up: a slower child already meets the clock there.
+export const quickLife=level=>LEAGUE_LEVELS.indexOf(level)>=0&&LEAGUE_LEVELS.indexOf(level)<2?LEAGUE_LIFE:1;
 export function freshLeague(){return {trophies:0,best:0,skill:1,played:0,wins:0};}
 function readLeague(data,fresh){const l=data.league,num=v=>Number.isFinite(v)?v:null;if(!l||typeof l!=='object')return;
   const trophies=clamp(Math.floor(num(l.trophies)??0),0,1e6);fresh.league={trophies,best:Math.max(trophies,clamp(Math.floor(num(l.best)??0),0,1e6)),skill:clamp(num(l.skill)??1,0,LEAGUE_LEVELS.length-.01),played:clamp(Math.floor(num(l.played)??0),0,1e8),wins:clamp(Math.floor(num(l.wins)??0),0,1e8)};}
@@ -763,7 +955,10 @@ export function makeLeagueMatch(profile,options={},random=Math.random){
   const arenas=['wind','sea','fire','mirror','castle'],arena=mode?({lava:'fire',wind:'wind',ball:'sea'})[mode]:arenas[Math.floor(random()*arenas.length)];
   // Now and then a giant: bigger and slower to fall, so it fights one level lower.
   let level=leagueLevel(profile);const giant=!mode&&random()<.1;if(giant)level=LEAGUE_LEVELS[Math.max(0,LEAGUE_LEVELS.indexOf(level)-1)];
-  const m=makeMatch({...options,player,rival,level,mode,arena,giantRival:giant,boost:options.boost??levelBoost(profile,player)});m.league=true;return m;
+  const forms=options.forms??[formUnlocked(profile,player),LEAGUE_LEVELS.indexOf(level)>=2];
+  // A plain league fight up to the challenger level gets a little more life, so it lasts like the other free fights. Missions and
+  // giants keep theirs, and so do the top levels, where a longer fight only gives the computer's Power Form more time to come.
+  const m=makeMatch({...options,forms,player,rival,level,mode,arena,giantRival:giant,life:options.life??(mode||giant||LEAGUE_LEVELS.indexOf(level)>2?1:LEAGUE_LIFE),boost:options.boost??levelBoost(profile,player)});m.league=true;return m;
 }
 export function recordLeague(profile,m){
   if(m.status!=='finished'||!m.league)return null;
@@ -831,7 +1026,8 @@ export function startTowerRun(profile,creature,seed=Date.now()){
 export function makeTowerMatch(profile,options={}){
   const run=profile.tower.run;if(!run||run.pending)return null;
   const f=towerFloor(run.seed,run.floor,run.creature),st=towerStats(run);
-  const m=makeMatch({...options,player:run.creature,rival:f.rival,level:f.level,mode:f.mode,arena:f.arena,giantRival:f.giant,upgrades:st.upgrades,boost:options.boost??levelBoost(profile,run.creature),run:{picks:run.picks,rivalHp:f.rivalHp,twist:f.twist,seed:run.seed,floor:run.floor}});
+  // A guardian floor is its own show: no Wonder there. From floor 5 up the rivals can grow a Power Form too.
+  const m=makeMatch({...options,forms:options.forms??[formUnlocked(profile,run.creature),run.floor>=5],wonder:!!options.wonder&&!f.giant,player:run.creature,rival:f.rival,level:f.level,mode:f.mode,arena:f.arena,giantRival:f.giant,upgrades:st.upgrades,boost:options.boost??levelBoost(profile,run.creature),run:{picks:run.picks,rivalHp:f.rivalHp,twist:f.twist,seed:run.seed,floor:run.floor}});
   m.tower={floor:run.floor,guard:f.giant};return m;
 }
 // After a tower battle: climb on, use the rescue star, or end the climb. A spark for every floor; a box for every
@@ -910,13 +1106,13 @@ const COOP_SPAWN=[{x:250,y:330},null,{x:250,y:500}];
 function setupCoop(m,{partner='havzuk',hpMul=2.8,hearts=[0,0]}={}){
   if(!CREATURES[partner])partner='havzuk';
   m.coop=true;m.duration=COOP_DURATION;const p1=m.actors[0],boss=m.actors[1],p2=actor(partner,2);
-  Object.assign(p1,COOP_SPAWN[0]);Object.assign(p2,COOP_SPAWN[2]);p2.facing=1;p2.aim=0;m.actors.push(p2);
+  Object.assign(p1,COOP_SPAWN[0]);Object.assign(p2,COOP_SPAWN[2]);p2.facing=1;p2.aim=0;p2.canForm=!!m.forms?.[2];m.actors.push(p2);
   boss.spec={...boss.spec,hp:Math.round(boss.spec.hp*hpMul*(COOP_GIANT_HP[boss.id]||1))};boss.hp=boss.spec.hp;boss.x=1000;boss.y=410;
   [p1,p2].forEach((a,i)=>{const extra=clamp(Math.floor(hearts?.[i]||0),0,2);if(extra){a.spec={...a.spec,hp:Math.round(a.spec.hp*(1+HEART_BONUS*extra))};a.hp=a.spec.hp;}});
 }
 function stepCoop(m,dt){
   for(const p of m.actors){if(p.side===1)continue;
     if(p.out>0){p.out-=dt;if(p.out<=0){p.out=0;p.hp=p.spec.hp;Object.assign(p,COOP_SPAWN[p.side]);p.invincible=1.5;event(m,'respawn',{side:p.side});}continue;}
-    if(p.hp<=0){p.out=COOP_RESPAWN;p.hp=0;event(m,'ko',{side:p.side});}}
+    if(p.hp<=0)knockOut(m,p,COOP_RESPAWN);}
   if(m.actors[1].hp<=0)finish(m,0,'giant');else if(m.time>=m.duration)finish(m,1,'time');
 }

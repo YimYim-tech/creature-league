@@ -254,7 +254,7 @@ body.versus-play #rival-level{color:#ff9aa8}
 .chest.mini .chest-lock{width:9px;height:11px;margin-left:-4.5px;border-radius:3px;box-shadow:0 0 0 1.5px #3a1d0f}.chest.mini .chest-lock::after{display:none}
 .chest.mini .chest-glow{inset:-10px}
 /* Sparks: three little diamonds that fill up. */
-.spark-meter{display:inline-flex;gap:5px;align-items:center;direction:ltr}
+.spark-meter{display:inline-flex;gap:5px;align-items:center;direction:rtl}
 .spark-meter i{width:13px;height:13px;transform:rotate(45deg);border-radius:3px;background:#0004;border:2px solid #c9a35d}
 .spark-meter i.on{background:#ffcf3a;border-color:#fff3b8;box-shadow:0 0 8px #ffcf3a}
 .spark-meter.big i{width:20px;height:20px}
@@ -362,7 +362,7 @@ body.versus-play #rival-level{color:#ff9aa8}
 .rank-shield svg{width:20px;height:20px}
 .rank-shield.big{width:84px;height:94px}.rank-shield.big svg{width:42px;height:42px}
 .league-bar,.level-bar{position:relative;display:block;height:8px;border-radius:5px;background:#0005;overflow:hidden;min-width:120px}
-.league-bar i,.level-bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#f2c14e,#ffe9a0);border-radius:inherit}
+.league-bar i,.level-bar i{position:absolute;inset:0 0 0 auto;background:linear-gradient(270deg,#f2c14e,#ffe9a0);border-radius:inherit}
 .league-bar.big{height:14px}
 .league-view{padding:16px 22px 28px;max-width:980px;margin-inline:auto}
 .league-head{display:flex;align-items:center;gap:16px;justify-content:center;text-align:right}
@@ -419,7 +419,7 @@ body.versus-play #rival-level{color:#ff9aa8}
 .tower-pick{min-height:0}.tower-pick h2{font-size:18px;margin:4px 0}.tower-pick p{font-size:13px;margin:0}
 .tower-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px}
 .tower-actions .text-button{color:#dccfb0}
-@media (max-width:760px){.tower-layout{grid-template-columns:1fr}.tower-art{grid-template-columns:repeat(7,1fr);direction:ltr}.tower-floor{height:36px}}
+@media (max-width:760px) and (orientation:portrait){.tower-layout{grid-template-columns:1fr}.tower-art{grid-template-columns:repeat(7,1fr);direction:ltr}.tower-floor{height:36px}}
 @media (max-height:600px) and (orientation:landscape){
   .tower-view{padding:6px 12px 12px}.tower-layout{grid-template-columns:minmax(0,.4fr) minmax(0,1.6fr);gap:14px}
   .tower-floor{height:30px}.tower-floor b{font-size:14px}.tower-art{gap:4px;padding:6px 8px}
@@ -554,3 +554,151 @@ button.code-pic{border:0;font:inherit;cursor:pointer}
 .bridge-view .necklace{margin:6px auto 0}
 @media(prefers-reduced-motion:reduce){.echo-pad.sing{animation:none;filter:brightness(1.3)}}
 @media (max-height:600px) and (orientation:landscape){.bridge-stage{height:30vh}.bridge-pads{margin:8px 0 4px}.echo-pad{width:64px}}
+/* ================================================================== wave 1: sideways phones fit the screen */
+/* Notches and rounded corners: the menu screens keep clear of them like the battle does. */
+@media (orientation:landscape) and (max-height:600px){
+  .header{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+  .view:not(.battle-view){padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+  .notice{top:max(8px,env(safe-area-inset-top));bottom:auto;max-width:min(90vw,560px)}
+}
+@media (orientation:portrait){.header{padding-top:max(12px,env(safe-area-inset-top))}body{padding-bottom:env(safe-area-inset-bottom)}}
+/* A thin painted frame on short screens: the window inside is what matters. */
+@media (max-height:500px) and (orientation:landscape){
+  dialog{border-width:18px;max-height:calc(100dvh - 12px)}
+  #pause-dialog{padding:8px 16px}#pause-dialog p,#pause-dialog .muted{display:none}#pause-dialog h2{margin:2px 0 8px;font-size:22px}#pause-dialog .button{min-height:44px;padding:8px 12px;margin-top:6px}
+  .help-grid{gap:8px}
+}
+/* The result on a sideways phone: the stage and the chips side by side, the buttons in one row, nothing to scroll. */
+@media (max-height:500px) and (orientation:landscape){
+  #result-dialog.stage{padding:4px 14px 6px}
+  #result-dialog.stage[open]{gap:4px 14px}
+  #result-dialog.stage .result-stage{padding-top:18px}
+  .result-spot{width:min(170px,calc(100dvh - 220px))}
+  .result-stamp b{font-size:24px}.result-stamp.long b{font-size:19px}.result-stamp{min-width:120px;padding:3px 14px 2px}.result-stamp.painted{width:150px;height:74px}.result-stamp.painted b{font-size:24px}.result-stamp.painted.long b{font-size:18px}
+  #result-dialog .result-stars{min-height:28px}#result-dialog .result-stars span svg{width:28px;height:28px}
+  #result-dialog.stage .result-side{gap:7px}
+  .rchip{min-height:32px;padding:2px 10px;font-size:14px}
+  .result-primary{min-height:54px;font-size:20px;padding:4px 20px}
+  .next-face{width:46px;height:46px}
+  .result-pick{width:42px;height:42px}
+  #result-dialog.stage .result-home,#result-dialog.stage .result-ask{width:40px;height:40px}
+  #result-dialog.stage #result-secondary{min-height:40px;padding:4px 12px;font-size:14px}
+  #result-dialog.plain{padding:8px 16px}
+}
+@media (max-height:360px) and (orientation:landscape){
+  .result-spot{width:min(140px,calc(100dvh - 200px))}
+  #result-dialog.stage .result-stage{padding-top:14px}
+  .result-stamp b{font-size:21px}
+  .result-pick{width:38px;height:38px}
+  .result-primary{min-height:50px;font-size:18px}
+  /* The next rival's face keeps the big button inside the window on the shortest phones. */
+  .result-primary.with-next{min-height:46px;padding-block:2px}
+  .next-face{width:40px;height:40px}
+}
+/* The card window: the card takes the height, so its picture always shows; the looks scroll beside it. */
+@media (max-height:500px) and (orientation:landscape){
+  .card-dialog{width:min(780px,calc(100vw - 2*var(--safe-x)));max-width:none;padding:6px 12px;overflow:hidden}
+  .card-dialog-body{grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start}
+  .card-dialog .card-dialog-card{width:calc((100dvh - 60px) * .714);max-width:none;margin:0}
+  .card-dialog-side{max-height:calc(100dvh - 60px);overflow:auto;overscroll-behavior:contain;padding-inline-end:4px}
+  .card-dialog-side h2{margin:2px 0 4px;font-size:24px}.card-dialog-side>p.muted{display:none}
+  .card-dialog-card .tcard,.reveal-dialog .flip .tcard{padding:7px}
+  .card-dialog-card .tcard-art,.reveal-dialog .flip .tcard-art{flex:1 1 auto;min-height:36%}
+  .card-dialog-card .tcard header,.reveal-dialog .flip .tcard header{padding:2px 4px 4px}
+  .card-dialog-card .tcard.big .tcard-title h3,.reveal-dialog .tcard.big .tcard-title h3{font-size:18px;white-space:nowrap}
+  .card-dialog-card .tcard-title,.reveal-dialog .flip .tcard-title{padding:3px 4px 0}
+  .card-dialog-card .tcard.big .tcard-special,.reveal-dialog .tcard.big .tcard-special{font-size:11px;margin:2px 2px 3px;padding:2px 6px}
+  .card-dialog-card .tcard.big .tcard-bars li,.reveal-dialog .tcard.big .tcard-bars li{font-size:10px;grid-template-columns:38px 1fr 28px;gap:4px}
+  .card-dialog-card .tcard.big .tcard-bars i,.reveal-dialog .tcard.big .tcard-bars i{height:6px}
+  .card-dialog-card .tcard-bars,.reveal-dialog .flip .tcard-bars{gap:2px}
+  .card-dialog-card .tcard footer,.reveal-dialog .flip .tcard footer{padding:3px 4px 0;font-size:10px}
+  .reveal-dialog{max-height:calc(100dvh - 12px);width:min(680px,calc(100vw - 2*var(--safe-x)))}
+  .reveal-dialog .flip{width:calc((100dvh - 64px) * .714)}
+  .reveal-dialog.ritual .ritual-thumb{width:58px;height:58px}.reveal-dialog.ritual .ritual-thumb svg{width:30px;height:30px}.ritual-meter{width:44px;height:44px}
+}
+@media (max-height:360px) and (orientation:landscape){
+  .card-dialog-card .tcard.big .tcard-special,.reveal-dialog .tcard.big .tcard-special{display:none}
+}
+/* Home: everything on the first screen, the strips included. */
+@media (max-height:500px) and (orientation:landscape){
+  .lobby-view{padding-top:6px}
+  .home-stage{min-height:0;height:calc(100dvh - 60px);max-height:400px;padding:8px 16px;gap:12px;margin-bottom:14px}
+  .home-hero{gap:0}.home-portrait{width:min(200px,calc(100dvh - 150px))}
+  .home-play{gap:5px}.home-gems{margin-top:0;padding-top:4px;padding-bottom:4px}
+  .home-play h1{font-size:24px}
+  .play-big{min-height:56px;font-size:24px;padding:6px 34px;margin-top:2px}
+  .home-strips{margin-top:2px}
+}
+@media (max-height:360px) and (orientation:landscape){
+  .home-stage{padding:6px 14px;gap:10px;height:calc(100dvh - 56px)}
+  .home-portrait{width:min(170px,calc(100dvh - 140px))}.home-name{font-size:19px}
+  .home-gems .gem{width:20px;height:20px}.home-gems .gem.star{width:24px;height:24px}.home-gems.bridge-row .bridge-shard{width:24px;height:24px}
+  .home-play .eyebrow{font-size:11px}.home-play h1{font-size:20px}
+  .play-big{min-height:48px;font-size:21px;padding:4px 28px}.play-big svg{width:22px;height:22px}
+  .home-links .button{min-height:32px;padding:3px 9px;font-size:12px}
+  .home-strips>button{padding:2px 5px}
+}
+/* The golden castle and the sound bridge: the scene on one side, what to tap on the other. */
+@media (max-height:500px) and (orientation:landscape){
+  .castle-view{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"stage back" "stage head" "stage gems" "stage guide" "stage actions";grid-template-rows:auto auto auto 1fr auto;column-gap:16px;align-items:center;padding-top:6px;padding-bottom:8px}
+  .castle-view .back-link{grid-area:back;justify-self:start;margin:0}
+  .castle-view .castle-head{grid-area:head;margin:0;display:block}.castle-view .castle-head h1{font-size:26px;margin:0}.castle-view .castle-head .eyebrow{display:none}.castle-view .castle-head p{font-size:13px;margin:2px 0 0}
+  .castle-view .castle-stage{grid-area:stage;height:calc(100dvh - var(--header-h,50px) - 22px);align-self:start}
+  .castle-view #castle-gems{grid-area:gems;margin:4px auto}.castle-view .necklace .gem{width:40px;height:40px}.castle-view .necklace .gem.star{width:46px;height:46px}
+  .castle-view .guide{grid-area:guide;margin:0;align-self:start}.castle-view .guide-face{width:58px}.castle-view .guide-bubble{padding:8px 12px}.castle-view .guide-bubble p{font-size:14px;line-height:1.45}
+  .castle-view .story-actions{grid-area:actions;margin:0}
+  .bridge-view{grid-template-areas:"stage back" "stage head" "stage pads" "stage guide" "stage actions";grid-template-rows:auto auto auto 1fr auto}
+  .bridge-view .bridge-stage{grid-area:stage;height:calc(100dvh - var(--header-h,50px) - 22px);align-self:start}
+  .bridge-view .bridge-pads{grid-area:pads;margin:4px 0}.bridge-view .echo-pad{width:clamp(76px,11vw,100px)}
+  .bridge-view #bridge-symbol{grid-area:stage;align-self:end;justify-self:center;z-index:2;margin:0 0 12px}.bridge-view .necklace.big .gem{width:30px;height:30px}.bridge-view .necklace.big .bridge-shard{width:36px;height:36px}
+  .bridge-view .story-actions{display:flex;gap:8px;justify-content:center}.bridge-view .story-actions .button{font-size:16px;padding:8px 18px}
+}
+/* The briefing: the creature on one side; the words scroll, while the picker and the start button stay on screen. */
+@media (max-height:500px) and (orientation:landscape){
+  .wild-view{display:flex;flex-direction:column;height:calc(100dvh - var(--header-h,50px));padding-top:4px;padding-bottom:6px;overflow:hidden}
+  .wild-view .back-link{flex:none}
+  .wild-view .wild-layout{flex:1 1 auto;min-height:0;grid-template-rows:minmax(0,1fr);align-items:stretch}
+  .wild-view .wild-stage{position:relative;top:0;height:auto;min-height:0}
+  .wild-view .wild-copy{display:flex;flex-direction:column;min-height:0}
+  .wild-view .wild-scroll{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:2px 4px 6px}
+  .wild-view #wild-start{position:static;flex:none;margin-top:6px;box-shadow:0 6px 14px #0008}
+  .wild-view .wild-copy .guide{margin:2px 0 6px}.wild-view .guide-bubble{padding:8px 12px}.wild-view .guide-bubble p{font-size:14px;line-height:1.45}
+  .wild-view .wild-fighters{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding:3px 2px}
+  .wild-view .fighter-chip{flex:none;width:60px;padding:2px 2px 4px;gap:0}.wild-view .fighter-chip canvas{width:42px;height:42px}.wild-view .fighter-chip b{font-size:11px}.wild-view .fighter-chip .chip-level{display:none}
+  .wild-view .wild-role{display:none}.wild-view h1#wild-name{font-size:24px;margin:2px 0}.wild-view .wild-pick-title{margin:2px 0;font-size:14px}
+  .wild-view .guide-bubble p{font-size:13px;line-height:1.4}.wild-view .wild-copy .guide-face{width:60px}
+  .wild-view #wild-start{min-height:50px;padding:6px 16px;font-size:20px}
+}
+@media (max-height:360px) and (orientation:landscape){.wild-view #wild-progress{display:none}.wild-view .wild-copy .guide{margin:0 0 4px}}
+/* The tower on a sideways phone: the words and picks scroll, the start button stays below them and never covers a card. */
+@media (max-height:500px) and (orientation:landscape){
+  .tower-view{display:flex;flex-direction:column;height:calc(100dvh - var(--header-h,50px));padding-top:4px;padding-bottom:6px;overflow:hidden}
+  .tower-view .back-link{flex:none}
+  .tower-view .tower-layout{flex:1 1 auto;min-height:0;grid-template-rows:minmax(0,1fr);align-items:stretch}
+  .tower-view .tower-art{align-self:start}
+  .tower-view .tower-copy{display:flex;flex-direction:column;min-height:0}
+  .tower-view .tower-scroll{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:2px}
+  .tower-view .tower-actions{position:static;flex:none;margin-top:6px}
+  .tower-view .tower-pick{padding:6px 10px;gap:2px}.tower-view .tower-pick .upgrade-art{height:34px;margin:0 0 2px}.tower-view .tower-pick p{min-height:0;font-size:12px}.tower-view .tower-pick .upgrade-choice{padding:4px;font-size:12px;margin-top:4px}
+}
+/* The league on a sideways phone: the road shrinks first, so the creatures and the start button are always on screen. */
+@media (max-height:500px) and (orientation:landscape){
+  .league-view{display:flex;flex-direction:column;height:calc(100dvh - var(--header-h,50px));padding-top:4px;padding-bottom:6px;overflow:hidden}
+  .league-view>*{flex:none}
+  .league-view .league-head{gap:10px}.league-view .league-head .eyebrow{display:none}.league-view .league-head h1{font-size:22px}.league-view .league-head p{font-size:11px}.league-view .rank-shield.big{width:44px;height:49px}.league-view .rank-shield.big svg{width:22px;height:22px}
+  .league-view .league-progress{margin:2px auto;gap:3px}.league-view .league-bar.big{height:10px}
+  .league-view .league-road{flex:0 1 auto;min-height:0;margin:2px 0}.league-view .wild-fighters,.wild-view .wild-fighters,.tower-view .wild-fighters{scrollbar-width:none}.league-view .road-stop{padding:2px 4px;min-width:46px}.league-view .road-stop .chest.mini{width:32px;height:27px}.league-view .road-stop .rank-shield{width:26px;height:29px}.league-view .road-stop b{font-size:12px}.league-view .road-stop small{font-size:10px}
+  .league-view .wild-pick-title{margin:2px 0;font-size:14px}
+  .league-view .fighter-chip{width:60px;padding:2px 2px 4px;gap:0}.league-view .fighter-chip canvas{width:42px;height:42px}.league-view .fighter-chip b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.league-view .fighter-chip .chip-level{display:none}
+  #league-start{position:static;margin-top:6px;min-height:50px;padding:6px 22px;font-size:20px}
+}
+@media (max-height:360px) and (orientation:landscape){.league-view .wild-pick-title{display:none}.league-view .league-road .road-stop small{display:none}}
+/* The Star Book on a sideways phone. */
+@media (max-height:500px) and (orientation:landscape){
+  .album-tabs{margin:2px 0 8px}.album-tabs button{font-size:15px;padding:4px 16px}
+  .wonder-grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}.wonder-pic{width:78px;height:78px}.wonder-pic svg{width:40px;height:40px}.wonder-sticker .wonder-q{font-size:42px}.wonder-sticker b{font-size:15px}
+  .campfire-view{min-height:calc(100dvh - var(--header-h,50px) - 14px);gap:6px}
+  #campfire-portrait{width:min(170px,40dvh);height:min(170px,40dvh)}.campfire-ron{width:min(110px,26dvh)}.campfire-fire{transform:scale(.8);transform-origin:50% 100%}
+  .campfire-view .guide-face{width:56px}.campfire-view .guide-bubble{padding:6px 12px}.campfire-view .guide-bubble p{font-size:14px}
+  #campfire-back{min-height:46px;font-size:17px;margin-bottom:4px}
+}

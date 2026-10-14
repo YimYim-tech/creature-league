@@ -148,6 +148,19 @@ export class Skeleton {
     if (index !== undefined) this.bones[index].extraAngle += angle;
   }
 
+  // הגדלה מעל הקליף: העצם וכל ילדיו גדלים יחד (ראשים ענקיים, כתר שגדל עם הראש).
+  // קוראים לה אחרי עדכון האנימטור ולפני update, כי האנימטור מאפס את התנוחה.
+  scaleBone(name, factor) {
+    const index = this.byName.get(name);
+    if (index !== undefined && Number.isFinite(factor)) this.bones[index].pose.scale *= factor;
+  }
+
+  // מיקום העצם בעולם אחרי update: לכובעים ולכתרים שרוכבים עליו.
+  boneWorld(name) {
+    const index = this.byName.get(name);
+    return index === undefined ? null : this.bones[index].world;
+  }
+
   update(root) {
     const rootTransform = { x: root.x, y: root.y, angle: root.angle ?? 0, scale: root.scale ?? 1 };
     for (const bone of this.evaluation) {
