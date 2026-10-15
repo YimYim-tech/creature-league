@@ -1,0 +1,310 @@
+/* The sideways phone (wave 3): Home and friends.
+   Every rule sits inside @media (orientation:landscape) and (max-height:500px) and (pointer:coarse) (or its SHORT tier, max-height:360px)
+   and every selector starts with one of: #lobby #arenas #versus #online #goals #players #lab #cup #workshop #challenge #ccard-dialog #pick-dialog. */
+@media (orientation:landscape) and (max-height:500px) and (pointer:coarse){
+  /* ---- Home: one screen and nothing under it. The creature at the start (a tap on it opens the picker); at the end the badges in their
+     fixed places, where the journey stands, the four doors and the big Play at the bottom-left. */
+  #lobby>:not(.home-stage){display:none}
+  #lobby .home-stage{display:grid;grid-template-columns:minmax(0,38fr) auto minmax(0,62fr);grid-template-rows:auto auto minmax(0,1fr) auto auto;
+    grid-template-areas:"hero top top" "hero gems where" "hero title title" "hero doors doors" "hero play play";gap:6px 12px;align-items:center;height:100%;min-height:0;max-height:none;margin:0;padding:8px 12px;box-sizing:border-box;border-radius:16px}
+  #lobby .home-play{display:contents}
+  #lobby .home-hero{grid-area:hero;position:relative;display:grid;justify-items:center;align-content:center;gap:2px;min-width:0;min-height:0;height:100%}
+  #lobby .home-portrait{width:min(100%,calc(100cqh - 104px));height:auto;aspect-ratio:1;cursor:pointer}
+  #lobby .home-name{max-width:100%;font-size:20px;line-height:1.15;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #lobby .home-name .home-crown{width:22px;height:22px}#lobby .home-name .home-crown svg,#lobby .home-name .home-crown img{width:20px;height:20px}
+  #lobby .home-change{min-height:var(--hit);padding:0 16px;border-radius:999px;background:#0b1a2299;box-shadow:0 0 0 1.5px #e8cf9566;font-size:14px;color:#f3e6c8}
+  /* The crown of a Power Form that waits: it glows on the creature until it is tapped. */
+  #lobby .home-ritual{position:absolute;top:0;inset-inline-end:4px;z-index:2;display:grid;place-items:center;width:52px;height:52px;padding:0;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff6cf,#ffd23a 55%,#b98f3e);box-shadow:0 0 0 2px #3a1d0f,0 0 16px 4px #ffd23a99;animation:home-crown-glow 1.6s ease-in-out infinite}
+  #lobby .home-ritual[hidden]{display:none}
+  #lobby .home-ritual .home-crown{width:34px;height:34px;margin:0;color:#7a4a10}#lobby .home-ritual .home-crown svg,#lobby .home-ritual .home-crown img{width:32px;height:32px}
+  #lobby .home-ritual-word{display:none}
+  @keyframes home-crown-glow{50%{box-shadow:0 0 0 2px #3a1d0f,0 0 24px 8px #ffd23acc;transform:scale(1.06)}}
+  @media (prefers-reduced-motion:reduce){#lobby .home-ritual{animation:none}}
+  /* The badges: the day's goals, the star boxes, Ron's gift while it waits, and at the far end who plays. Each keeps its place. */
+  #lobby .home-strips{grid-area:top;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;margin:0;min-width:0}
+  #lobby .home-strips>button{position:relative;flex:none;display:flex;flex-direction:row;align-items:center;gap:6px;min-width:var(--hit);height:48px;margin:0;padding:0 12px 0 6px;border-radius:24px}
+  #lobby .home-strips .strip-long,#lobby .home-strips .strip-short,#lobby .home-strips .goals-dots,#lobby #home-box .box-strip-copy{display:none}
+  #lobby .home-strips .goals-count{display:inline;font-size:15px;font-weight:900}
+  #lobby .home-strips .goals-badge{width:34px;height:34px}
+  #lobby #home-box{padding:0 6px}#lobby #home-box .chest.mini{width:38px;height:31px}
+  #lobby #home-gift{width:48px;padding:0 4px;justify-content:center;box-shadow:0 0 0 2px var(--gold-hi,#ffd23a),0 0 14px #ffcf5a88}
+  #lobby #home-gift[hidden]{display:none}#lobby #home-gift .home-gift-ron{width:40px;height:40px;object-fit:contain}#lobby #home-gift .box-strip-copy{display:none}
+  #lobby #home-player{margin-inline-start:auto;display:flex;max-width:150px;height:48px;padding:2px 12px 2px 4px}
+  #lobby #home-player[hidden]{display:none}#lobby #home-player canvas{width:40px;height:40px}#lobby #home-player b{font-size:15px;max-width:96px}
+  /* Where the journey stands, and its next step in one or two lines. */
+  #lobby .home-gems{grid-area:gems;margin:0;padding:0;justify-content:flex-start}
+  /* The island being played: its gem fills like a clock face, one slice for every step won. */
+  #lobby .home-gems .gem.part{background:conic-gradient(var(--g) calc(var(--p,0) * 1turn),#4a4338 0)}
+  #lobby #home-where{grid-area:where;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-content:flex-start}
+  #lobby .home-play h1{grid-area:title;align-self:center;margin:0;font-size:22px;line-height:1.15;text-align:start;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  /* The four doors: מסע, קלפים, זירות, חברים. A door still locked shows its lock and when it opens, and only wiggles. */
+  #lobby .home-links{grid-area:doors;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0;min-width:0}
+  /* On a taller phone (the home-screen app) the doors and the big Play grow into the room instead of leaving a hole above them. */
+  #lobby .home-door{flex-direction:column;justify-content:center;gap:1px;min-width:0;min-height:clamp(54px,19cqh,72px);margin:0;padding:3px 4px;font-size:clamp(15px,5cqh,18px);line-height:1.1;white-space:nowrap}
+  #lobby .home-door svg{width:clamp(22px,8cqh,30px);height:clamp(22px,8cqh,30px)}
+  #lobby .home-door .door-wait{font-size:10px;font-weight:700;opacity:.85}
+  #lobby .home-door.locked{filter:saturate(.35) brightness(.92)}
+  #lobby #home-play{grid-area:play;width:100%;min-height:max(var(--action-h),min(19cqh,70px));margin:0;padding:4px 16px;font-size:26px}
+  #lobby #home-play svg{width:26px;height:26px}
+
+  /* ---- The arenas (זירות): four tiles, each with the arena it is fought in, and training beside them with its own big button. */
+  #arenas{display:grid;grid-template-columns:minmax(0,1fr) min(250px,36cqw);grid-template-rows:minmax(0,1fr);gap:0 12px;padding-bottom:4px}
+  #arenas .arenas-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:10px;margin:0;padding:2px;min-height:0;flex-wrap:nowrap}
+  #arenas .arena-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0;min-height:0;margin:0;padding:8px 8px 10px;border-radius:16px;overflow:hidden;text-align:center;
+    background:linear-gradient(180deg,#0b1a2255,#0b1a22e6 62%),var(--tile-art,none) center/cover;box-shadow:0 0 0 2px #c9a35d99,0 6px 14px #0007}
+  #arenas #home-league{--tile-art:url(art/gen/arena-castle.jpg)}#arenas #home-tower{--tile-art:url(art/gen/arena-mirror.jpg)}
+  #arenas #home-wonder{--tile-art:url(art/gen/arena-sea-bubbles.jpg)}#arenas #journey-start{--tile-art:url(art/gen/arena-sea.jpg)}
+  #arenas .arena-tile[hidden]{display:none}
+  #arenas .arena-tile .box-strip-copy{display:grid;justify-items:center;gap:1px;max-width:100%;text-align:center}
+  #arenas .arena-tile b{font:900 19px/1.15 var(--display,serif);color:#fff4d6;text-shadow:0 2px 0 #0009;white-space:nowrap}
+  #arenas .arena-tile small{max-width:100%;font-size:12px;color:#f3e6c8;opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #arenas .strip-long{display:inline}#arenas .strip-short{display:none}
+  #arenas .rank-shield,#arenas .tower-badge,#arenas .cup-badge,#arenas .wonder-strip .wonder-pic{width:46px;height:50px;flex:none}
+  #arenas .rank-shield svg,#arenas .tower-badge svg{width:26px;height:26px}
+  #arenas .cup-badge{display:grid;place-items:center;width:50px;height:50px;border-radius:50%;background:radial-gradient(circle at 40% 30%,#fff3c4,#e8b931 60%,#9a6a10);color:#3a1d0f;box-shadow:0 0 0 2px #3a1d0f,0 3px 8px #0008}
+  #arenas .cup-badge svg{width:30px;height:30px}
+  #arenas .wonder-strip .wonder-pic{width:50px;height:50px}#arenas .wonder-strip .wonder-q{font-size:28px}
+  #arenas .league-bar{display:block;width:min(120px,80%);margin-top:2px}
+  #arenas .journey-track{display:flex;gap:5px;margin-top:2px}#arenas .journey-track i{width:9px;height:9px}
+  /* A tile still locked (before the first island) wiggles and says when it opens; it never sends the child anywhere. */
+  #arenas .arena-tile.locked{filter:grayscale(.6) brightness(.85)}
+  #arenas .tile-wait{display:flex;flex:none;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#fff4d6}#arenas .tile-wait svg{width:14px;height:14px}
+  /* Where it waits beats how far along it is: a locked cup tile leaves out its dots, so its lock line has room. Training's own button says it waits. */
+  #arenas .arena-tile.locked .journey-track{display:none}
+  #arenas #quick-start.locked{font-size:16px;filter:grayscale(.5)}#arenas #quick-start.locked svg{width:16px;height:16px}
+  /* Training: who, which battle and how hard, then its big button at the bottom-left. */
+  #arenas #training-options{display:flex;flex-direction:column;gap:6px;min-height:0;margin:0;padding:6px 10px 8px;border-radius:16px;overflow:hidden}
+  #arenas .training-title{margin:0;font:900 20px/1.2 var(--display,serif)}
+  #arenas #training-options>p{display:none}
+  #arenas .training-choices{flex:1;display:flex;flex-direction:column;align-items:stretch;gap:6px;min-height:0;margin:0}
+  #arenas .training-choices>div{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:6px}
+  #arenas .training-choices label{font-size:13px;font-weight:700;line-height:1.1}
+  /* Light boxes with dark words on every phone: on the dark page a phone would draw its own dark box with grey words. */
+  #arenas .training-choices select{-webkit-appearance:none;appearance:none;color-scheme:light;min-height:var(--hit);width:100%;min-width:0;padding:0 10px 0 28px;border:1.5px solid var(--gold-soft,#d6b46a);border-radius:10px;
+    background:linear-gradient(45deg,transparent 50%,#3a1d0f 50%) left 10px center/6px 6px no-repeat,linear-gradient(135deg,#3a1d0f 50%,transparent 50%) left 16px center/6px 6px no-repeat,#fffaf0;color:var(--ink,#3a1d0f);font:700 15px var(--text,sans-serif);text-overflow:ellipsis}
+  /* The hub is a choice of places, so it has no big red button: training's start is a calm wooden one, the tiles stay the places to go. */
+  #arenas #quick-start{width:100%;margin:auto 0 0;color:var(--ink,#3a1d0f);text-shadow:none;background:linear-gradient(180deg,#f7ecd2,#e2cd9c);box-shadow:inset 0 1px 0 #fff,inset 0 -3px 0 #0000001a,0 0 0 2px var(--gold,#b98f3e),0 0 0 3px #3a1d0f,0 6px 12px #0006}
+
+  /* ---- The picker over Home: the chosen creature big at the start, the team as chips in two rows that slide sideways, 'בוחרים' at the bottom-left. */
+  #pick-dialog{--dlg-cap:840px}
+  #pick-dialog .dlg-head h2{font-size:20px}
+  #pick-dialog .dlg-body{display:grid;grid-template-columns:min(150px,24%) minmax(0,1fr);gap:10px;overflow:hidden}
+  #pick-dialog .pick-hero{display:grid;justify-items:center;align-content:center;gap:1px;min-width:0;min-height:0;padding:2px;text-align:center}
+  #pick-dialog .pick-hero canvas{width:min(130px,100%,calc(100cqh - 44px));height:auto;aspect-ratio:1}
+  #pick-dialog .pick-hero b{max-width:100%;font:900 17px/1.15 var(--display,serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pick-dialog .pick-hero small{max-width:100%;font-size:12px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Six columns and a bit fill the shelf at every size, so the next creature always peeks in at the far edge (a whole last column read as 'that is all'). */
+  #pick-dialog .pick-chips{--col:calc((100cqw - min(150px,24cqw) - 14px) / 6.6 - 6px);--chip:clamp(34px,min(calc(50cqh - 33px),calc(var(--col) - 14px)),64px);--shelf-w:var(--col);display:grid;grid-template-rows:repeat(2,auto);align-content:center;gap:6px;margin:0;padding:4px 2px 8px;flex-wrap:nowrap;scrollbar-width:thin}
+  #pick-dialog .pick-chips .fighter-chip{width:auto;min-width:0;min-height:var(--hit);padding:3px 2px 4px;gap:0}
+  #pick-dialog .pick-chips .fighter-chip canvas,#pick-dialog .pick-lock{width:var(--chip);height:var(--chip)}
+  #pick-dialog .pick-chips .fighter-chip b{max-width:100%;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pick-dialog .pick-chips .fighter-chip.waiting{opacity:.82;filter:saturate(.35)}
+  #pick-dialog .pick-lock{display:grid;place-items:center;border-radius:50%;background:#3a1d0f1f;color:var(--ink,#3a1d0f)}#pick-dialog .pick-lock svg{width:22px;height:22px}
+  #pick-dialog .pick-chips .fighter-chip.waiting small{display:none}
+  /* A tap on one still waiting: it wiggles, and for a moment its name gives way to where it waits. */
+  #pick-dialog .pick-chips .fighter-chip.waiting.told b{display:none}
+  #pick-dialog .pick-chips .fighter-chip.waiting.told small{display:block;max-width:100%;font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--brick,#a8402a)}
+  #pick-dialog .pick-chips .fighter-chip.waiting.told{opacity:1;filter:none}
+  #pick-dialog .dlg-foot .ph-action{width:auto;min-width:min(220px,40%);margin:0}
+
+  /* ---- Friends on one screen: each child's side under their thumb (player 1 on the left), how to play in the middle, the kind of battle
+     and the big button in their own row at the bottom. The hats wait behind their button, in the place of the creatures. */
+  #versus{display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:6px 8px;padding-bottom:4px}
+  #versus .versus-sides{display:contents}
+  #versus .versus-side.p2{grid-column:1;grid-row:1}#versus .versus-heading{grid-column:2;grid-row:1}#versus .versus-side.p1{grid-column:3;grid-row:1}
+  #versus .versus-vs{display:none}
+  #versus .versus-heading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;margin:0;min-width:0;flex-wrap:nowrap}
+  #versus .versus-heading>.eyebrow,#versus .versus-heading>h1{display:none}
+  #versus .vs-kind{display:flex;flex-direction:column;gap:6px;margin:0}
+  #versus .vs-kind-btn{display:grid;justify-items:center;align-content:center;gap:1px;width:64px;min-height:58px;margin:0;padding:3px 2px;border-radius:14px;font-size:12px;line-height:1.05;white-space:normal;text-align:center}
+  #versus .vs-kind-btn svg{width:24px;height:24px}
+  #versus .versus-side{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"art players players" "art hearts toggle" "chips chips chips";
+    gap:4px 8px;align-content:stretch;align-items:stretch;min-width:0;min-height:0;padding:6px 8px;border-top-width:4px;overflow:hidden}
+  #versus .versus-who{display:none}
+  #versus .versus-players{grid-area:players;--shelf-w:max-content;--shelf-gap:6px;align-self:end;margin:0;padding:0 0 2px;justify-content:start}
+  #versus .vs-player{min-width:var(--hit);min-height:var(--hit);padding:0 10px;font-size:14px}
+  /* The creature's picture gives way first on a narrow phone, so the hearts and the hats button keep their thumb size. */
+  #versus .versus-side{--art:clamp(48px,calc(50cqw - 262px),92px)}
+  #versus .versus-pick canvas{grid-area:art;align-self:start;width:var(--art);height:var(--art)}
+  #versus .versus-pick strong{grid-area:art;align-self:end;justify-self:center;max-width:max(var(--art),64px);padding:0 6px;border-radius:8px;background:#fff8e8d9;font-size:13px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:none}
+  #versus .versus-hearts{grid-area:hearts;align-self:center;display:flex;align-items:center;gap:4px;margin:0}
+  #versus .versus-hearts small{display:none}
+  #versus .vs-heart{flex:none;width:var(--hit);height:var(--hit);font-size:22px}
+  #versus .vs-hats-toggle{grid-area:toggle;align-self:center;display:grid;place-items:center;width:var(--hit);height:var(--hit);padding:0;border:2px solid #c9a35d;border-radius:12px;background:#fff6e0;color:var(--ink,#3a1d0f)}
+  #versus .vs-hats-toggle[hidden]{display:none}#versus .vs-hats-toggle.chosen{background:var(--p);border-color:var(--p);color:#fff}
+  /* The creatures (or the hats) fill the rest of the side: two rows where the phone has the room, one row on the shortest. */
+  #versus .versus-fighters,#versus .versus-hats{grid-area:chips;--shelf-w:58px;--shelf-gap:6px;display:grid;grid-template-rows:repeat(auto-fill,50px);row-gap:4px;align-content:start;align-self:stretch;height:auto;max-height:none;min-height:0;margin:0;padding:2px 2px 6px;flex-wrap:nowrap}
+  #versus .versus-fighters .fighter-chip{width:auto;height:50px;min-height:0;padding:2px 1px 3px;gap:0}
+  #versus .versus-fighters .fighter-chip canvas{width:33px;height:33px}
+  #versus .versus-fighters .fighter-chip b{max-width:100%;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #versus .versus-side:not(.hats-on) .versus-hats,#versus .versus-side.hats-on .versus-fighters{display:none}
+  #versus .versus-hats{--shelf-w:var(--hit);grid-template-rows:repeat(auto-fill,var(--hit));align-content:start}
+  #versus .versus-side .versus-hats .hat-option{width:var(--hit);height:var(--hit);border-radius:10px}
+  #versus .versus-bottom{grid-column:1/-1;grid-row:2;position:static;display:flex;align-items:stretch;gap:8px;margin:0;padding:0;background:none}
+  #versus .coop-levels{display:flex;align-items:stretch;gap:4px;margin:0}#versus .coop-levels[hidden]{display:none}
+  #versus .coop-levels .vs-player{min-height:var(--action-h);padding:0 10px;font-size:14px}
+  #versus .versus-modes{flex:1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;margin:0;min-width:0}
+  #versus .vs-mode{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:var(--hit);padding:2px 4px;transform:none}
+  #versus .vs-mode svg{width:20px;height:20px;flex:none}#versus .vs-mode b{font-size:13px;line-height:1.1;white-space:normal;text-align:center}#versus .vs-mode small{display:none}
+  #versus .versus-modes.giants .vs-mode{flex-direction:column;gap:0;padding:2px}#versus .versus-modes.giants canvas{width:46px;height:30px}#versus .versus-modes.giants .vs-mode b{font-size:11px;white-space:nowrap}
+  #versus #versus-start{flex:none;width:auto;min-width:150px;margin:0;padding:4px 18px;position:static;box-shadow:0 6px 14px #0008}
+
+  /* ---- Two phones: the friend and the creature to choose at the start, the room (open, join, the code, the battle kinds) and the big
+     button at the end. Nothing is pinned over anything: the big button is the room column's last row. */
+  #online{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:4px 14px;padding-bottom:4px;text-align:center}
+  #online .online-heading{grid-column:1/-1;grid-row:1}
+  #online .online-heading h1{display:none}
+  #online .online-heading p{margin:0;font-size:13px;line-height:1.3;color:#dccfb0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  #online .online-me{grid-column:1;grid-row:2;display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0;min-height:0}
+  #online .online-side{grid-column:2;grid-row:2;display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0}
+  #online .online-friends{gap:10px;margin:0}#online .online-friends[hidden]{display:none}
+  #online .online-who{min-width:0;padding:4px 12px}#online .online-who canvas{width:64px;height:54px}#online .online-who b{font-size:14px}
+  #online .wild-pick-title{margin:0;font-size:15px}
+  #online .online-me{container:online-me/size}
+  #online #online-fighters{--shelf-w:62px;--shelf-gap:6px;grid-template-rows:70px;row-gap:4px;align-content:start;flex:none;margin:0;padding:2px 2px 6px;flex-wrap:nowrap}
+  /* Two rows of creatures when the column has room for them (before the friend's card joins it, or on a taller phone). */
+  @container online-me (min-height:200px){#online:not(.linked) #online-fighters{grid-template-rows:repeat(2,70px)}}
+  @container online-me (min-height:280px){#online #online-fighters{grid-template-rows:repeat(2,70px)}}
+  #online #online-fighters .fighter-chip{width:auto;height:70px;padding:3px 1px 4px;gap:0}#online #online-fighters .fighter-chip canvas{width:46px;height:46px}
+  #online #online-fighters .fighter-chip.chosen{background:color-mix(in srgb,var(--c) 26%,#fff6e0)}
+  #online #online-fighters .fighter-chip b{max-width:100%;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #online .online-start{display:flex;flex-direction:column-reverse;gap:8px;margin:auto 0 0}#online .online-start[hidden]{display:none}
+  #online .online-start .button{min-height:var(--hit);width:100%}#online #online-host{min-height:var(--action-h);font-size:20px}
+  #online .online-room{display:grid;grid-template-columns:auto auto;align-items:center;justify-content:center;gap:10px;margin:auto 0}#online .online-room[hidden]{display:none}
+  #online .online-room .micro-label,#online .online-pad .micro-label,#online .room-qr small{display:none}
+  #online .room-code{gap:6px;margin:0 0 8px}#online .code-pic{width:64px;padding:4px 2px}#online .code-pic canvas{width:52px;height:40px}#online .code-pic b{font-size:11px}
+  #online #room-share{min-height:var(--hit);padding:4px 12px;font-size:14px}
+  /* The QR shares the room's column with the three code pictures (3 x 64 px and their gaps): it never pushes out of it into the side margin. */
+  #online .room-qr canvas{width:min(116px,calc(100cqh - 120px),calc(50cqw - 221px));height:auto;aspect-ratio:1}
+  #online .online-pad{display:flex;flex-direction:column;align-items:center;gap:6px;margin:auto 0}#online .online-pad[hidden]{display:none}
+  #online #pad-code{margin:0}#online #pad-code .code-pic{min-height:var(--hit)}#online #pad-code .code-pic.empty{height:56px}
+  #online .pad-keys{display:grid;grid-template-columns:repeat(5,minmax(0,58px));gap:6px;margin:0}
+  #online .pad-keys .fighter-chip{width:auto;min-height:var(--hit);padding:2px 1px 3px;gap:0}#online .pad-keys .fighter-chip canvas{width:44px;height:36px}#online .pad-keys .fighter-chip b{font-size:10px}
+  #online #online-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0}#online #online-modes[hidden]{display:none}
+  #online #online-modes .vs-mode{flex-direction:row;align-items:center;justify-content:center;gap:4px;min-height:var(--hit);padding:2px 6px;transform:none}
+  #online #online-modes .vs-mode svg{width:20px;height:20px}#online #online-modes .vs-mode b{font-size:13px}#online #online-modes .vs-mode small{display:none}
+  #online #online-go{width:100%;margin:auto 0 0;position:static;box-shadow:0 6px 14px #0008}#online #online-go[hidden]{display:none}
+
+  /* ---- Who is playing: the players side by side; a new player's name and its button on the top row (above the keyboard), the faces under it. */
+  #players{display:flex;flex-direction:column;gap:8px}
+  #players .players-heading{margin:0}#players .players-heading h1{display:none}#players .players-heading p{margin:0;font-size:13px}
+  /* While a name is typed the line about the players steps aside, so the name and its button sit as high as they can above the keyboard. */
+  #players:has(#player-form:not([hidden])) .players-heading{display:none}
+  #players .players-grid{--shelf-w:150px;--shelf-gap:12px;flex:1 1 0;min-height:0;align-items:stretch;padding:4px 4px 8px}
+  #players .players-grid[hidden]{display:none}
+  #players .player-card{min-height:0}
+  #players .player-pick,#players .player-new{align-content:center;min-height:0;padding:6px 6px 8px}
+  #players .player-pick canvas{width:min(110px,calc(100cqh - 120px));height:auto;aspect-ratio:1}
+  #players .player-pick b,#players .player-new b{font-size:19px}
+  #players .player-edit{width:var(--hit);height:var(--hit);top:4px;left:4px}
+  #players .player-form{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:auto auto auto minmax(0,1fr);grid-template-areas:"label label label" "input cancel save" "faces-label faces-label faces-label" "faces faces faces";
+    gap:4px 8px;align-content:start;max-width:none;min-height:0;margin:0;padding:6px 12px 4px}
+  #players .player-form[hidden]{display:none}
+  #players .player-form h2{display:none}
+  #players .player-form label{grid-area:label;font-size:13px}
+  #players #player-name-input{grid-area:input;min-width:0;min-height:48px;padding:2px 12px;font-size:20px}
+  #players .player-form-actions{display:contents}
+  #players #player-save{grid-area:save;min-height:48px;margin:0;padding:4px 18px;font-size:17px}
+  #players #player-cancel{grid-area:cancel;min-height:48px;margin:0;padding:4px 14px}
+  #players .player-form>.micro-label{grid-area:faces-label}
+  #players .player-faces{grid-area:faces;--shelf-w:62px;--shelf-gap:6px;grid-template-rows:repeat(auto-fill,72px);row-gap:4px;align-content:start;min-height:0;padding:2px 2px 6px;flex-wrap:nowrap}
+  #players .player-faces .fighter-chip{width:auto;height:72px;padding:3px 1px 4px;gap:0}#players .player-faces .fighter-chip canvas{width:48px;height:48px}
+  #players .player-faces .fighter-chip b{max-width:100%;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* ---- Goals of the day: all of them on the screen, each with its 'יאללה'; what they add up to underneath. */
+  #goals{display:flex;flex-direction:column;gap:6px}
+  #goals .goals-heading{display:none}
+  #goals .goals-list{flex:1 1 0;min-height:0;display:grid;grid-auto-rows:minmax(0,76px);align-content:center;gap:8px}
+  #goals .goal{min-height:0;padding:4px 10px;gap:10px;overflow:hidden}
+  #goals .goal-pic{width:52px;height:52px}#goals .goal-pic canvas{width:52px;height:52px}#goals .goal-pic svg{width:28px;height:28px}
+  #goals .goal-copy{min-width:0;gap:2px}#goals .goal-copy b{font-size:16px;line-height:1.2}#goals .goal-copy small{font-size:12px}
+  #goals .goal .button{min-height:var(--hit);min-width:88px;margin:0;padding:4px 14px;font-size:16px}
+  #goals .goals-bonus{margin:0;font-size:14px}
+
+  /* ---- The cup: its three rounds as a ladder at the start; the build, the rival and the big button at the end. */
+  #cup{display:grid;grid-template-columns:min(36cqw,240px) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"track head" "track build" "track ready";gap:6px 14px;padding-bottom:4px}
+  #cup .cup-heading{grid-area:head;margin:0;text-align:start}
+  #cup .cup-heading .trophy-large,#cup .cup-heading h1,#cup .cup-heading p{display:none}
+  #cup .cup-heading .eyebrow{justify-content:flex-start;margin:0;font-size:13px}
+  #cup .cup-track{grid-area:track;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(0,1fr);gap:6px;min-height:0;margin:0}
+  #cup .cup-round{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"num title" "num rival";align-items:center;gap:0 10px;min-height:0;padding:4px 10px;text-align:start}
+  #cup .cup-round p,#cup .cup-round .round-state{display:none}
+  #cup .cup-round .round-num{grid-area:num;margin:0;width:36px;height:36px}
+  #cup .cup-round h3{grid-area:title;margin:0;font-size:13px}
+  #cup .cup-round .round-rival{grid-area:rival;margin:0;font-size:18px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cup .cup-build{grid-area:build;flex-wrap:nowrap;gap:10px;margin:0;padding:6px 10px;min-width:0;overflow:hidden}
+  #cup .cup-build .micro-label,#cup .cup-build small{display:none}#cup .cup-build h2{margin:0;font-size:18px;white-space:nowrap}
+  #cup .cup-build .build-chips{flex-wrap:nowrap;min-width:0;overflow:hidden}#cup .cup-build .build-chip{padding:4px 10px;white-space:nowrap}
+  #cup .cup-ready{grid-area:ready;display:flex;flex-direction:column;align-items:stretch;gap:6px;min-height:0;margin:0;padding:0;border:0;background:none;text-align:start}
+  #cup #cup-matchup{flex:1 1 0;min-height:0;padding:6px 12px;border-radius:14px;background:var(--grain),var(--parchment,#f1e4c4);color:var(--ink,#3a1d0f);box-shadow:var(--frame,0 0 0 2px #c9a24a)}
+  #cup #cup-matchup strong{font-size:17px}#cup #cup-matchup p{margin:2px 0 0;font-size:13px;line-height:1.4;color:var(--ink-soft,#5a4a36)}
+  #cup #cup-start{width:100%;margin:auto 0 0}
+
+  /* ---- The cup's workshop: the three powers side by side, and the big button under them. */
+  #workshop{display:flex;flex-direction:column;gap:6px}
+  #workshop .workshop-heading{margin:0;text-align:center}
+  #workshop .workshop-heading .eyebrow,#workshop .workshop-heading p{display:none}
+  #workshop .workshop-heading h1{margin:0;font-size:20px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #workshop .workshop-build{justify-content:center;flex-wrap:nowrap;overflow:hidden;margin:0}#workshop .workshop-build .build-chip{padding:3px 10px}
+  #workshop .upgrade-cards{flex:1 1 0;min-height:0;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0}
+  #workshop .upgrade-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:0;padding:6px 8px;text-align:center;overflow:hidden}
+  #workshop .upgrade-card .micro-label,#workshop .upgrade-card>p,#workshop .upgrade-card .upgrade-choice{display:none}
+  /* The power's picture keeps inside its own box (its rings and streaks shrink with it), so it never runs over the power's name. */
+  #workshop .upgrade-art{width:100%;height:clamp(30px,calc(100cqh - 230px),64px);margin:0;overflow:hidden}
+  #workshop .upgrade-art>svg{width:clamp(22px,calc(100cqh - 240px),32px);height:clamp(22px,calc(100cqh - 240px),32px)}
+  #workshop .upgrade-art.scatter{padding:0}#workshop .upgrade-art.scatter i{width:16px;height:4px;right:calc(50% - 42px)}
+  #workshop .upgrade-art.scatter i:nth-of-type(1){transform:translate(-2px,-10px) rotate(20deg)}#workshop .upgrade-art.scatter i:nth-of-type(2){transform:translate(2px,0)}
+  #workshop .upgrade-art.scatter i:nth-of-type(3){transform:translate(-2px,10px) rotate(-20deg)}
+  #workshop .upgrade-card h2{margin:0;font-size:17px}
+  #workshop .upgrade-benefit{margin:0;font-size:13px;line-height:1.35}#workshop .upgrade-cost{min-height:0;margin:0;font-size:11px;line-height:1.3}
+  #workshop .workshop-footer{display:flex;margin:0;padding:0;position:static;background:none}#workshop .workshop-footer p{display:none}
+  #workshop #upgrade-confirm{min-width:0;font-size:18px}
+
+  /* ---- The crumbling arena: its rules panel (the picture and the words, which may scroll), the winning build and the buttons under it. */
+  #challenge{display:flex;flex-direction:column;gap:6px;padding-bottom:4px}
+  #challenge .challenge-heading{flex:none;display:flex;align-items:baseline;gap:10px;margin:0;text-align:start}
+  #challenge .challenge-heading .eyebrow{margin:0;font-size:12px}#challenge .challenge-heading h1{order:-1;margin:0;font-size:22px;line-height:1.15}#challenge .challenge-heading p{display:none}
+  #challenge .challenge-rules{flex:1 1 0;min-height:0;display:grid;grid-template-columns:min(26cqw,170px) minmax(0,1fr);gap:12px;margin:0;padding:6px 12px}
+  /* The falling stones are drawn to the height of their box, so on the shortest phone none of them drops onto the row under it. */
+  #challenge .crumbling-art{width:100%;height:100%;min-height:0;margin:0;overflow:hidden;container-type:size}
+  #challenge .crumbling-art i{width:40cqh;height:36cqh;top:8%;right:24%}
+  #challenge .crumbling-art i:nth-of-type(2){width:18cqh;height:15cqh;top:60%;right:16%}
+  #challenge .crumbling-art i:nth-of-type(3){width:15cqh;height:13cqh;top:74%;right:44%}
+  #challenge .crumbling-art i:nth-of-type(4){width:12cqh;height:10cqh;top:56%;right:64%}
+  #challenge .crumbling-art>span{font-size:60cqh}
+  #challenge .challenge-text{min-height:0;padding-block:2px}
+  #challenge .challenge-text h2{margin:0 0 2px;font-size:16px}#challenge .challenge-text p{margin:0 0 4px;font-size:13px;line-height:1.4}#challenge .challenge-text strong{font-size:13px}
+  #challenge .cup-build{flex:none;flex-wrap:nowrap;gap:10px;margin:0;padding:4px 10px;min-width:0;overflow:hidden}
+  #challenge .cup-build .micro-label,#challenge .cup-build small{display:none}#challenge .cup-build h2{margin:0;font-size:17px;white-space:nowrap}
+  #challenge .cup-build .build-chips{flex-wrap:nowrap;min-width:0;overflow:hidden}#challenge .cup-build .build-chip{padding:4px 10px;white-space:nowrap}
+  #challenge .challenge-actions{flex:none;display:flex;align-items:stretch;gap:8px;margin:0;flex-wrap:nowrap}
+  #challenge .challenge-actions .button.secondary{flex:none;min-height:var(--hit);margin:0;padding:4px 12px;font-size:13px;width:auto}
+  #challenge #challenge-start{order:3;flex:1 1 auto;width:auto;margin:0}
+  #challenge .challenge-footnote{display:none}
+
+  /* ---- The Lab (?lab, for grown-ups): the rows scroll, and the save bar keeps its own row under them, so it never covers a row. */
+  #lab.ph-fit{display:flex;flex-direction:column;gap:6px}
+  #lab .lab-heading{flex:none;display:flex;align-items:center;gap:10px;margin:0}
+  #lab .lab-heading h1,#lab .lab-heading p{display:none}#lab .lab-heading .eyebrow{margin:0}
+  #lab .lab-list{flex:1 1 0;min-height:0}
+  #lab .lab-actions{flex:none;position:static;margin:0;padding:4px 8px}
+  #lab .lab-name,#lab .lab-mech{min-height:var(--hit);padding:2px 12px}
+  #lab .lab-name-input{min-height:var(--hit)}
+  #lab #lab-save{min-height:48px}
+
+  /* ---- Comeback cards between two rounds on one screen: the cards are a little smaller, so the window never needs a scroll. */
+  #ccard-dialog{padding:6px 10px}
+  #ccard-dialog .ccard-kicker{margin:0}
+  #ccard-dialog .ccard-hint{margin:2px 0 0}
+}
+@media (orientation:landscape) and (max-height:360px) and (pointer:coarse){
+  /* The iPhone in Safari and Android with its address bar: a little tighter. */
+  #lobby .home-door{min-height:50px}
+  #lobby .home-play h1{font-size:20px}
+  #lobby .home-gems .gem{width:20px;height:20px}#lobby .home-gems .gem.star{width:24px;height:24px}
+  #lobby #home-play{font-size:23px}
+  #arenas .arena-tile b{font-size:17px}
+  #arenas #training-options{gap:4px;padding:4px 10px 6px}#arenas .training-choices{gap:4px}#arenas .training-title{font-size:18px}
+  #pick-dialog .dlg-head h2{font-size:18px}
+  #ccard-dialog .ccard{width:88px}
+}

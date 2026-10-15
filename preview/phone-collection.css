@@ -1,0 +1,196 @@
+/* The sideways phone (wave 3): the cards, the boxes and the reveals.
+   Every rule sits inside @media (orientation:landscape) and (max-height:500px) and (pointer:coarse) (or its SHORT tier, max-height:360px)
+   and every selector starts with one of: #cards #records #boxes #card-dialog #reveal-dialog #hatbox-dialog. */
+@media (orientation:landscape) and (max-height:500px) and (pointer:coarse){
+  /* The Star Book: one row of tabs (with the book's progress and the frames' button), then the page under it. The title lives in the bar. */
+  #cards.ph-fit,#records.ph-fit{display:flex;flex-direction:column;gap:6px;position:relative}
+  #cards .section-heading,#records .section-heading{display:none}
+  #cards .album-bar,#records .album-bar{flex:none;display:flex;align-items:center;gap:8px;min-height:var(--hit);margin:0}
+  #cards .album-tabs,#records .album-tabs{flex:none;display:flex;gap:6px;margin:0}
+  #cards .album-tabs button,#records .album-tabs button{display:inline-flex;align-items:center;gap:5px;min-height:var(--hit);padding:0 14px;font-size:15px;white-space:nowrap}
+  #cards .album-tabs button[hidden],#records .album-tabs button[hidden]{display:none}
+  #cards .album-tabs svg,#records .album-tabs svg{width:17px;height:17px;flex:none}
+  #cards .album-tabs small,#records .album-tabs small{font-size:12px}
+  #cards .album-meter{flex:1 1 0;min-width:24px;height:10px;margin:0}
+  #cards .frame-open{display:grid;place-items:center;flex:none;width:var(--hit);height:var(--hit);padding:0;border-radius:50%;color:var(--gold-hi,#e9cf8c);background:radial-gradient(circle at 40% 30%,#6a4628,#3b2517);box-shadow:0 0 0 2px var(--gold,#b98f3e),0 3px 8px #0008}
+  #cards .frame-open svg{width:24px;height:24px}
+  #cards.frames-open .frame-open{background:var(--gold-hi,#e9cf8c);color:#3a1d0f}
+  /* The frames take the tabs' place in the same row while their button is lit, so the cards under them show each frame at once;
+     the button again (or a tap anywhere else) brings the tabs back. */
+  #cards .frame-picker{display:none}
+  #cards.frames-open .album-tabs,#cards.frames-open .album-meter{display:none}
+  #cards.frames-open .album-bar{justify-content:flex-end}
+  #cards.frames-open .frame-picker:not([hidden]){display:flex;position:absolute;z-index:2;top:6px;inset-inline:var(--safe-x) calc(var(--safe-x) + var(--hit) + 8px);height:var(--hit);margin:0;padding:0}
+  #cards .frame-picker .micro-label{display:none}
+  #cards #frame-options{flex:1 1 0;min-width:0;display:grid;grid-auto-flow:column;grid-auto-columns:max-content;gap:5px;padding:0;scroll-snap-type:none;align-items:center}
+  #cards .frame-option{min-height:var(--hit);gap:5px;padding:0 10px 0 6px;font-size:13px;white-space:nowrap}
+  #cards .frame-option span{width:20px;height:20px}
+
+  /* The creatures: one sideways shelf of cards as tall as the page (a card is 5:7), the new cards to turn over first, the story cards after their label. */
+  #cards #album-creatures:not([hidden]){flex:1 1 0;min-height:0;display:flex;align-items:flex-start;gap:8px;padding-top:8px;scroll-snap-type:none;--card-w:calc((100cqh - var(--hit) - 6px - 24px) * .714)}
+  #cards #album,#cards #album-story{display:contents}
+  #cards .album-slot{flex:none;width:var(--card-w);scroll-snap-align:start}
+  #cards .album-slot:hover{transform:none}
+  #cards .album-slot.fresh{order:-1}
+  /* Then the child's own cards, then the ones still waiting, then the story cards: a card just won is near the start, not among the locked ones. */
+  #cards #album>.album-slot.locked{order:1}
+  #cards .album-story-title,#cards #album-story>.album-slot{order:2}
+  #cards #album-story>.album-slot.fresh{order:-1}
+  #cards .album-story-title{flex:none;align-self:stretch;display:grid;place-items:center;margin:0;padding:0 2px;writing-mode:vertical-rl;font-size:17px;white-space:nowrap}
+  #cards .album-slot .tcard{padding:6px;border-radius:14px}
+  #cards .album-slot .tcard:before{inset:4px;border-radius:11px}
+  #cards .album-slot .tcard header{gap:3px;padding:2px 2px 4px;flex-wrap:nowrap}
+  #cards .album-slot .tcard-level,#cards .album-slot .tcard-el{white-space:nowrap;font-size:10px;padding:1px 6px}
+  #cards .album-slot .tcard-el svg{width:11px;height:11px}
+  #cards .album-slot .tcard-title{padding:4px 4px 0}
+  /* On the shelf the name has the whole row (its subtitle waits in the card window), so the child can read every creature's name. */
+  #cards .album-slot .tcard-title h3{flex:1 1 auto;min-width:0;font-size:min(18px,calc(var(--card-w) * .135));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cards .album-slot .tcard-title small{display:none}
+  #cards .album-slot .tcard-special,#cards .album-slot .tcard-bars,#cards .album-slot .tcard-note{display:none}
+  #cards .album-slot .tcard footer{padding:3px 4px 0;font-size:10px}
+  /* Where a locked card waits takes two lines when it needs them, never an ellipsis. */
+  #cards .album-hint{bottom:30px;left:5px;right:5px;width:max-content;max-width:calc(100% - 10px);margin-inline:auto;transform:none;padding:3px 10px;font-size:12px;line-height:1.2;white-space:normal;text-align:center;border-radius:14px}
+  #cards .album-slot .tcard-crown{top:-6px;inset-inline-start:2px;width:36px;height:36px}
+  #cards .album-slot .form-dots{top:-6px}
+  #cards .album-slot.nudge .album-hint{box-shadow:0 0 0 2px var(--gold-hi,#e9cf8c),0 0 14px #ffcf5a}
+
+  /* The Wonders: the stickers in the one page that scrolls. */
+  #cards #album-wonders:not([hidden]){flex:1 1 0;min-height:0;padding-top:4px}
+  #cards .wonders-lead{margin:0 0 6px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cards .wonder-grid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px;margin:0}
+  #cards .wonder-sticker{padding:8px 6px 6px;gap:2px}
+  #cards .wonder-pic{width:66px;height:66px}
+  #cards .wonder-sticker b{font-size:15px}
+
+  /* The mixes: the creatures' pages as a sideways shelf of tabs, then the open page: its face on one side, its slots scrolling on the other. */
+  #cards #album-mixes:not([hidden]){flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:4px}
+  #cards #album-mixes .wonders-lead{flex:none}
+  #cards .mix-tabs{flex:none;scroll-snap-type:none;grid-auto-columns:max-content;gap:6px;padding:2px 2px 6px}
+  #cards .mix-tab{min-height:var(--hit);padding:2px 12px;align-content:center}
+  #cards .mix-page{flex:1 1 0;min-height:0;margin:0;padding:8px 10px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px}
+  #cards .mix-head{flex-direction:column;justify-content:center;gap:4px;text-align:center}
+  #cards .mix-head canvas{width:64px;height:64px}
+  #cards .mix-head h2{font-size:18px;display:grid}
+  #cards .mix-grid{margin:0;padding-block:4px;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));align-content:start}
+
+  /* The records: the same tabs, the four totals in one row, then the cabinet, the team and the last battles in the one part that scrolls. */
+  #records .record-totals{flex:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0}
+  #records .total-card{display:flex;align-items:baseline;justify-content:center;gap:6px;min-width:0;padding:6px 8px;border-radius:12px}
+  #records .total-card strong{display:inline;font-size:24px;line-height:1}
+  #records .total-card span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #records .records-more{padding-inline:2px}
+  #records .records-more .subheading{margin:4px 0 6px;font-size:19px}
+  #records .achievements{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+  #records .achievement{padding:6px 10px;gap:8px}
+  #records .winning-build{margin:8px 0}
+  #records .history-row{padding:6px 10px}
+
+  /* The star boxes: the chest on the start side; its sparks, the road of boxes and what to do on the other; the button at the bottom-left.
+     Once open, the prizes take the whole page, each with its button over the bottom of its picture. */
+  #boxes.ph-fit{display:grid;grid-template-columns:var(--art-w) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"chest head" "chest road" "chest hint" "chest act";gap:6px 12px;--art-w:min(40cqw,calc(100cqh * 1.05));text-align:center}
+  #boxes .boxes-heading{grid-area:head;display:grid;justify-items:center;gap:4px;margin:0}
+  #boxes .boxes-heading h1{display:none}
+  #boxes #boxes-sub{margin:0;font-size:14px;line-height:1.35}
+  #boxes:has(#box-chest.ready) #boxes-sub{display:none}
+  #boxes .box-road{grid-area:road;margin:0;gap:6px;flex-wrap:nowrap;justify-content:center}
+  #boxes .road-box{flex:0 1 64px;min-width:0;padding:4px 2px}
+  #boxes .road-box small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #boxes .box-stage:not([hidden]){display:contents}
+  #boxes #box-chest{grid-area:chest;align-self:center;justify-self:center;width:min(calc(var(--art-w) - 24px),calc(62cqh * 1.19));height:auto;aspect-ratio:190/160}
+  #boxes #box-hint{grid-area:hint;align-self:center;font-size:24px}
+  #boxes .box-actions{grid-area:act;display:flex;flex-direction:row-reverse;justify-content:flex-start;align-items:flex-end;gap:8px;margin:0}
+  #boxes .box-actions .button{min-height:var(--action-h);margin:0;padding:4px 22px;font-size:20px}
+  #boxes .box-actions .button.primary{flex:0 1 auto;min-width:min(260px,48cqw)}
+  #boxes .box-actions .button small{font-size:13px;opacity:.85}
+  #boxes.showing{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"title" "prizes" "act"}
+  #boxes.showing .boxes-heading,#boxes.showing .box-road{display:none}
+  #boxes .box-prizes-title{grid-area:title;margin:0;font-size:20px}
+  #boxes .box-prizes:not([hidden]){grid-area:prizes;display:flex;flex-wrap:nowrap;justify-content:center;align-items:stretch;gap:12px;min-height:0;margin:0;padding:2px 0;overflow:visible}
+  #boxes .box-prizes>:first-child,#boxes .box-prizes>:last-child{margin-inline:0}
+  #boxes .prize{flex:0 1 auto;width:min(176px,30cqw);min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto auto;justify-items:center;gap:2px}
+  #boxes .prize-art{grid-row:1;grid-column:1;height:auto;min-height:0;align-self:stretch}
+  #boxes .prize-art .frame-sample{width:auto;height:72%;padding:5px}
+  #boxes .prize>.button,#boxes .prize>.prize-worn{grid-row:1;grid-column:1;align-self:end;z-index:1;margin-bottom:6px}
+  #boxes .prize>.button{min-height:var(--hit);padding:4px 16px;font-size:15px;box-shadow:0 4px 10px #0008}
+  #boxes .prize>.prize-worn{padding:4px 10px;border-radius:999px;background:#0b1a22cc}
+  #boxes .prize-kind{font-size:12px}
+  #boxes .prize b{font-size:14px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #boxes .prize-plus{align-self:center;flex:none;font-size:14px}
+
+  /* The card window, three zones on a wide short screen: who it is on the right (under the X), the card in the middle at the window's
+     full height, and its wardrobe on the left: two tabs, the swatches (the only part that scrolls), and the big button at the bottom. */
+  #card-dialog{--dlg-cap:840px}
+  #card-dialog[open]{grid-template-rows:minmax(0,1fr)}
+  #card-dialog .card-dialog-body{container:card-dlg/size;height:100%;min-height:0;display:grid;grid-template-columns:minmax(112px,.5fr) auto minmax(0,1fr);grid-template-rows:var(--hit) auto auto minmax(0,1fr) auto;
+    grid-template-areas:". card tabs" "name card body" "level card body" "form card body" "form card foot";gap:6px 12px;align-items:stretch}
+  #card-dialog .card-dialog-side{display:contents;overflow:visible;max-height:none}
+  #card-dialog .card-dialog-side>.eyebrow,#card-dialog .card-dialog-side>p.muted{display:none}
+  #card-dialog .card-dialog-card{grid-area:card;width:calc(100cqh * .714);height:100cqh;max-width:none;margin:0}
+  #card-dialog .card-dialog-card .tcard{width:100%;height:100%}
+  #card-dialog #card-dialog-title{grid-area:name;margin:0;font-size:22px;line-height:1.15;overflow-wrap:anywhere}
+  #card-dialog .card-level{grid-area:level;margin:0;gap:3px}
+  #card-dialog .card-level b{font-size:15px}
+  #card-dialog .card-level small{display:none}
+  #card-dialog .card-form{grid-area:form;align-self:start;margin:0}
+  #card-dialog .form-toggle{display:flex;flex-direction:column;border-radius:14px}
+  #card-dialog .form-toggle button{justify-content:center;min-height:var(--hit);padding:2px 10px;font-size:16px}
+  #card-dialog .form-road{font-size:12px;gap:4px 6px}
+  #card-dialog .wardrobe-tabs{grid-area:tabs;display:flex;gap:6px}
+  #card-dialog .wardrobe-tabs button{flex:1 1 0;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:var(--hit);padding:0 10px;border-radius:999px;border:2px solid var(--gold,#b98f3e);background:#fff8e8;color:var(--ink,#3a1d0f);font:inherit;font-weight:800;font-size:16px;cursor:pointer}
+  #card-dialog .wardrobe-tabs button.chosen{background:var(--gold-hi,#e9cf8c);box-shadow:0 0 0 2px var(--brick,#b4472b)}
+  #card-dialog .wardrobe-tabs svg{width:20px;height:20px;flex:none}
+  #card-dialog .wardrobe{grid-area:body;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:4px 2px 8px;scrollbar-width:thin;scrollbar-color:var(--gold-soft,#d6b46a) transparent;
+    -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 12px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 12px),transparent)}
+  #card-dialog.one-wardrobe .wardrobe{grid-row:1/5}
+  #card-dialog[data-wear="hats"] #skin-picker,#card-dialog[data-wear="looks"] #hat-picker{display:none}
+  #card-dialog .hat-picker{margin:0}
+  #card-dialog .hat-picker .micro-label{display:none}
+  #card-dialog .hat-row{display:flex;flex-wrap:wrap;gap:6px;margin:0}
+  #card-dialog .hat-option{width:50px;height:50px;padding:3px;border-radius:12px}
+  #card-dialog .hat-option.more{width:auto;min-width:50px}
+  #card-dialog .skin-picker{display:flex;flex-wrap:wrap;gap:6px;margin:0}
+  #card-dialog .skin-option{position:relative;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:52px;min-height:56px;padding:4px 2px;border-radius:12px}
+  #card-dialog .skin-option .skin-swatch{width:30px;height:30px}
+  #card-dialog .skin-option b{max-width:100%;font-size:10px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #card-dialog .skin-option small{display:none}
+  #card-dialog .skin-option[data-need]::after{content:attr(data-need);position:absolute;top:4px;inset-inline:0;margin-inline:auto;display:grid;place-items:end center;box-sizing:border-box;width:30px;height:30px;padding-bottom:3px;border-radius:50%;
+    background:#2a1a0cd0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff3c4' stroke-width='2.4' stroke-linecap='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E") no-repeat 50% 4px/12px 12px;color:#fff3c4;font:900 11px/1 var(--text,sans-serif)}
+  #card-dialog .skin-option:disabled{opacity:.75}
+  #card-dialog .dlg-foot{grid-area:foot;display:flex;margin:0}
+  #card-dialog #card-dialog-play{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:var(--action-h);margin:0;padding:4px 14px;font-size:19px;white-space:nowrap}
+  #card-dialog #card-dialog-play svg{width:20px;height:20px}
+
+  /* A card turning over, a Power Form's ritual, a new mix: the card on one side, the words and the buttons on the other, the big button last (bottom-left). */
+  #reveal-dialog .result-actions{display:flex;flex-direction:column-reverse;gap:6px}
+  #reveal-dialog .result-actions .button{min-height:var(--hit);padding:6px 10px;font-size:15px}
+  #reveal-dialog .result-actions .button[hidden]{display:none}
+  #reveal-dialog #reveal-primary{min-height:52px;font-size:18px}
+  #reveal-dialog .ritual-skip:not([hidden]){display:grid;place-items:center;min-width:var(--hit);min-height:var(--hit);top:2px;padding:0 8px}
+  /* Only the face toward the child shows, even where a browser draws the back of a turned card: the faces swap as the card passes its edge. */
+  #reveal-dialog .flip-front{visibility:hidden;transition:visibility 0s}
+  #reveal-dialog .flip.flipped .flip-front{visibility:visible;transition:visibility 0s .12s}
+  #reveal-dialog .flip.flipped .flip-back{visibility:hidden;transition:visibility 0s .12s}
+
+  /* Ron's box: as wide as every fitted window, its X exactly where the bar's house is (the corner every window closes from), and nothing to scroll.
+     The window clips nothing, so Safari shows the X whole where it overlaps the frame. */
+  #hatbox-dialog{width:min(calc(100vw - 2*var(--safe-x) - 16px),760px);max-width:none;overflow:visible}
+  #hatbox-dialog .dialog-close{position:fixed;top:0;right:var(--safe-x);left:auto;z-index:5;width:var(--hit);height:var(--hit);margin:0}
+  #hatbox-dialog .hatbox-ron{margin-inline:48px 0;padding-inline:0}
+}
+@media (orientation:landscape) and (max-height:360px) and (pointer:coarse){
+  #cards .wonders-lead{display:none}
+  #cards .album-tabs button,#records .album-tabs button{padding:0 11px;font-size:14px}
+  #records .total-card strong{font-size:20px}
+  #boxes #box-hint{font-size:21px}
+  #boxes .box-actions .button{font-size:18px}
+  #card-dialog #card-dialog-title{font-size:20px}
+  #card-dialog #card-dialog-play{font-size:18px}
+  /* A short screen's card is narrow: its form stamps, its tag and the designer's credit shrink so none runs over another. */
+  #card-dialog .tcard-stamp{font-size:12px;padding:0 6px 0 5px}
+  #card-dialog .tcard-mech{max-width:58%;font-size:10px;padding:1px 6px}
+  #card-dialog .tcard-mech b{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #card-dialog .tcard.form footer{gap:4px;min-width:0}
+  #card-dialog .tcard.form .tcard-emblem{min-width:0;max-width:76%;overflow:hidden;font-size:9px}
+  #card-dialog .tcard.form .tcard-emblem small{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #reveal-dialog #reveal-primary{min-height:48px}
+}

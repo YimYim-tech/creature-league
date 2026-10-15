@@ -1,0 +1,189 @@
+/* The sideways phone (wave 3): the journey and the screens before a battle.
+   Every rule sits inside @media (orientation:landscape) and (max-height:500px) and (pointer:coarse) (or its SHORT tier, max-height:360px)
+   and every selector starts with one of: #story #wild #castle #bridge #campfire #league #tower #island-dialog #team-dialog. */
+@media (orientation:landscape) and (max-height:500px) and (pointer:coarse){
+  /* The map of the journey: the painted map at the start, its width written out (Safari once left the other side with nothing),
+     and on the other side the chapter, the necklace and the stars, the Little Shadow, and the big button at the bottom. */
+  #story.ph-fit{--art-w:min(calc((var(--content-h) - 18px)*1.5),60%);grid-template-columns:var(--art-w) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"map head" "map guide" "map go";gap:6px 12px;align-items:stretch;padding-bottom:0}
+  #story .map-frame{grid-area:map;align-self:center;justify-self:center;width:min(calc((100cqh - 12px)*1.5),60cqw);height:calc(min(calc((100cqh - 12px)*1.5),60cqw)/1.5);aspect-ratio:auto;margin:0;max-width:none;box-shadow:0 0 0 2px #7d5a2e,0 0 0 5px var(--wood),0 0 0 6px var(--gold),0 8px 16px #0008}
+  #story .map-frame>img{width:100%;height:100%;object-fit:cover}
+  #story .story-head{grid-area:head;display:block;margin:0}
+  #story .story-head>div:first-child{display:none}
+  #story .story-head-side{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+  #story .map-tabs{margin:0;gap:6px}
+  #story .map-tabs button{min-height:44px;padding:0 14px;font-size:15px}
+  #story .necklace{margin:0;padding:4px 10px;gap:8px;border-top:0}
+  #story .necklace .gem{width:28px;height:28px}#story .necklace .gem.star{width:32px;height:32px}#story .necklace .bridge-shard{width:32px;height:32px}
+  #story .story-stars{font-size:16px;white-space:nowrap}
+  #story #story-guide{grid-area:guide;display:flex;align-items:flex-end;gap:6px;margin:0;min-height:0}
+  #story #story-guide .guide-face{width:46px;flex:none}
+  #story #story-guide .guide-bubble{display:flex;flex-direction:column;min-width:0;min-height:0;max-height:100%;padding:6px 10px 2px;border-radius:12px 12px 12px 4px}
+  #story #story-guide .guide-bubble b{flex:none;font-size:12px;margin:0}
+  #story #story-guide .guide-line{flex:0 1 auto;font-size:14px;line-height:1.4;padding-block:4px}
+  #story .story-actions{grid-area:go;display:block;margin:0}
+  #story #story-go{width:100%;margin:0}
+  /* The briefing before a battle: the rival at the start. At the end: its name and the mission line, then what to know (the only part
+     that scrolls), then who goes into the battle (a row that slides sideways and never scrolls away) and the big button under it. */
+  #wild .wild-layout{--art-w:min(100cqh,42cqw);grid-template-columns:var(--art-w) minmax(0,1fr);gap:0 12px;margin:0;align-items:stretch}
+  #wild .wild-stage{position:relative;top:0;width:var(--art-w);height:calc(100% - 10px);margin:5px 0;max-width:none;aspect-ratio:auto;box-shadow:0 0 0 2px #7d5a2e,0 0 0 4px var(--wood),0 0 0 5px var(--gold),0 8px 16px #0008}
+  #wild .wild-stage canvas{width:100%;height:100%}
+  #wild .wild-tag{top:8px;right:8px;padding:3px 10px;font-size:12px}
+  #wild .wild-copy{gap:4px;min-height:0}
+  #wild .wild-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px;flex:none;min-width:0}
+  #wild .wild-head .eyebrow{flex:0 0 100%;font-size:12px}
+  #wild .wild-head #wild-role{flex:1 1 0;min-width:0}
+  #wild h1#wild-name{flex:0 1 auto;max-width:100%;margin:0;font-size:24px;line-height:1.15;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #wild .wild-role{display:block;margin:0;font-size:13px;line-height:1.35}
+  /* A long rival line (a trio's three names) takes a second line rather than lose a name. */
+  #wild #wild-role{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+  #wild .wild-scroll{padding:6px 2px}
+  #wild .wild-scroll>*{margin:0 0 6px}
+  #wild .wild-gates{display:flex;align-items:flex-end;justify-content:center;gap:16px;padding:2px 12px;border-radius:10px;background:#0b1a22b3;box-shadow:0 0 0 1px #c9a35d66}
+  #wild .wild-gates span{display:flex;align-items:flex-end;gap:6px}#wild .wild-gates .gate-dot{align-self:center;color:#c9a35d}#wild .wild-gates img{width:18px;height:38px;object-fit:contain}
+  #wild .wild-gates b{font-size:13px;line-height:1.2;color:#dbf3ff}#wild .wild-gates .gate-theirs b{color:#ffe7a6}
+  #wild .wild-copy .guide{align-items:flex-start;gap:6px}
+  #wild .wild-copy .guide-face{width:46px}
+  #wild .guide-bubble{padding:6px 10px;border-radius:12px 12px 12px 4px}
+  #wild .guide-bubble b{font-size:12px;margin:0}
+  #wild .guide-bubble p{font-size:14px;line-height:1.4}
+  #wild .wild-power,#wild .wild-prize{gap:10px;padding:6px 10px}
+  #wild .wild-power h2{font-size:16px;margin:0}#wild .wild-power p{font-size:12px}
+  #wild .wild-prize svg{width:24px;height:24px}#wild .wild-prize strong{font-size:14px}
+  #wild .power-icon{width:36px;height:36px}
+  #wild .wild-tip{color:#f3e6c8;font-size:13px}
+  #wild .wild-pick-title{flex:none;margin:0;font-size:14px}
+  #wild .wild-fighters{--shelf-w:clamp(60px,calc((100cqw - var(--art-w) - 24px)/5.5 - 8px),84px);flex:none;margin:0;padding:4px 4px 8px}
+  #wild .fighter-chip canvas{width:44px;height:44px}
+  #wild .fighter-chip b{max-width:100%;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #wild .fighter-chip .chip-level{display:none}
+  #wild #wild-start{position:static;flex:none;margin:0;box-shadow:0 6px 14px #0008}
+  /* An island's window: its name and stars on top, its steps two by two, each with its own button. */
+  #island-dialog{--dlg-cap:680px}
+  #island-dialog .dlg-head{gap:10px}
+  #island-dialog .dlg-head h2{order:-1;font-size:22px;margin:0}
+  #island-dialog .dlg-head .eyebrow{margin:0;font-size:14px}
+  #island-dialog #island-sub{display:none}
+  #island-dialog .island-steps{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:2px}
+  #island-dialog .island-step{grid-template-columns:minmax(0,1fr) auto auto;gap:6px;padding:4px 4px 4px 8px}
+  #island-dialog .island-step b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #island-dialog .island-step small{font-size:12px}
+  #island-dialog .island-step-stars{font-size:16px;letter-spacing:1px}
+  #island-dialog .island-step .button{min-height:44px;padding:4px 10px;font-size:14px}
+  #island-dialog .island-step-lock{display:grid;place-items:center;min-width:44px}
+  /* The trio window: the whole height, seven creatures in a row, two rows and a peek of the next in sight;
+     the three chosen wait by the button in their order. */
+  #team-dialog .dlg-head{gap:10px}
+  #team-dialog .dlg-head .eyebrow{margin:0;font-size:13px}
+  #team-dialog .dlg-head h2{margin:0;font-size:21px}
+  #team-dialog .dlg-body>p{display:none}
+  #team-dialog .team-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;max-height:none;margin:0;padding:4px;overflow:visible}
+  #team-dialog .team-pick{min-width:0;gap:0;padding:3px 2px 4px;border-radius:10px}
+  #team-dialog .dlg-body{-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 12px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 12px),transparent)}
+  #team-dialog .team-pick canvas{--tile:clamp(34px,calc((100cqh - 20px)/2.3 - 28px),64px);width:var(--tile);height:var(--tile)}
+  #team-dialog .team-pick b{max-width:100%;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #team-dialog .team-order{top:3px;width:22px;height:22px;font-size:13px}
+  #team-dialog .dlg-foot{justify-content:space-between;gap:10px}
+  #team-dialog .team-slots{display:flex;gap:6px;flex:none}
+  #team-dialog .team-slot{position:relative;display:grid;place-items:center;width:48px;height:48px;padding:0;border-radius:12px;background:#0000000d;box-shadow:inset 0 0 0 2px #c9ad7a;color:#7d5a2e;font:900 18px var(--display)}
+  #team-dialog .team-slot.on{background:#fff;box-shadow:0 0 0 3px var(--c)}
+  #team-dialog .team-slot canvas{width:46px;height:46px}
+  #team-dialog .team-slot.on b{position:absolute;top:-6px;inset-inline-start:-6px;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--c);color:#fff;font-size:12px}
+  #team-dialog #team-go{flex:1 1 auto;width:auto;min-height:48px;margin:0}
+  /* A row of creatures to choose from, the same on every screen before a battle: it slides sideways, the next one always peeks in. */
+  #wild .wild-fighters,#tower .wild-fighters,#league .wild-fighters{display:grid;grid-auto-flow:column;flex-wrap:nowrap;justify-content:start;overflow-x:auto;scrollbar-width:thin}
+  /* The mask tower: the floors at the start, the climb at the end; the creature row, or the three powers during a climb, sit right above the button. */
+  #tower .tower-layout{--art-w:min(24cqw,170px);grid-template-columns:var(--art-w) minmax(0,1fr);gap:0 12px;align-items:stretch}
+  #tower .tower-art{align-self:stretch;display:grid;grid-template-rows:repeat(7,minmax(0,1fr));gap:4px;height:calc(100% - 10px);margin:5px 0;padding:6px 8px;box-shadow:0 0 0 2px #8f7bd6,0 8px 16px #000a}
+  #tower .tower-floor{height:auto;min-height:0}#tower .tower-floor b{font-size:15px}
+  #tower .tower-copy{gap:6px;min-height:0}
+  #tower .tower-scroll{padding:4px 2px}
+  #tower .tower-scroll h1{display:none}
+  #tower .tower-scroll .eyebrow{font-size:13px}
+  #tower #tower-text{margin:2px 0 6px;font-size:13px;line-height:1.4}
+  #tower .tower-run{gap:6px;margin:0}#tower .tower-hero{padding:2px 10px;font-size:13px}#tower .tower-run .build-chip{font-size:12px}#tower .tower-lives{font-size:13px}
+  #tower .tower-picks{flex:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0;padding:4px 2px 0}
+  #tower .tower-pick{display:flex;flex-direction:column;align-items:center;min-height:44px;padding:6px 8px;gap:2px}
+  #tower .tower-pick .upgrade-art{height:30px;margin:0}#tower .tower-pick .upgrade-art svg{width:28px;height:28px}
+  #tower .tower-pick h2{margin:0;font-size:14px}
+  #tower .tower-pick p{min-height:0;font-size:11px;line-height:1.3;margin:0}
+  #tower .tower-pick .upgrade-choice{margin-top:auto;padding:3px 12px;font-size:12px}
+  #tower.picking .tower-scroll{flex:0 1 auto}
+  #tower .wild-pick-title{flex:none;margin:0;font-size:14px}
+  #tower .wild-fighters{--shelf-w:clamp(60px,calc((100cqw - min(24cqw,170px) - 24px)/5.5 - 8px),84px);flex:none;margin:0;padding:4px 4px 8px}
+  #tower .tower-actions{flex:none;display:flex;flex-direction:row-reverse;justify-content:flex-end;align-items:stretch;gap:8px;margin:auto 0 0;position:static}
+  #tower #tower-start{flex:1 1 auto;width:auto;margin:0;padding:4px 16px;animation:none}
+  #tower #tower-quit{flex:none;min-height:44px;padding:0 12px;border-radius:12px;background:#0b1a22b3;box-shadow:0 0 0 1px #c9a35d66;color:#dccfb0;font-size:13px;white-space:nowrap}
+  /* The league: the road of prizes climbs at the start, like the tower; the rank, the next box, who goes and the button at the end. */
+  #league.ph-fit{display:grid;grid-template-columns:min(30%,190px) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto auto auto;grid-template-areas:"road head" "road prog" "road ." "road title" "road chips" "road go";gap:6px 12px;align-items:stretch;max-width:none}
+  #league>*{min-width:0}
+  #league .league-head{grid-area:head;justify-content:flex-start;gap:10px;text-align:start}
+  #league .league-head .eyebrow{display:none}
+  #league .league-head h1{margin:0;font-size:22px}
+  #league .league-head p{margin:0;font-size:12px;line-height:1.35}
+  #league .rank-shield.big{width:44px;height:49px}#league .rank-shield.big svg{width:22px;height:22px}
+  #league .league-progress{grid-area:prog;display:grid;gap:4px;max-width:none;margin:0;font-size:13px;text-align:start}
+  #league .league-bar.big{height:10px;min-width:0}
+  #league .league-road{grid-area:road;min-height:0;display:flex;flex-direction:column-reverse;justify-content:space-between;gap:4px;height:calc(100% - 10px);margin:5px 0;padding:6px;overflow:hidden;border-radius:14px;background:linear-gradient(180deg,#2b2147cc,#14102acc);box-shadow:0 0 0 2px #c9a35d,0 8px 16px #000a}
+  #league .road-stop{display:flex;align-items:center;justify-content:flex-start;gap:8px;flex:1 1 0;min-width:0;min-height:0;padding:0 8px;border-radius:8px}
+  #league .road-stop .chest.mini{width:30px;height:25px;flex:none}#league .road-stop .rank-shield{width:24px;height:27px}#league .road-stop .rank-shield svg{width:13px;height:13px}
+  #league .road-stop b{font-size:13px}
+  #league .road-stop small{display:block;margin-inline-start:auto;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #league .wild-pick-title{grid-area:title;margin:0;font-size:14px}
+  #league .wild-fighters{grid-area:chips;--shelf-w:clamp(60px,calc((100cqw - min(30cqw,190px) - 24px)/5.5 - 8px),84px);margin:0;padding:4px 4px 8px}
+  #league #league-start{grid-area:go;position:static;display:flex;justify-content:center;align-items:center;gap:8px;margin:0;padding:4px 16px;animation:none}
+  #wild .fighter-chip,#tower .fighter-chip,#league .fighter-chip{width:auto;min-width:0;padding:2px 2px 4px;gap:0}
+  #tower .fighter-chip canvas,#league .fighter-chip canvas{width:44px;height:44px}
+  #tower .fighter-chip b,#league .fighter-chip b{max-width:100%;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #tower .fighter-chip .chip-level,#league .fighter-chip .chip-level{display:none}
+  #wild .fighter-chip.chosen,#tower .fighter-chip.chosen,#league .fighter-chip.chosen{background:var(--grain),var(--parchment);transform:none}
+  /* The golden castle and the bridges: the scene at the start; at the end the title, what to tap, the Little Shadow and the button. */
+  #castle.ph-fit,#bridge.ph-fit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 12px;align-items:stretch;padding-bottom:0}
+  #castle.ph-fit{grid-template-areas:"stage head" "stage gems" "stage guide" "stage actions";grid-template-rows:auto auto minmax(0,1fr) auto}
+  #bridge.ph-fit{grid-template-areas:"stage head" "stage pads" "stage guide" "stage actions";grid-template-rows:auto auto minmax(0,1fr) auto}
+  #castle .castle-head,#bridge .castle-head{grid-area:head;display:block;margin:0;min-width:0}
+  #castle .castle-head .eyebrow{display:none}
+  #bridge .castle-head .eyebrow{font-size:12px}
+  #castle .castle-head h1,#bridge .castle-head h1{margin:0;font-size:22px;line-height:1.2;letter-spacing:0}
+  #castle .castle-head p,#bridge .castle-head p{display:-webkit-box;margin:2px 0 0;font-size:13px;line-height:1.35;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  #castle .castle-stage,#bridge .bridge-stage{grid-area:stage;align-self:stretch;height:calc(100% - 10px);margin:5px 0;box-shadow:0 0 0 2px #7d5a2e,0 0 0 4px var(--wood),0 0 0 5px var(--gold),0 8px 16px #0008}
+  #castle #castle-gems{grid-area:gems;justify-self:center;margin:0;padding:4px 12px;gap:10px}
+  #castle #castle-gems .gem{width:44px;height:44px}#castle #castle-gems .gem.star{width:48px;height:48px}
+  #bridge .bridge-pads{grid-area:pads;justify-content:center;align-items:center;gap:14px;margin:0}
+  #bridge .echo-pad{width:76px}
+  #bridge .beat-pad{width:78px}
+  #bridge #bridge-symbol{grid-area:stage;align-self:end;justify-self:center;z-index:2;margin:0 0 14px;padding:4px 10px}
+  #bridge #bridge-symbol .gem{width:28px;height:28px}#bridge #bridge-symbol .bridge-shard{width:32px;height:32px}
+  #castle .guide,#bridge .guide{grid-area:guide;display:flex;align-items:flex-end;gap:6px;margin:0;min-width:0;min-height:0}
+  #castle .guide-face,#bridge .guide-face{width:46px;flex:none}
+  #castle .guide-bubble,#bridge .guide-bubble{display:flex;flex-direction:column;min-width:0;min-height:0;max-height:100%;padding:6px 10px 2px;border-radius:12px 12px 12px 4px}
+  #castle .guide-bubble b,#bridge .guide-bubble b{flex:none;font-size:12px;margin:0}
+  #castle .guide-line,#bridge .guide-line{flex:0 1 auto;font-size:14px;line-height:1.4;padding-block:4px}
+  #castle .story-actions,#bridge .story-actions{grid-area:actions;display:flex;gap:8px;margin:0}
+  #castle .story-actions .button,#bridge .story-actions .button{width:100%;margin:0;padding:4px 16px}
+  /* The campfire: the creatures by the fire, the Little Shadow at the side and the button home at the bottom-left. */
+  #campfire.ph-fit{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"stage stage" "guide go";gap:6px 12px;align-items:end;align-content:stretch;justify-items:stretch;min-height:0;padding-bottom:0}
+  #campfire .campfire-stage{grid-area:stage;align-self:end;justify-self:center;min-height:0;max-height:100%}
+  #campfire #campfire-portrait{width:min(170px,62cqh);height:min(170px,62cqh)}
+  #campfire .campfire-ron{width:min(110px,38cqh)}
+  #campfire .campfire-fire{transform:scale(.8);transform-origin:50% 100%}
+  #campfire .guide{grid-area:guide;align-items:flex-end;gap:6px;margin:0;max-width:none;min-width:0}
+  #campfire .guide-face{width:46px;flex:none}
+  #campfire .guide-bubble{padding:6px 12px;border-radius:12px 12px 12px 4px}
+  #campfire .guide-bubble b{font-size:12px;margin:0}
+  #campfire .guide-bubble p{font-size:14px;line-height:1.4;padding-block:2px}
+  #campfire #campfire-back{grid-area:go;width:auto;min-width:200px;margin:0;justify-content:center}
+  @media (prefers-reduced-motion:reduce){#story .spot-dot.nudge{animation:none}}
+}
+@media (orientation:landscape) and (max-height:360px) and (pointer:coarse){
+  #story .necklace{padding:3px 8px;gap:6px}
+  #story .necklace .gem{width:24px;height:24px}#story .necklace .gem.star{width:28px;height:28px}#story .necklace .bridge-shard{width:28px;height:28px}
+  #story .story-stars{font-size:15px}
+  #story #story-guide .guide-face{width:40px}
+  #story #story-guide .guide-line{font-size:13px}
+  #wild .wild-head .eyebrow{display:none}
+  #wild h1#wild-name{font-size:22px}
+  #bridge .castle-head .eyebrow{display:none}
+  #bridge .castle-head p{-webkit-line-clamp:1}
+  #bridge .echo-pad{width:64px}
+  #bridge .beat-pad{width:64px}
+}

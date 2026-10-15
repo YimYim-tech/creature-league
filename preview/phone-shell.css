@@ -1,0 +1,144 @@
+/* The sideways phone (wave 3): the bar, the screen that fits under it, and the shared shapes every screen is built from.
+   PHONE  @media (orientation:landscape) and (max-height:500px) and (pointer:coarse)
+   SHORT  @media (orientation:landscape) and (max-height:360px) and (pointer:coarse)   the iPhone in Safari, Android with its address bar
+   GATE   @media (orientation:portrait) and (pointer:coarse) and (max-width:700px)     an upright phone: only the turn card
+   A screen joins the fitted shell when its section has the class ph-fit; a window joins with ph-dlg. Nothing here touches a screen that has not joined,
+   except the bar. Loaded after every other stylesheet; the screens' own sheets come after this one. */
+:root{--bar-h:44px;--pad-b:max(6px,env(safe-area-inset-bottom));--content-h:calc(100dvh - var(--bar-h) - var(--pad-b));--hit:44px;--chip-w:64px;--action-h:56px}
+.bar-house,.bar-title,.bar-up{display:none}
+/* A badge: any element with data-badge="<name>", set by setBadge(). A number or a word in a red pill, or a glowing gold dot. Its door is position:relative. */
+[data-badge]{position:absolute;top:-6px;inset-inline-start:-6px;z-index:2;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#c43c5a;color:#fff;font:900 13px/22px var(--text,'Heebo',sans-serif);text-align:center;box-shadow:0 0 0 2px #3a1d0f;pointer-events:none}
+[data-badge].dot{width:18px;min-width:18px;height:18px;padding:0;background:#ffd23a;animation:badge-glow 1.4s ease-in-out infinite}
+@keyframes badge-glow{50%{box-shadow:0 0 0 2px #3a1d0f,0 0 12px 3px #ffd23aaa}}
+@media (prefers-reduced-motion:reduce){[data-badge].dot{animation:none}}
+
+@media (orientation:landscape) and (max-height:500px) and (pointer:coarse){
+  /* The bar: 44 px. The house top-right (always Home), the up arrow beside it on a level-2 screen, the title in the middle, sound and help top-left. */
+  #app>.header{position:sticky;top:0;z-index:30;display:flex;align-items:center;flex-wrap:nowrap;gap:6px;height:var(--bar-h);min-height:0;max-width:none;margin:0;padding:0 var(--safe-x);box-sizing:border-box}
+  #app>.header nav,#app>.header .win-chip,#app>.header .player-chip,#brand-home .brand-mark,#brand-home>span{display:none}
+  #brand-home{display:grid;place-items:center;flex:none;width:var(--hit);height:var(--hit);padding:0;border-radius:50%;background:radial-gradient(circle at 40% 30%,#6a4628,var(--wood,#3b2517));color:var(--gold-hi,#e9cf8c);box-shadow:0 0 0 2px var(--gold,#b98f3e),0 3px 8px #0008}
+  #brand-home .bar-house{display:block;width:26px;height:26px}
+  #app>.header #bar-up{display:grid;flex:none;width:var(--hit);height:var(--hit)}
+  #bar-up svg{transform:scaleX(-1)}
+  #bar-title{display:block;flex:1 1 auto;min-width:0;text-align:center;font:900 20px/1.1 var(--display,serif);color:var(--gold-hi,#e9cf8c);text-shadow:0 2px 0 #0008;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #app>.header .header-tools{flex:none;margin:0;gap:6px}
+  #app>.header .header-tools .icon-button{width:var(--hit);height:var(--hit)}
+  /* No bar in a battle; the full-screen button only where the phone has full screen (Android, never an iPhone). */
+  body.battle-active #app>.header{display:none}
+  #app>.header #fullscreen{display:none}
+  html.can-fs #app>.header #fullscreen{display:grid}
+
+  /* A fitted screen: exactly the space under the bar, nothing below it, and the page itself never scrolls (Safari's bars stay still). */
+  html:has(.view.ph-fit:not([hidden])),body:has(.view.ph-fit:not([hidden])){height:100%;overflow:hidden;overscroll-behavior:none}
+  .view.ph-fit{height:var(--content-h);max-width:none;margin:0;padding:6px var(--safe-x) 0;box-sizing:border-box;overflow:hidden;container:content/size}
+  .view.ph-fit .back-link{display:none}
+
+  /* Two columns: the picture at the start (it sets its own width with --art-w), what to choose and the big button at the end, one under the other. */
+  .ph-split{display:grid;grid-template-columns:var(--art-w,auto) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0 12px;height:100%;min-height:0}
+  .ph-split>*{min-width:0;min-height:0}
+  .ph-split>:last-child{display:flex;flex-direction:column;gap:6px}
+  /* The only part that may scroll: it fades at both ends and shows a thin scrollbar. Never the big button, never the choice. */
+  .ph-scroll{flex:1 1 0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-block:8px;scrollbar-width:thin;scrollbar-color:var(--gold-soft,#d6b46a) transparent;
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 10px,#000 calc(100% - 10px),transparent);mask-image:linear-gradient(180deg,transparent,#000 10px,#000 calc(100% - 10px),transparent)}
+  .ph-scroll::-webkit-scrollbar{width:5px}.ph-scroll::-webkit-scrollbar-thumb{background:var(--gold-soft,#d6b46a);border-radius:3px}
+  /* A sideways row: it snaps, fades at its far edge, and the owner sizes the items (--shelf-w) so the next one always peeks in. */
+  .ph-shelf{display:grid;grid-auto-flow:column;grid-auto-columns:var(--shelf-w,var(--chip-w));gap:var(--shelf-gap,8px);overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding-bottom:6px;scrollbar-width:thin;scrollbar-color:var(--gold-soft,#d6b46a) transparent;
+    -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 28px),transparent)}
+  .ph-shelf>*{scroll-snap-align:start}
+  .ph-shelf::-webkit-scrollbar{height:5px}.ph-shelf::-webkit-scrollbar-thumb{background:var(--gold-soft,#d6b46a);border-radius:3px}
+  /* The big button: one per screen, bottom-left, never inside a scroller. */
+  .ph-action{flex:none;align-self:stretch;width:100%;min-height:var(--action-h);margin:auto 0 0;padding:4px 16px;font-size:20px;white-space:nowrap}
+
+  /* A fitted window: the head (the X's corner kept clear), the body (the only part that scrolls) and the foot (the buttons). */
+  dialog.ph-dlg{width:min(calc(100vw - 2*var(--safe-x) - 16px),var(--dlg-cap,760px));max-width:none;max-height:calc(100dvh - 16px);border-width:12px;padding:8px 12px;overflow:visible;box-sizing:border-box}
+  dialog.ph-dlg[open]{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:6px}
+  dialog.ph-dlg>.dlg-head{display:flex;align-items:center;gap:8px;min-height:var(--hit);padding-inline-start:52px}
+  dialog.ph-dlg>.dlg-head h2{margin:0;font-size:22px}
+  dialog.ph-dlg>.dlg-body{min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--gold-soft,#d6b46a) transparent}
+  dialog.ph-dlg>.dlg-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+  dialog.ph-dlg>.dlg-foot .button{margin:0;min-height:48px}
+  /* The window itself never scrolls (its rows hold it in) and clips nothing, so Safari shows the X whole where it overlaps the frame.
+     Its X takes the house's place exactly (the top-right corner of the screen, 44 px), whatever the window's size: one corner closes and goes home. */
+  dialog.ph-dlg>.dialog-close{position:fixed;top:0;right:var(--safe-x);left:auto;z-index:5;width:var(--hit);height:var(--hit);margin:0}
+  /* A tall window takes the whole height, and its body is a container: inside it, 100cqh is the body's height (a card at full height: width calc(100cqh*.714)). */
+  dialog.ph-dlg.ph-tall{height:calc(100dvh - 16px)}
+  dialog.ph-dlg.ph-tall>.dlg-body{container:dlg-body/size}
+
+  /* Help: three pictures of the controls, a line each, the OK in the foot; the rest scrolls under them. */
+  #help-dialog>.dlg-head{gap:10px}
+  #help-dialog>.dlg-head .eyebrow{display:none}
+  #help-dialog>.dlg-body{padding-block:2px 8px;-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent)}
+  #help-dialog .help-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:2px 0 10px}
+  #help-dialog .help-grid article{display:grid;justify-items:center;align-content:start;gap:2px;text-align:center}
+  #help-dialog .help-grid h3{margin:2px 0 0;font-size:15px}
+  #help-dialog .help-grid p{margin:0;font-size:14px;line-height:1.35}
+  #help-dialog .help-rule{padding:8px 12px;margin-bottom:8px}
+  #help-dialog .help-rule p,#help-dialog .help-parents{font-size:13px}
+  #help-dialog .help-parents{margin:0 0 4px}
+  #help-dialog>.dlg-foot .button{width:auto;min-width:180px}
+
+  /* The pause and the result: a thinner frame and the whole height; their content belongs to the battle and the result. */
+  #pause-dialog{width:min(calc(100vw - 2*var(--safe-x) - 16px),440px);max-width:none;max-height:calc(100dvh - 16px);border-width:12px;padding:8px 18px 10px;overflow:auto}
+  #result-dialog{border-width:12px;max-height:calc(100dvh - 16px)}
+  /* The buttons rise 10 px into place at the last beat: the bottom padding holds them, so the window never overflows on the first beat. */
+  #result-dialog.stage{padding:4px 14px 10px}
+  /* Every button of the result is a thumb's size. */
+  #result-dialog #result-wear{min-height:var(--hit);padding:2px 12px}
+  #result-dialog.stage .result-home,#result-dialog.stage .result-ask{width:var(--hit);height:var(--hit)}
+  #result-dialog.stage #result-secondary{min-height:var(--hit)}
+  #result-dialog .result-pick{width:var(--hit);height:var(--hit)}
+  /* One shape for every result, like every other screen: the window takes the whole height, its buttons sit on the bottom row with the big one
+     at the bottom-left (always the same spot), ממשיכים beside it and the '?' at the far end; the house is in the bar's corner (top-right), where
+     every window's X is. The faces for 'one more with…' stay on a computer: on a phone the row keeps few buttons. */
+  #result-dialog[open]{height:calc(100dvh - 16px)}
+  #result-dialog.stage[open]{grid-template-rows:minmax(0,1fr) auto;overflow:visible}
+  #result-dialog.plain[open]{display:flex;flex-direction:column}
+  #result-dialog.plain[open] #result-content{flex:1 1 auto;min-height:0;align-content:center}
+  #result-dialog .result-actions{flex-direction:row-reverse;justify-content:flex-start}
+  #result-dialog.stage .result-actions{transform:none}
+  #result-dialog.stage .result-team{display:none}
+  #result-dialog.stage #result-primary{flex:none;min-width:min(240px,40%)}
+  #result-dialog.stage .result-ask{order:1;margin-inline-end:auto}
+  #result-dialog.stage .result-home{position:fixed;top:0;right:var(--safe-x);left:auto;z-index:5;margin:0}
+}
+@media (orientation:landscape) and (max-height:360px) and (pointer:coarse){
+  .ph-action{min-height:48px;font-size:18px}
+  #bar-title{font-size:18px}
+  /* The thinner frame leaves room: the big button keeps 48 px even with the next rival's face in it. */
+  #result-dialog .result-primary.with-next{min-height:48px}
+}
+
+/* Help speaks of the controls the hand has: pictures of the stick, the fire button and the super ring on a touch screen; keys on a computer. */
+#help-dialog .help-pic,#help-dialog .help-touch{display:none}
+#help-dialog .help-pic{position:relative;place-items:center;width:52px;height:52px;margin:2px auto 4px;border-radius:50%}
+#help-dialog .help-pic svg{width:26px;height:26px}
+#help-dialog .help-stick{border:3px solid var(--gold,#b98f3e);background:#0b1a2233;box-sizing:border-box}
+#help-dialog .help-stick i{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 40% 30%,#f7ecd2,#cdb27a);box-shadow:0 0 0 2px var(--gold,#b98f3e),0 2px 4px #0006;translate:6px -4px}
+#help-dialog .help-fire{background:linear-gradient(180deg,#d4593b,#953119);color:#fff4dc}
+#help-dialog .help-fire svg,#help-dialog .help-super svg{color:inherit}
+#help-dialog .help-super{background:radial-gradient(circle,#2a1a0e 58%,transparent 60%),conic-gradient(#ffd23a 0 78%,#ffd23a44 78%);color:#ffd23a}
+#help-dialog .help-parents{font-size:12px;color:var(--ink-soft,#6b5640)}
+@media (pointer:coarse){
+  #help-dialog .help-keys,#help-dialog .help-key{display:none}
+  #help-dialog .help-pic{display:grid}
+  #help-dialog .help-touch{display:block}
+}
+/* The word for parents is about phones: a computer does not show it. */
+@media not all and (pointer:coarse){#help-dialog .help-parents{display:none}}
+/* A computer or tablet without the full-screen call never shows its button. */
+html:not(.can-fs) #app>.header #fullscreen{display:none}
+
+/* GATE: an upright phone sees only the turn card. It covers everything, and the windows under it hide until the phone turns back (a battle pauses). */
+@media (orientation:portrait) and (pointer:coarse) and (max-width:700px){
+  #rotate-hint{display:flex;position:fixed;inset:0;z-index:2147483647;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px max(24px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));text-align:center;background:#0b1a22;color:#f3e6c8;touch-action:none}
+  #rotate-hint strong{font:900 28px var(--display,serif)}
+  #rotate-hint .rotate-phone{width:58px;height:98px;border:5px solid #e0b13a;border-radius:12px;animation:turn-phone 2.2s ease-in-out infinite}
+  #rotate-hint .rotate-lock{font-size:13px;line-height:1.5;opacity:.8;max-width:300px;margin-top:18px}
+  dialog[open]{visibility:hidden}
+  /* Everything inside a window hides with it, even a part that asks to be seen (a comeback card just turned shows its face with visibility:visible). */
+  dialog[open] *{visibility:hidden!important}
+  dialog::backdrop{display:none}
+  /* The screens under the card are laid out for a sideways phone: they never make the upright page wider or scroll it. */
+  html,body{overflow:hidden}
+  @media (prefers-reduced-motion:reduce){#rotate-hint .rotate-phone{animation:none;transform:rotate(-90deg)}}
+}
