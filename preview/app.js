@@ -19,6 +19,8 @@ import {RITUAL_HOLD,sessionAfterBattle,sessionRested,campfireReady,sparkWord,spa
 import * as tale from './story.js';
 import {loadArt,createPuppet,drawPortrait,Renderer} from './art.js';
 import {Sound} from './audio.js';
+import {CLOUD} from './cloud-config.js';
+import * as cloud from './cloud.js';
 const $=id=>document.getElementById(id);
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 const icon=name=>`<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
@@ -29,13 +31,19 @@ const PHONE=matchMedia(PHONE_Q),SHORT=matchMedia(SHORT_Q),GATE=matchMedia(GATE_Q
 // Players on this device: each child has a name, a face and a separate save. Nothing leaves the device and there are no accounts.
 // The first player keeps the original save, so a child who played before keeps everything.
 const PLAYERS_KEY='creature-league.players',MAX_PLAYERS=6,FACES=Object.keys(CREATURES).filter(id=>!CREATURES[id].star);
-const playerStorage=id=>{const suffix=id==='p1'?'':'.'+id;return {getItem:key=>localStorage.getItem(storagePrefix+key+suffix),setItem:(key,value)=>localStorage.setItem(storagePrefix+key+suffix,value)};};
+const playerStorage=id=>{const suffix=id==='p1'?'':'.'+id;return {getItem:key=>localStorage.getItem(storagePrefix+key+suffix),setItem:(key,value)=>localStorage.setItem(storagePrefix+key+suffix,value),removeItem:key=>localStorage.removeItem(storagePrefix+key+suffix)};};
 function readPlayers(){
   try{const d=JSON.parse(localStorage.getItem(storagePrefix+PLAYERS_KEY)),list=Array.isArray(d?.players)?d.players.filter(p=>p&&/^p\d{1,3}$/.test(p.id)).map(p=>({id:p.id,name:String(p.name||'').trim().slice(0,12),face:CREATURES[p.face]?p.face:null})):[];
     if(list.length)return {players:list,active:list.some(p=>p.id===d.active)?d.active:list[0].id};}catch{}
   return {players:[{id:'p1',name:'',face:null}],active:'p1'};
 }
 let players=readPlayers(),storage=playerStorage(players.active);
+// Online users (cloud.js): api is null without a project in cloud-config.js, and on a page the project does not take (the real project
+// only from the published https site, a fake only from this computer): then nothing in the game asks the network for them.
+// The browser key is limited to the published game's address, so each call names the page it comes from (its path, never its ?query):
+// a browser alone would send only the site. While the app goes to the background the last upload may finish there (keepalive, under 60 KB).
+let cloudKeep=false,cloudOff=false,cloudCheck=false,C={};
+const passes=new Map(),api=cloud.cloudApi(cloud.cloudFor(CLOUD,location.href),(url,init)=>fetch(url,{...init,referrer:location.origin+location.pathname,referrerPolicy:'no-referrer-when-downgrade',...(cloudKeep&&String(init?.body||'').length<60000?{keepalive:true}:{})})),cloudSync=cloud.syncer(cloudRound);
 let profile=readProfile(storage),art,renderer,screen='lobby',match=null,mode='quick',cupFinal=false,previousStatus='playing';
 let frameTime=0,clock=0,accumulator=0,lastHUD=0,toastUntil=0,noticeTimer,saveNoticeShown=false;
 const sound=new Sound();sound.enabled=profile.sound;
@@ -283,8 +291,8 @@ function storyCardHTML(id,{big=false}={}){const c=STORY_CARDS[id];
     <footer><span class="tcard-stars">${stars((RARITY[c.rarity]||RARITY['רגיל']).stars)}</span><span>קלף סיפור</span></footer></article>`;}
 function cardBack(id,{label='ליגת היצורים'}={}){const c=CREATURES[id]||STORY_CARDS[id];return `<article class="tcard tcard-back" style="--c:${c?.color||'#68ebcf'}"><div class="tcard-emblem">${icon('bolt')}</div><b>${label}</b>${c?`<small>${/^[0-9]/.test(c.number)?'#':''}${c.number}</small>`:''}</article>`;}
 function notify(text){$('notice').textContent=text;$('notice').hidden=false;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$('notice').hidden=true,5000);}
-function persist(){if(!saveProfile(storage,profile)&&!saveNoticeShown){notify('השמירה במכשיר אינה זמינה. אפשר להמשיך לשחק עד שסוגרים את הדף.');saveNoticeShown=true;}updateHeader();}
-function updateHeader(){{const p=activePlayer();$('player-chip-name').textContent=playerName(p);livePortrait('player-chip-face',faceOf(p),{skin:skinOf(profile,faceOf(p))});}$('header-wins').textContent=profile.league.trophies;$('cards-badge').hidden=!profile.newCards.length;$('cards-badge').textContent=profile.newCards.length;setBadge('cards',profile.newCards.length);$('sound-toggle').innerHTML=icon(profile.sound?'sound':'muted');$('sound-toggle').setAttribute('aria-label',profile.sound?'השתקת צליל':'הפעלת צליל');$('sound-toggle').setAttribute('aria-pressed',String(!profile.sound));}
+function persist(){if(!saveProfile(storage,profile)&&!saveNoticeShown){notify('השמירה במכשיר אינה זמינה. אפשר להמשיך לשחק עד שסוגרים את הדף.');saveNoticeShown=true;}cloudTouch();updateHeader();}
+function updateHeader(){{const p=activePlayer();$('player-chip-name').textContent=playerName(p);livePortrait('player-chip-face',faceOf(p),{skin:skinOf(profile,faceOf(p))});}$('header-wins').textContent=profile.league.trophies;$('cards-badge').hidden=!profile.newCards.length;$('cards-badge').textContent=profile.newCards.length;setBadge('cards',profile.newCards.length);$('sound-toggle').innerHTML=icon(profile.sound?'sound':'muted');$('sound-toggle').setAttribute('aria-label',profile.sound?'השתקת צליל':'הפעלת צליל');$('sound-toggle').setAttribute('aria-pressed',String(!profile.sound));cloudMarks();}
 function showView(name){
   if(LAB_ASKED&&!labOpened){labOpened=true;name='lab';}
   const from=screen;metaInit();
@@ -737,8 +745,8 @@ let tutorial=null;
 // The first-fight lesson. A touch screen gets no words: the control glows, a thumb on it shows what to do (drag the stick, tap a button), and the
 // Little Shadow says it once its lines are recorded. A keyboard gets one short line in the HUD band. The praise at the end is the crowd's cheer.
 const TUT_TEXT=['זוזו עם החצים או W A S D','רווח כדי לירות על היריב','כוח־העל מלא! לחצו E'];
-// Its three lines (voice-shadow-tut-move, -tut-fire, -tut-super) are not recorded yet: until they are in art/gen and sw.js, nothing is asked for.
-const TUT_TARGET=['joystick','fire-button','special-button',null],TUT_VOICE=[];
+// Its three lines are the Little Shadow's: drag the thumb, press the red button, the super is full.
+const TUT_TARGET=['joystick','fire-button','special-button',null],TUT_VOICE=['voice-shadow-tut-move','voice-shadow-tut-fire','voice-shadow-tut-super'];
 function startTutorial(){
   let seen=false;try{seen=storage.getItem(TUT_KEY)==='1';}catch{}
   tutorial=null;$('tutorial').hidden=true;tutThumb(null);document.querySelectorAll('.tut-glow').forEach(e=>e.classList.remove('tut-glow'));
@@ -976,7 +984,7 @@ function resultAgain(o){const R=stage.run;if(!R||!match)return;resultLayout({...
 function plainResult(R){resultLayout({...R,plain:true});showResult(match,{voice:R.voice});}
 // The window opens 1.2 s after the finish, and only once the freeing finale is over. It opens at the top, on the window itself.
 function showResult(shown,{voice=null}={}){
-  clearTimeout(resultWait);const t0=performance.now();
+  cloudSoon();clearTimeout(resultWait);const t0=performance.now();
   const tick=()=>{
     if(match!==shown)return;const age=performance.now()-t0,left=typeof finaleLeft==='function'?finaleLeft():0;
     if((age<RESULT_DELAY||left>0)&&age<9000){resultWait=setTimeout(tick,100);return;}
@@ -1464,7 +1472,7 @@ const profileOf=id=>id===players.active?profile:readProfile(playerStorage(id));
 const faceOf=p=>p.face||(isUnlocked(profileOf(p.id),profileOf(p.id).selected)?profileOf(p.id).selected:'maimi');
 function switchPlayer(id){
   if(!findPlayer(id))return;players.active=id;savePlayers();storage=playerStorage(id);profile=readProfile(storage);sound.setEnabled(profile.sound);
-  match=null;wildTarget=null;storyEvent=null;versus.players=[id,null];refreshTodayGoals();updateHeader();showView('lobby');
+  match=null;wildTarget=null;storyEvent=null;versus.players=[id,null];refreshTodayGoals();updateHeader();showView('lobby');cloudSoon(true);
 }
 function renderPlayers(){
   const form=!$('player-form').hidden;$('players-grid').hidden=form;
@@ -1474,7 +1482,7 @@ function renderPlayers(){
   players.players.forEach(p=>{const card=document.querySelector(`[data-player="${p.id}"]`);card.querySelector('b').textContent=playerName(p);card.setAttribute('aria-label','משחקים בתור '+playerName(p));livePortrait('player-face-'+p.id,faceOf(p),{skin:skinOf(profileOf(p.id),faceOf(p))});});
   document.querySelectorAll('[data-player]').forEach(el=>el.onclick=()=>{sound.click();switchPlayer(el.dataset.player);});
   document.querySelectorAll('[data-player-edit]').forEach(el=>el.onclick=()=>{sound.click();openPlayerForm(el.dataset.playerEdit);});
-  if($('player-new'))$('player-new').onclick=()=>{sound.click();openPlayerForm();};
+  if($('player-new'))$('player-new').onclick=()=>{sound.click();openPlayerForm();};renderCloudRow();
 }
 let editingPlayer=null,formFace='maimi';
 function openPlayerForm(id=null){
@@ -1494,6 +1502,165 @@ function savePlayerForm(e){
   const id='p'+(Math.max(...players.players.map(p=>+p.id.slice(1)))+1);players.players.push({id,name,face:formFace});savePlayers();$('player-form').hidden=true;
   switchPlayer(id);if(STARTERS.includes(formFace)){profile.selected=formFace;persist();renderHome();}
 }
+// ------------------------------------------------------------------ online users: a child's progress kept online, after a parent's consent
+// Only with a project the page may use (cloud.cloudFor; api is null otherwise: the row, the marks and the window stay hidden, nothing asks the network).
+// Each local player may be linked to one online user; the link (its id, refresh token and nickname) sits in that player's own save area, the
+// pictures never. The local save stays what the game reads: a changed one goes up after each result, when the app goes to the background and
+// every 3 minutes. A newer online copy comes down only on Home or Who plays, never in a battle or its result. Words: cloud.CLOUD_WORDS.
+const freshSave=p=>!p.played&&!p.story?.done&&!Object.keys(p.creatures||{}).length&&!(p.unlocked||[]).length;
+const linkOf=id=>api?cloud.readLink(playerStorage(id)):null,setLink=(id,l)=>cloud.writeLink(playerStorage(id),l);
+const saveOf=id=>id===players.active?JSON.stringify(profile):playerStorage(id).getItem(sim.STORAGE_KEY);
+const cloudSoon=(check=false,ms)=>{if(!api)return;cloudCheck||=check;cloudSync.soon(ms);};
+// One round for every linked player on this phone; only the one playing looks online for a newer copy (check), the others only send theirs.
+async function cloudRound(){
+  // A battle being played is left alone: its result asks for the next round.
+  if(!api||screen==='battle'&&match&&match.status!=='finished')return true;if(navigator.onLine===false){cloudOff='offline';cloudMarks();return false;}const check=cloudCheck;cloudCheck=false;let ok=true,off=false;
+  for(const p of [...players.players]){const L=linkOf(p.id),save=L&&saveOf(p.id);if(!L||L.out||L.deleting||save==null)continue;const st=playerStorage(p.id);
+    try{if(await cloud.syncOne(api,{link:L,save,face:faceOf(p),changedAt:L.changedAt,fresh:freshSave(profileOf(p.id)),check:check&&p.id===players.active,
+      store:l=>setLink(p.id,l),backup:s=>cloud.keepBackup(st,L.uid,s),take:s=>cloudTake(p.id,s)},passes)==='later'){ok=false;cloudCheck=true;}}
+    catch(e){const k=cloud.kindOf(e);if(k!=='out')ok=false;if(k==='offline'||k==='away')off=k;}}
+  cloudOff=off;cloudMarks();if(screen==='players'&&!$('cloud-dialog').open)renderCloudRow();return ok;
+}
+// The online copy taken into a player: another player's save at once; the one playing only on Home or Who plays, with nothing open over it.
+function cloudTake(id,save){
+  try{if(id!==players.active){playerStorage(id).setItem(sim.STORAGE_KEY,save);return true;}
+    if(!['lobby','players'].includes(screen)||document.querySelector('dialog[open]')||!$('player-form').hidden)return false;storage.setItem(sim.STORAGE_KEY,save);}catch{return false;}
+  profile=readProfile(storage);sound.setEnabled(profile.sound);refreshTodayGoals();updateHeader();showView(screen);return true;
+}
+// Every save of the player playing marks the link as changed now; the next round sends it.
+function cloudTouch(){const L=linkOf(players.active);if(!L)return;L.changedAt=Date.now();setLink(players.active,L);}
+// The mark beside the player's face: kept online (ok), a change still going up (up), no connection or sign in again (off). Icon only,
+// and never in a battle (phone-cloud.css hides it there).
+function cloudMarkOf(id){const L=linkOf(id);if(!L)return null;if(L.out||L.deleting||cloudOff)return 'off';return !L.pending&&cloud.saveHash(saveOf(id))===L.sent?'ok':'up';}
+const CLOUD_MARK={ok:'נשמר גם באינטרנט',up:'מחכה לשמירה באינטרנט',off:'אין חיבור לאינטרנט'};
+function cloudMarks(){
+  if(!api)return;const m=cloudMarkOf(players.active);
+  for(const id of ['home-cloud','chip-cloud']){const el=$(id);if(!el)continue;el.hidden=!m;if(m){el.dataset.cloud=m;el.querySelector('use').setAttribute('href','#i-cloud-'+m);}}
+  if(m)$('home-player').setAttribute('aria-label','מי משחק? '+playerName(activePlayer())+' · '+CLOUD_MARK[m]);
+}
+// Who plays: a small cloud on every linked player, and under them the online user of the one playing, or the way to make one.
+function renderCloudRow(){
+  const row=$('cloud-row');row.hidden=!api;$('players').classList.toggle('with-cloud',!!api);if(!api)return;const p=activePlayer(),L=linkOf(p.id),m=cloudMarkOf(p.id);
+  document.querySelector('#players .players-heading p').textContent='לכל שחקן מסע, יצורים וקלפים משלו. הכל נשמר במכשיר, ועם משתמש מקוון גם באינטרנט.';
+  $('cloud-row-mark').innerHTML=icon(L?'cloud-'+m:'cloud');row.dataset.cloud=L?m:'none';$('cloud-row-title').textContent=L?L.name+' · משתמש מקוון':'משתמש מקוון';
+  $('cloud-row-sub').textContent=!L?'שומרים גם באינטרנט ונכנסים מכל טלפון.':L.deleting?'המחיקה לא הסתיימה. ״להורים״ ← ״מחיקת המשתמש״.':L.out?cloud.CLOUD_WORDS.out:m==='off'?cloud.CLOUD_WORDS[cloudOff==='away'?'away':'offline']:m==='up'?'השמירה באינטרנט מחכה לרגע הבא.':'נשמר גם באינטרנט.';
+  $('cloud-create').hidden=!!L;$('cloud-parent').hidden=!L;$('cloud-signin').textContent=L?.out?'כניסה מחדש':'כבר יש לי משתמש';
+  $('cloud-create').onclick=()=>{sound.click();cloudOpen('gate',{for:'create'});};$('cloud-parent').onclick=()=>{sound.click();cloudOpen('gate',{for:'rights'});};
+  $('cloud-signin').onclick=()=>{sound.click();cloudOpen('name',{for:'signin',name:L?.out?L.name:''});};
+  for(const pl of players.players){const card=document.querySelector(`[data-player="${pl.id}"]`)?.parentElement;if(card&&linkOf(pl.id)&&!card.querySelector('.cloud-tag'))card.insertAdjacentHTML('beforeend',`<span class="cloud-tag" title="משתמש מקוון" aria-hidden="true">${icon('cloud')}</span>`);}
+}
+// ---- the window, a page at a time: the parent's check, the nickname, the pictures, waiting, done or what went wrong, and the rights.
+// C is the window's state while it is open: the page, what it is for, the nickname, the pictures tapped (in memory only, gone when it closes).
+const CLOUD_EXPLAIN='<p><b>מה נשמר באינטרנט:</b> כינוי (לא שם מלא), הפרצוף שנבחר מהיצורים, ההתקדמות במשחק וזמן ההסכמה הזו.</p><p><b>מה לא:</b> מייל, טלפון, כתובת, גיל, תמונות, קול או מיקום. בלי פרסומות, בלי מעקב ובלי שיתוף עם אף אחד.</p>'+
+  '<p><b>למה ואיפה:</b> כדי שההתקדמות תחזור בכל טלפון. אצל Google Firebase, באירופה.</p><p><b>תמיד אפשר</b> לראות את המידע, להחליף את התמונות ולמחוק את המשתמש: ״מי משחק?״ ← ״להורים״.</p>';
+const CLOUD_AGREE='אני הורה/אפוטרופוס של הילד/ה ומסכים/ה ליצירת המשתמש ולשמירת המידע כמתואר';
+function cloudOpen(page,opts={}){if(!api)return;C={...opts,page,picks:[],typed:'',msg:''};cloudPage();const d=$('cloud-dialog');if(!d.open)d.showModal();}
+const cloudClose=()=>$('cloud-dialog').close(),cloudGo=(page,more={})=>{Object.assign(C,{page,msg:'',...more});cloudPage();};
+const cloudBusy=text=>cloudGo('busy',{text}),cloudDone=(title,html,mark='cloud-ok')=>cloudGo('done',{title,html,mark});
+const picHTML=picks=>picks.map(i=>{const p=cloud.PICTURES[i];return `<span class="cloud-shown" style="--pc:${p.color}" title="${p.name}">${icon(p.icon)}</span>`;}).join('');
+function cloudPage(){
+  const P=C.page,primary=(text,cls='')=>`<button type="button" class="button primary${cls}" id="cloud-go">${text}</button>`,second=(text,id='cloud-back')=>`<button type="button" class="button secondary" id="${id}">${text}</button>`;
+  const status=`<p class="cloud-status" id="cloud-status" role="status">${esc(C.msg||'')}</p>`,tap=(id,fn)=>{const el=$(id);if(el)el.onclick=()=>{sound.click();fn(el);};};
+  const show=(title,head,body,foot)=>{$('cloud-dialog').dataset.page=P;$('cloud-title').textContent=title;$('cloud-head').innerHTML=head||'';$('cloud-body').innerHTML=body||'';$('cloud-foot').innerHTML=foot||'';$('cloud-foot').hidden=!foot;};
+  const L=linkOf(players.active);
+  if(P==='gate'){const create=C.for==='create';C.q??=cloud.adultQuestion();
+    show('להורים',`<span class="cloud-q">כמה זה <b dir="ltr">${C.q.a} × ${C.q.b}</b>?</span><output class="cloud-answer" id="cloud-answer" dir="ltr"></output>`,
+      `<div class="cloud-gate"><div class="cloud-explain ph-scroll"><a class="cloud-privacy" href="./privacy.html" target="_blank" rel="noopener">מדיניות הפרטיות</a>${create?CLOUD_EXPLAIN:'<p>כאן ההורים רואים את המידע שנשמר באינטרנט, מחליפים את סיסמת התמונות או מוחקים את המשתמש.</p>'}</div>`+
+      `<div class="cloud-keys" role="group" aria-label="ספרות">${[1,2,3,4,5,6,7,8,9,0].map(n=>`<button type="button" class="cloud-key" data-key="${n}">${n}</button>`).join('')}<button type="button" class="cloud-key" data-key="x" aria-label="מחיקה">${icon('backspace')}</button></div></div>`,
+      (create?`<label class="cloud-agree"><input type="checkbox" id="cloud-agree"${C.agree?' checked':''}><span>${CLOUD_AGREE}</span></label>`:status)+primary('ממשיכים'));
+    const ready=()=>{$('cloud-answer').textContent=C.typed;$('cloud-go').disabled=!C.typed||create&&!C.agree;};ready();
+    document.querySelectorAll('#cloud-body [data-key]').forEach(el=>el.onclick=()=>{sound.click();const k=el.dataset.key;C.typed=k==='x'?C.typed.slice(0,-1):(C.typed+k).slice(0,3);ready();});
+    if(create)$('cloud-agree').onchange=e=>{C.agree=e.target.checked;ready();};
+    // A wrong answer gets a new sum; a right one records the consent now (create) or opens the rights.
+    tap('cloud-go',()=>{if(+C.typed!==C.q.answer){C.q=cloud.adultQuestion();C.typed='';cloudPage();wiggle($('cloud-head'));return;}C.q=null;if(create){C.consent=cloud.consentRecord();cloudGo('name');}else cloudGo('rights');});return;}
+  if(P==='name'){const create=C.for==='create';
+    show(create?'יצירת משתמש':'כניסה למשתמש','',`<form class="cloud-name" id="cloud-name-form" autocomplete="off"><input id="cloud-name" maxlength="12" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" placeholder="כינוי" aria-label="כינוי" value="${esc(C.name||'')}"><button class="button primary" id="cloud-name-go">ממשיכים</button></form><p class="cloud-hint">כינוי — לא שם מלא. 2 עד 12 אותיות או ספרות, בלי טלפון ובלי מייל.</p>${status}`,'');
+    $('cloud-name-form').onsubmit=e=>{e.preventDefault();const n=$('cloud-name').value,why=cloud.nameProblem(n);if(why){C.msg=cloud.NAME_WORDS[why];$('cloud-status').textContent=C.msg;wiggle($('cloud-name'));return;}
+      sound.click();C.name=cloud.showName(n);if(create&&C.first)return cloudCreate();cloudGo('pics',{round:create?'new':'signin',picks:[]});};
+    setTimeout(()=>$('cloud-name')?.focus({preventScroll:true}),60);return;}
+  if(P==='pics'){const R=C.round,n=C.picks.length;
+    show({new:'בוחרים 4 תמונות',again:'עוד פעם, אותן תמונות',signin:'התמונות של '+C.name,old:'התמונות של היום',fresh:'4 תמונות חדשות',fresh2:'עוד פעם, החדשות',del:'התמונות של '+C.name}[R],
+      `<span class="cloud-slots" role="img" aria-label="${n} מתוך 4">${[0,1,2,3].map(i=>{const p=cloud.PICTURES[C.picks[i]];return p?`<span class="cloud-slot on${i===n-1?' last':''}" style="--pc:${p.color}">${icon(p.icon)}</span>`:'<span class="cloud-slot"></span>';}).join('')}</span>`,
+      `<div class="cloud-pad" role="group" aria-label="תמונות">${cloud.PICTURES.map((p,i)=>`<button type="button" class="cloud-pic" data-pic="${i}" style="--pc:${p.color}" aria-label="${p.name}">${icon(p.icon)}</button>`).join('')}</div>`,
+      status+`<button type="button" class="button secondary cloud-small" id="pic-undo" aria-label="מחיקת התמונה האחרונה"${n?'':' disabled'}>${icon('undo')}</button><button type="button" class="button secondary cloud-small" id="pic-again"${n?'':' disabled'}>מההתחלה</button>`+
+      primary({new:'ממשיכים',again:'יוצרים משתמש',signin:'נכנסים',old:'ממשיכים',fresh:'ממשיכים',fresh2:'מחליפים',del:'מוחקים'}[R]));
+    $('cloud-go').disabled=n<cloud.PICS;
+    document.querySelectorAll('#cloud-body [data-pic]').forEach(el=>el.onclick=()=>{if(C.picks.length>=cloud.PICS){wiggle($('cloud-head'));return;}sound.click();C.picks.push(+el.dataset.pic);C.msg='';cloudPage();});
+    tap('pic-undo',()=>{C.picks.pop();cloudPage();});tap('pic-again',()=>{C.picks=[];cloudPage();});tap('cloud-go',cloudPicked);return;}
+  if(P==='busy'){show($('cloud-title').textContent,'',`<div class="cloud-busy" role="status"><span class="cloud-spin" aria-hidden="true"></span><b>${esc(C.text)}</b></div>`,'');return;}
+  if(P==='done'){show(C.title,'',`<div class="cloud-done">${icon(C.mark)}<div>${C.html}</div></div>`,primary('ממשיכים'));tap('cloud-go',cloudClose);return;}
+  if(P==='fail'){const again=typeof C.retry==='function';show($('cloud-title').textContent||'משתמש מקוון','',`<div class="cloud-done fail">${icon(['offline','away'].includes(C.kind)?'cloud-off':'cloud')}<div><p>${esc(cloud.CLOUD_WORDS[C.kind]||cloud.CLOUD_WORDS.other)}</p></div></div>`,
+      again?second('סגירה')+primary('מנסים שוב'):primary('סגירה'));tap('cloud-back',cloudClose);tap('cloud-go',()=>again?C.retry():cloudClose());return;}
+  // The rights, behind the same check: see (and download) what is kept, new pictures, leave on this phone, delete for good.
+  if(!L){cloudClose();return;}
+  if(P==='rights'){show('להורים · '+L.name,'',`<div class="cloud-rights">${[['cloud-see','eye','הצגת המידע','מה נשמר, וגם להורדה'],['cloud-repics','key','שינוי סיסמת התמונות','קודם התמונות של היום'],['cloud-leave','out','יציאה בטלפון הזה','ההתקדמות נשארת'],['cloud-delete','trash','מחיקת המשתמש','מהאינטרנט, לתמיד']]
+      .map(([id,ic,b,sm])=>`<button type="button" class="cloud-right${id==='cloud-delete'?' danger':''}" id="${id}">${icon(ic)}<b>${b}</b><small>${sm}</small></button>`).join('')}</div>${L.deleting?'<p class="cloud-hint">המחיקה הקודמת לא הסתיימה. לוחצים שוב על ״מחיקת המשתמש״.</p>':''}`,
+      status+'<a class="text-button cloud-privacy" href="./privacy.html" target="_blank" rel="noopener">מדיניות הפרטיות</a>'+primary('סיימנו'));
+    tap('cloud-see',cloudSee);tap('cloud-repics',()=>cloudGo('pics',{round:'old',name:L.name,picks:[],first:null}));tap('cloud-leave',()=>cloudGo('leave'));tap('cloud-delete',()=>cloudGo('delete1'));tap('cloud-go',cloudClose);return;}
+  if(P==='data'){show('המידע שנשמר','',`<pre class="cloud-json" dir="ltr" tabindex="0">${esc(JSON.stringify(C.data,null,2))}</pre>`,second('חזרה')+primary(icon('download')+'הורדה'));
+    tap('cloud-back',()=>cloudGo('rights'));tap('cloud-go',()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(C.data,null,2)],{type:'application/json'}));a.download='creature-league-data.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);});return;}
+  // Deleting asks twice.
+  if(P==='delete1'||P==='delete2'){const first=P==='delete1';show(first?'מחיקת המשתמש':'בטוחים?','',`<div class="cloud-done warn">${icon('trash')}<div>${first?`<p>המשתמש <b>${esc(L.name)}</b> וכל מה שנשמר בו באינטרנט יימחקו.</p><p>ההתקדמות בטלפון הזה נשארת בו.</p>`:'<p>אי אפשר להחזיר משתמש שנמחק.</p>'}</div></div>`,
+      second('ביטול')+primary(first?'מוחקים':'כן, מוחקים לתמיד',' danger'));tap('cloud-back',()=>cloudGo('rights'));tap('cloud-go',()=>first?cloudGo('delete2'):(C.tryPicks=null,cloudDelete()));return;}
+  if(P==='leave'){show('יציאה בטלפון הזה','',`<div class="cloud-done">${icon('out')}<div><p>יוצאים מהמשתמש <b>${esc(L.name)}</b> בטלפון הזה.</p><p>ההתקדמות נשארת גם כאן וגם באינטרנט, ונכנסים שוב עם הכינוי והתמונות.</p></div></div>`,second('ביטול')+primary('יוצאים'));
+    tap('cloud-back',()=>cloudGo('rights'));tap('cloud-go',cloudLeave);}
+}
+// Four pictures tapped: the first round of new ones asks for them again; the old ones come before the new; then the call itself.
+function cloudPicked(){const R=C.round,picks=[...C.picks];C.picks=[];C.msg='';
+  if(R==='new'||R==='fresh'){C.first=picks;C.round=R==='new'?'again':'fresh2';return cloudPage();}
+  if(R==='again'||R==='fresh2'){if(picks.join()!==C.first.join()){C.first=null;C.round=R==='again'?'new':'fresh';C.msg='התמונות לא אותו דבר. בוחרים שוב מההתחלה.';return cloudPage();}return R==='again'?cloudCreate():cloudRepics();}
+  if(R==='old'){C.old=picks;if(C.first)return cloudRepics();C.round='fresh';return cloudPage();}
+  C.tryPicks=picks;return R==='del'?cloudDelete():cloudSignIn();
+}
+// What went wrong, where it can be fixed: the pictures again, another nickname, or a page that says it (and may try again).
+function cloudFailed(e,retry,back){const k=cloud.kindOf(e);
+  if(k==='wrong'&&back)return cloudGo('pics',{round:back,picks:[],msg:cloud.CLOUD_WORDS.wrong});if(k==='taken')return cloudGo('name',{msg:cloud.CLOUD_WORDS.taken});
+  cloudGo('fail',{kind:k,retry:['offline','away','other'].includes(k)?retry:null});}
+// Creating: the consent recorded at the check, the nickname, the pictures; the player playing is linked and its save goes up with it.
+async function cloudCreate(){const p=activePlayer(),id=p.id,name=C.name,picks=C.first;if(linkOf(id))return cloudClose();cloudBusy('יוצרים את המשתמש…');
+  try{const r=await cloud.createUser(api,{name,picks,face:faceOf(p),save:JSON.stringify(profile),consent:C.consent});passes.set(r.link.uid,r.session);setLink(id,r.link);if(!p.name){p.name=name;savePlayers();}updateHeader();
+    cloudDone('המשתמש מוכן!',`<p>מעכשיו ההתקדמות של <b>${esc(name)}</b> נשמרת גם באינטרנט, ונכנסים אליה מכל טלפון עם הכינוי וארבע התמונות.</p><p class="cloud-hint">להורים: כדאי לזכור את הכינוי ואת סדר התמונות.</p><span class="cloud-pics">${picHTML(picks)}</span>`);}
+  catch(e){cloudFailed(e,cloudCreate);}}
+// Signing in: a player already linked to this user takes the newer copy (the other one waits in the backup); otherwise the online copy
+// comes into a new player, or into the one playing when it was never played. Another child's save on this phone is never overwritten.
+async function cloudSignIn(){const name=C.name,picks=C.tryPicks;cloudBusy('בודקים…');let r;
+  try{r=await cloud.signInUser(api,{name,picks});}catch(e){return cloudFailed(e,cloudSignIn,'signin');}
+  const {session:s,doc}=r,slot=cloud.chooseSlot({players:players.players,active:players.active,linked:Object.fromEntries(players.players.map(p=>[p.id,linkOf(p.id)?.uid])),fresh:freshSave(profile),uid:s.uid,max:MAX_PLAYERS});
+  passes.set(s.uid,s);if(!slot)return cloudFailed(new cloud.CloudError('full'));const mine=slot.mine?findPlayer(slot.id):null;
+  if(mine){const L=linkOf(mine.id),save=saveOf(mine.id),what=cloud.decide({save,changedAt:L.changedAt,fresh:freshSave(profileOf(mine.id))},doc,L);L.refreshToken=s.refreshToken;delete L.out;
+    if(what==='down'){if(cloud.saveHash(save)!==L.sent)cloud.keepBackup(playerStorage(mine.id),L.uid,save);try{playerStorage(mine.id).setItem(sim.STORAGE_KEY,doc.save);}catch{}Object.assign(L,{seen:doc.updateTime,sent:cloud.saveHash(doc.save),changedAt:doc.updatedAt});}
+    else if(what==='same')Object.assign(L,{seen:doc.updateTime,sent:cloud.saveHash(save)});setLink(mine.id,L);switchPlayer(mine.id);}
+  else{const id=slot.id,act=findPlayer(id),face=FACES.includes(doc.face)?doc.face:null;
+    if(slot.reuse){act.name||=doc.name;act.face||=face;}else players.players.push({id,name:doc.name,face});
+    try{playerStorage(id).setItem(sim.STORAGE_KEY,doc.save);}catch{}setLink(id,{uid:s.uid,refreshToken:s.refreshToken,name:doc.name,seen:doc.updateTime,sent:cloud.saveHash(doc.save),changedAt:doc.updatedAt});savePlayers();switchPlayer(id);}
+  cloudDone('ברוכים השבים, '+doc.name+'!',`<p>ההתקדמות של <b>${esc(doc.name)}</b> חזרה לטלפון הזה, ומעכשיו נשמרת ממנו גם באינטרנט.</p>`);}
+async function cloudSee(){const id=players.active,L=linkOf(id);cloudBusy('אוספים את המידע…');
+  try{C.data=await cloud.userData(api,{link:L,cache:passes});}catch(e){if(cloud.kindOf(e)==='out'){L.out=true;setLink(id,L);}return cloudFailed(e,cloudSee);}cloudGo('data');}
+async function cloudRepics(){const id=players.active,L=linkOf(id),fresh=C.first;cloudBusy('מחליפים את התמונות…');
+  try{const s=await cloud.changePictures(api,{name:L.name,oldPicks:C.old,newPicks:fresh});L.refreshToken=s.refreshToken;delete L.out;setLink(id,L);passes.set(L.uid,s);}catch(e){return cloudFailed(e,cloudRepics,'old');}
+  cloudDone('התמונות הוחלפו',`<p>מעכשיו נכנסים ל־<b>${esc(L.name)}</b> עם התמונות החדשות. בטלפון אחר נכנסים שוב.</p><span class="cloud-pics">${picHTML(fresh)}</span>`,'key');}
+// Deleting: the document, then the account (Firebase may first want the pictures); then the link goes, and the save stays on this phone.
+async function cloudDelete(){const id=players.active,L=linkOf(id),picks=C.tryPicks||null;if(!L)return cloudClose();C.name=L.name;
+  // Firebase lets an account go only soon after a sign-in: without one in the last minutes, the pictures come first (before anything is deleted).
+  if(!picks&&!cloud.signedInLately(passes,L.uid))return cloudGo('pics',{round:'del',picks:[],msg:'כדי למחוק, בוחרים את התמונות של המשתמש.'});cloudBusy('מוחקים…');
+  try{await cloud.deleteUser(api,{link:L,cache:passes,picks,gone:()=>{L.deleting=true;setLink(id,L);}});}
+  catch(e){if(['old','out'].includes(cloud.kindOf(e))&&!picks)return cloudGo('pics',{round:'del',picks:[],msg:'כדי למחוק, בוחרים את התמונות של המשתמש.'});return cloudFailed(e,cloudDelete,'del');}
+  setLink(id,null);try{playerStorage(id).removeItem(cloud.BACKUP_KEY);}catch{}passes.delete(L.uid);updateHeader();
+  cloudDone('המשתמש נמחק',`<p>המשתמש <b>${esc(L.name)}</b> וכל מה שנשמר בו באינטרנט נמחקו.</p><p>ההתקדמות נשארת בטלפון הזה.</p>`,'trash');}
+// Leaving on this phone: the last change goes up first when it can; the link goes, the save stays.
+async function cloudLeave(){const id=players.active,L=linkOf(id);cloudBusy('שומרים לפני היציאה…');try{await cloudSync.now();}catch{}setLink(id,null);if(L)passes.delete(L.uid);updateHeader();
+  cloudDone('יצאנו מהמשתמש',`<p>ההתקדמות נשארת בטלפון הזה, וגם באינטרנט במשתמש <b>${esc(L?.name||'')}</b>.</p>`,'out');}
+// Started once the game is up: old backups go, the one playing looks online, and the triggers for the rounds.
+function cloudStart(){
+  if(!api)return;for(const p of players.players)cloud.pruneBackup(playerStorage(p.id));
+  $('cloud-dialog').addEventListener('close',()=>{C={};if(screen==='players')renderPlayers();cloudMarks();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){cloudKeep=true;cloudSync.now().finally(()=>{cloudKeep=false;});}else cloudSoon(true);});
+  window.addEventListener('online',()=>cloudSoon(true));setInterval(()=>{if(!document.hidden)cloudSoon();},180e3);cloudMarks();cloudSoon(true,2500);
+}
+// Verification: the online users as the screens show them (never a token), and a round now on a verify save.
+(window.__LEAGUE_FIT__??={}).cloud=()=>({on:!!api,page:$('cloud-dialog').open?C.page||null:null,round:C.round||null,active:players.active,off:cloudOff,fails:cloudSync.fails,
+  players:players.players.map(p=>{const L=linkOf(p.id);return {id:p.id,name:playerName(p),linked:!!L,nick:L?.name||null,mark:cloudMarkOf(p.id),out:!!L?.out,deleting:!!L?.deleting};})});
+window.__LEAGUE_FIT__.cloudSync=check=>!!storagePrefix&&!!api&&(cloudCheck||=!!check,cloudSync.now().then(()=>true));
 // ------------------------------------------------------------------ friend battle: two players, one screen
 // Best of three. Whoever loses a round gets an extra heart in the next one, so nobody falls far behind.
 const VS_MODES=[{id:'',name:'קרב',icon:'bolt',text:'מי שמפיל את השני'},{id:'ball',name:'כדור הגאות',icon:'spiral',text:'ראשון ל־'+BALL_GOALS+' גולים'},{id:'wind',name:'תופסים את הרוח',icon:'swirl',text:WIND_TARGET+' נוצות, '+WIND_HOLD+' שניות'},{id:'lava',name:'טבעת הלבה',icon:'flame',text:'שורדים בלבה'}];
@@ -1942,7 +2109,7 @@ function diagFrame(ts,work){diag.n++;diag.work+=work;const gap=diag.last?ts-diag
   diag.el.textContent=diag.small?`${fps}fps`:`${fps}fps worst ${Math.round(diag.worst)}ms work ${avg}ms long ${diag.long} | ${screen} ${m}\nsw ${diag.sw} files ${diag.files} | audio ${sound?.ctx?.state||'none'} | ${innerWidth}x${innerHeight}@${devicePixelRatio}${navigator.standalone?' app':''}${err?'\nERR '+err:''}`;
   diag.n=0;diag.work=0;diag.worst=0;}
 async function boot(){
-  $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);refreshTodayGoals();buildRoster();renderStoryPanel();bindControls();updateHeader();
+  $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);refreshTodayGoals();buildRoster();renderStoryPanel();bindControls();updateHeader();cloudStart();
     {const q=new URLSearchParams(location.search),code=codeFromText(q.get('join'));if(code){q.delete('join');history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:''));showView('online');joinRoom(code);}else showView(players.players.length>1?'players':'lobby');}$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);
     if('serviceWorker' in navigator&&location.protocol!=='file:')setTimeout(()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}),navigator.serviceWorker.controller?0:12000);
   }catch(error){console.error(error);$('loading-text').textContent='חלק מהציורים לא נטענו. בדקו שהמשחק נפתח דרך קובץ ההפעלה ונסו שוב.';$('load-retry').hidden=false;}

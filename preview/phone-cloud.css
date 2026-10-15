@@ -1,0 +1,133 @@
+/* Online users (cloud.js): the row under the players, the cloud mark beside a face, the cloud on a linked player's card, and the online
+   user's window. On a sideways phone the window is a fitted window (dialog.ph-dlg in phone-shell.css: head, body, foot, the X in the house's
+   corner); its own parts are drawn here for every screen, and what changes on the phone sits in the phone query at the end. Loaded last. */
+.cloud-mark{display:inline-grid;place-items:center;flex:none;width:22px;height:22px;border-radius:50%;background:#fff6e0;color:#2e7d4f;box-shadow:0 0 0 1.5px var(--gold,#b98f3e)}
+.cloud-mark svg{width:17px;height:17px;stroke-width:2.2}
+.cloud-mark[data-cloud="up"]{color:#a8700c}.cloud-mark[data-cloud="off"]{color:#8d7553}
+.cloud-mark[hidden]{display:none}
+/* Never in a battle. */
+body.battle-active .cloud-mark{display:none!important}
+
+.cloud-row{display:flex;align-items:center;gap:10px;max-width:980px;margin:18px auto 0;padding:8px 12px;border-radius:14px;background:var(--grain),var(--parchment);color:var(--ink);box-shadow:var(--frame),0 8px 16px #0006}
+.cloud-row[hidden],#player-form:not([hidden])~.cloud-row{display:none}
+.cloud-row-mark{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:50%;background:#fff6e0;color:var(--sea,#1f5a72);box-shadow:0 0 0 2px #c9a35d}
+.cloud-row-mark svg{width:28px;height:28px;stroke-width:2}
+.cloud-row[data-cloud="ok"] .cloud-row-mark{color:#2e7d4f}.cloud-row[data-cloud="up"] .cloud-row-mark{color:#a8700c}.cloud-row[data-cloud="off"] .cloud-row-mark{color:#8d7553}
+.cloud-row-copy{display:grid;flex:1 1 auto;min-width:0;line-height:1.25}
+.cloud-row-copy b{font-size:16px}.cloud-row-copy small{font-size:13px;color:var(--ink-soft,#5d4831)}
+.cloud-row-actions{display:flex;flex:none;gap:8px}
+.cloud-row-actions .button{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin:0;padding:4px 14px;white-space:nowrap}
+.cloud-row-actions .button svg{width:20px;height:20px}
+.cloud-tag{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#fff6e0;color:var(--sea,#1f5a72);box-shadow:0 0 0 2px #c9a35d;pointer-events:none}
+.cloud-tag svg{width:19px;height:19px;stroke-width:2.2}
+
+/* Help says where the privacy notice is, on every screen. */
+#help-dialog .help-privacy{margin:8px 0 6px;font-size:13px}
+#help-dialog .help-privacy a,.cloud-privacy{color:var(--brick,#b5402a);font-weight:700}
+/* A link is a thumb's size too. */
+.cloud-privacy{display:inline-flex;align-items:center;min-height:44px;padding-inline:4px}
+
+/* ---- the window */
+.cloud-dialog{width:min(700px,calc(100vw - 30px));max-width:none}
+.cloud-dialog .dlg-head{display:flex;align-items:center;flex-wrap:wrap;gap:10px;min-height:44px;padding-inline-end:44px;margin-bottom:10px}
+.cloud-dialog .dlg-head h2{margin:0;font-size:26px;min-width:0}
+.cloud-head{display:flex;align-items:center;gap:10px;margin-inline-start:auto}
+.cloud-head:empty{display:none}
+.cloud-dialog .dlg-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px}
+.cloud-dialog .dlg-foot[hidden]{display:none}
+.cloud-dialog .button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:48px;margin:0;padding:6px 18px;white-space:nowrap}
+.cloud-dialog .button svg{width:20px;height:20px}
+.cloud-dialog .button.cloud-small{min-width:48px;padding:6px 12px}
+.cloud-dialog .button.primary.danger{background:linear-gradient(180deg,#a8321f,#7a1d10)}
+.cloud-dialog .button:disabled{cursor:default;opacity:.5}
+.cloud-dialog .cloud-status{flex:1 1 auto;min-width:0;margin:0;font-size:14px;font-weight:700;line-height:1.3;color:var(--brick,#b5402a)!important}
+.cloud-dialog .cloud-status:empty{visibility:hidden}
+.cloud-hint{margin:6px 0 0;font-size:13px;line-height:1.4}
+
+/* The parent's check: a sum and its answer in the head, what is kept beside the digits, the consent beside the big button. */
+.cloud-q{font-size:18px;font-weight:700;white-space:nowrap}.cloud-q b{font-size:22px;color:var(--brick,#b5402a)}
+.cloud-answer{display:inline-grid;place-items:center;min-width:76px;height:40px;padding:0 10px;border-radius:10px;border:2px solid #c9a35d;background:#fffaf0;font:900 24px/1 var(--text,sans-serif);color:var(--ink)}
+.cloud-gate{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start}
+.cloud-explain{max-height:260px;overflow:auto;font-size:14px;line-height:1.45}
+.cloud-explain p{margin:0 0 6px}
+.cloud-keys{display:grid;grid-template-columns:repeat(6,minmax(44px,1fr));gap:6px}
+.cloud-key{display:grid;place-items:center;min-height:48px;border-radius:10px;background:linear-gradient(180deg,#fffaf0,#efdfb8);color:var(--ink);font:900 22px/1 var(--text,sans-serif);box-shadow:inset 0 -3px 0 #0000001a,0 0 0 2px #c9a35d}
+.cloud-key:active{transform:translateY(1px)}
+.cloud-key svg{width:24px;height:24px}
+.cloud-agree{display:flex;flex:1 1 auto;align-items:center;gap:8px;min-width:0;min-height:44px;font-size:13px;line-height:1.3;cursor:pointer}
+.cloud-agree input{flex:none;width:26px;height:26px;margin:0;accent-color:var(--brick,#b5402a)}
+
+/* The nickname: the field and its button on one row (above a phone's keyboard). */
+.cloud-name{display:flex;align-items:stretch;gap:8px}
+.cloud-name input{flex:1 1 auto;min-width:0;min-height:48px;padding:2px 12px;border-radius:12px;border:2px solid #c9a35d;background:#fffaf0;color:var(--ink);font:700 22px var(--text,sans-serif)}
+.cloud-name .button{min-height:48px}
+
+/* The picture password: four places in the head, twelve big pictures in two rows. */
+.cloud-slots{display:flex;gap:6px}
+.cloud-slot{display:grid;place-items:center;width:40px;height:40px;border-radius:10px;border:2px dashed #c9a35d;background:#fffaf080}
+.cloud-slot.on{border:2px solid var(--pc);background:#fff;color:var(--pc)}
+.cloud-slot svg,.cloud-shown svg{width:28px;height:28px;stroke-width:2.4;fill:color-mix(in srgb,var(--pc) 25%,transparent)}
+.cloud-slot.last{animation:cloud-pop .28s ease-out}
+@keyframes cloud-pop{50%{transform:scale(1.2)}}
+.cloud-pad{display:grid;grid-template-columns:repeat(6,minmax(44px,1fr));gap:8px}
+.cloud-pic{display:grid;place-items:center;min-height:68px;border-radius:14px;background:#fff;color:var(--pc);box-shadow:inset 0 -3px 0 #0000001a,0 0 0 2px #c9a35d,0 0 0 4px color-mix(in srgb,var(--pc) 35%,transparent)}
+.cloud-pic svg{width:42px;height:42px;stroke-width:2.2;fill:color-mix(in srgb,var(--pc) 25%,transparent)}
+.cloud-pic:active{transform:scale(.94)}
+.cloud-pics{display:flex;gap:6px;margin-top:6px}
+.cloud-shown{display:grid;place-items:center;width:44px;height:44px;border-radius:10px;background:#fff;color:var(--pc);box-shadow:0 0 0 2px var(--pc)}
+
+/* Waiting, done and what went wrong: a big picture and a line or two. */
+.cloud-busy{display:flex;align-items:center;justify-content:center;gap:12px;min-height:96px;font-size:20px}
+.cloud-spin{width:30px;height:30px;border-radius:50%;border:4px solid #c9a35d55;border-top-color:var(--brick,#b5402a);animation:cloud-spin .8s linear infinite}
+@keyframes cloud-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.cloud-spin{animation-duration:2.4s}.cloud-slot.last{animation:none}}
+.cloud-done{display:flex;align-items:center;gap:16px}
+.cloud-done>svg{width:64px;height:64px;flex:none;color:#2e7d4f;stroke-width:1.6}
+.cloud-done.fail>svg{color:#8d7553}.cloud-done.warn>svg{color:var(--brick,#b5402a)}
+.cloud-done p{margin:0 0 6px;font-size:16px;line-height:1.4}
+
+/* The rights: four tiles, the delete one in red; the data as it is kept. */
+.cloud-rights{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.cloud-right{display:grid;justify-items:center;align-content:center;gap:3px;min-height:104px;padding:8px 6px;border-radius:14px;background:linear-gradient(180deg,#fffaf0,#efdfb8);color:var(--ink);text-align:center;box-shadow:inset 0 -3px 0 #0000001a,0 0 0 2px #c9a35d}
+.cloud-right svg{width:32px;height:32px;color:var(--sea,#1f5a72)}
+.cloud-right b{font-size:15px;line-height:1.2}.cloud-right small{font-size:12px;line-height:1.2;color:var(--ink-soft,#5d4831)}
+.cloud-right.danger svg,.cloud-right.danger b{color:var(--brick,#b5402a)}
+.cloud-json{max-height:50vh;margin:0;padding:10px;overflow:auto;border-radius:10px;background:#fffaf0;color:var(--ink);font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all;text-align:left}
+
+@media (orientation:landscape) and (max-height:500px) and (pointer:coarse){
+  /* The bar's face: the mark sits after the name. */
+  #home-cloud,#chip-cloud{width:20px;height:20px}
+  /* Who plays: the faces a little smaller, so the online row fits under them. */
+  #players.with-cloud .player-pick canvas{width:min(96px,calc(100cqh - 160px))}
+  #players .cloud-row{flex:none;margin:0;padding:4px 8px;gap:8px;max-width:none}
+  #players .cloud-row-mark{width:36px;height:36px}#players .cloud-row-mark svg{width:24px;height:24px}
+  #players .cloud-row-copy b{font-size:15px}
+  #players .cloud-row-copy small{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #players .cloud-row-actions .button{font-size:15px;padding:2px 12px}
+
+  /* The window: the head with the X's corner kept clear by the shell, a body that never scrolls except the explanation and the data. */
+  #cloud-dialog{--dlg-cap:820px}
+  #cloud-dialog .dlg-head{flex-wrap:nowrap;margin:0;padding-inline-end:0}
+  #cloud-dialog .dlg-head h2{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cloud-dialog .cloud-q{font-size:15px}#cloud-dialog .cloud-q b{font-size:19px}
+  #cloud-dialog .cloud-answer{height:36px;min-width:64px;font-size:21px}
+  #cloud-dialog .dlg-foot{margin:0}
+  #cloud-dialog .cloud-status{font-size:13px}
+  #cloud-dialog .button{min-height:44px;padding:4px 14px;font-size:16px}
+  #cloud-dialog .dlg-foot .button.primary{min-height:48px;padding:4px 18px;font-size:18px}
+  #cloud-dialog[data-page="gate"] .dlg-body,#cloud-dialog[data-page="pics"] .dlg-body,#cloud-dialog[data-page="rights"] .dlg-body{overflow:hidden}
+  #cloud-dialog .cloud-gate{height:100%;gap:10px}
+  #cloud-dialog .cloud-explain{height:100%;max-height:none;padding-block:2px 8px;font-size:13px;line-height:1.4}
+  #cloud-dialog .cloud-keys{gap:5px}#cloud-dialog .cloud-key{min-height:44px;font-size:20px}
+  #cloud-dialog .cloud-agree{font-size:12px;line-height:1.25}
+  #cloud-dialog .cloud-slots{gap:4px}#cloud-dialog .cloud-slot{width:36px;height:36px}#cloud-dialog .cloud-slot svg{width:24px;height:24px}
+  #cloud-dialog .cloud-pad{height:100%;grid-template-rows:repeat(2,minmax(44px,1fr));gap:6px;padding:3px 4px}
+  #cloud-dialog .cloud-pic{min-height:44px}#cloud-dialog .cloud-pic svg{width:min(42px,70%);height:min(42px,70%)}
+  #cloud-dialog .cloud-rights{height:100%;gap:8px;padding:3px 4px}
+  #cloud-dialog .cloud-right{min-height:0}
+  #cloud-dialog .cloud-json{max-height:none}
+  #cloud-dialog .cloud-busy{min-height:72px}
+  #cloud-dialog .cloud-done>svg{width:48px;height:48px}
+  #cloud-dialog .cloud-done p{font-size:15px}
+  #cloud-dialog .cloud-shown{width:40px;height:40px}
+}
