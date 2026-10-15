@@ -1825,6 +1825,8 @@ try{localStorage.removeItem('creature-league.portrait-ok');}catch{}
 // Android: full screen and the sideways lock are a bonus. Every ask is the same, and when the phone drops full screen (an app switch, a share, a back swipe)
 // the next tap asks again, unless the child left it with the bar's button. An iPhone has neither, so the button is not shown there (html.can-fs).
 const canFS=!!document.documentElement.requestFullscreen,COARSE=matchMedia('(pointer:coarse)');let fsOff=false,fsArmed=false;document.documentElement.classList.toggle('can-fs',canFS);
+// An iPhone in Safari cannot hide the address bar; added to the home screen the game opens with none. Its button shows how (html.ios-web).
+const IOS_WEB=!canFS&&/iP(hone|od|ad)/.test(navigator.userAgent)&&navigator.standalone!==true&&!matchMedia('(display-mode: standalone)').matches;document.documentElement.classList.toggle('ios-web',IOS_WEB);
 function fullOn(force=false){if(!canFS||document.fullscreenElement||!force&&(fsOff||!COARSE.matches))return;document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>window.screen.orientation?.lock?.('landscape')).catch(()=>{});}
 function armFull(){if(!canFS||fsArmed||fsOff||!COARSE.matches)return;fsArmed=true;document.addEventListener('click',()=>{fsArmed=false;fullOn();},{once:true,capture:true});}
 // Going full screen puts the page above every window already open (the top layer keeps its order): those windows are lifted back on top, quietly.
@@ -1851,7 +1853,7 @@ function bindControls(){
   $('reveal-dialog').addEventListener('close',()=>{if(screen==='story'&&storyEvent)renderStory();});
   // Phones show the whole arena, still: there is no close camera to choose (wave 3).
   window.addEventListener('resize',()=>{if(screen==='battle')requestAnimationFrame(measureHud);});
-  $('fullscreen').onclick=()=>{sound.click();if(document.fullscreenElement){fsOff=true;document.exitFullscreen?.().catch(()=>{});}else{fsOff=false;fullOn(true);}};
+  $('fullscreen').onclick=()=>{sound.click();if(IOS_WEB){$('install-dialog').showModal();return;}if(document.fullscreenElement){fsOff=true;document.exitFullscreen?.().catch(()=>{});}else{fsOff=false;fullOn(true);}};
   $('help-open').onclick=openHelp;if($('help-inline'))$('help-inline').onclick=openHelp;document.querySelectorAll('[data-close]').forEach(el=>el.onclick=()=>$(el.dataset.close).close());
   $('pause-button').onclick=pauseBattle;$('resume-button').onclick=resumeBattle;$('leave-button').onclick=leaveBattle;
   $('pause-dialog').addEventListener('cancel',e=>{e.preventDefault();resumeBattle();});$('result-dialog').addEventListener('cancel',e=>{e.preventDefault();leaveBattle();});

@@ -26,7 +26,7 @@
   /* No bar in a battle; the full-screen button only where the phone has full screen (Android, never an iPhone). */
   body.battle-active #app>.header{display:none}
   #app>.header #fullscreen{display:none}
-  html.can-fs #app>.header #fullscreen{display:grid}
+  html.can-fs #app>.header #fullscreen,html.ios-web #app>.header #fullscreen{display:grid}
 
   /* A fitted screen: exactly the space under the bar, nothing below it, and the page itself never scrolls (Safari's bars stay still). */
   html:has(.view.ph-fit:not([hidden])),body:has(.view.ph-fit:not([hidden])){height:100%;overflow:hidden;overscroll-behavior:none}
@@ -126,7 +126,14 @@
 /* The word for parents is about phones: a computer does not show it. */
 @media not all and (pointer:coarse){#help-dialog .help-parents{display:none}}
 /* A computer or tablet without the full-screen call never shows its button. */
-html:not(.can-fs) #app>.header #fullscreen{display:none}
+html:not(.can-fs):not(.ios-web) #app>.header #fullscreen{display:none}
+/* An iPhone in Safari: the button shows how to add the game to the home screen, where it opens with no address bar. */
+.install-steps{list-style:none;margin:4px 0 8px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.install-steps li{display:grid;justify-items:center;align-content:start;gap:6px;text-align:center}
+.install-pic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:#5a3b1c14;border:1.5px solid #5a3b1c55}
+.install-pic svg{width:30px;height:30px;color:#3a2614}
+.install-steps b{font-weight:800}.install-pic img{width:44px;height:44px;border-radius:10px}
+.install-steps p{margin:0;font-size:14px;line-height:1.35}
 
 /* GATE: an upright phone sees only the turn card. It covers everything, and the windows under it hide until the phone turns back (a battle pauses). */
 @media (orientation:portrait) and (pointer:coarse) and (max-width:700px){
