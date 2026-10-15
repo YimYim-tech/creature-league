@@ -29,7 +29,7 @@
   html.can-fs #app>.header #fullscreen,html.ios-web #app>.header #fullscreen{display:grid}
 
   /* A fitted screen: exactly the space under the bar, nothing below it, and the page itself never scrolls (Safari's bars stay still). */
-  html:has(.view.ph-fit:not([hidden])),body:has(.view.ph-fit:not([hidden])){height:100%;overflow:hidden;overscroll-behavior:none}
+  html.fit,html.fit body{height:100%;overflow:hidden;overscroll-behavior:none}
   .view.ph-fit{height:var(--content-h);max-width:none;margin:0;padding:6px var(--safe-x) 0;box-sizing:border-box;overflow:hidden;container:content/size}
   .view.ph-fit .back-link{display:none}
 

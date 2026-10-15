@@ -158,7 +158,7 @@ body.battle-active #match-toast{top:8px;right:12px;left:auto;transform:none;max-
 #battle .match-toast .toast-face{display:inline-grid;place-items:center;width:20px;height:20px;margin-inline-end:6px;vertical-align:-5px;border-radius:50%;background:var(--c,#ffd23a);color:#2a1d11;box-shadow:0 0 0 2px #3a1d0f}
 #battle .match-toast .toast-face svg{width:13px;height:13px;stroke-width:2.4}
 /* The lesson on a touch screen has no words: a thumb on the glowing control drags (the stick) or taps (a button). */
-#battle .tut-thumb{position:fixed;z-index:9;width:44px;height:44px;margin:-6px 0 0 -22px;pointer-events:none;color:#fff4dc;filter:drop-shadow(0 2px 0 #3a1d0f) drop-shadow(0 0 5px #ffcf5a);animation:tut-tap 1.1s ease-in-out infinite}
+#battle .tut-thumb{position:fixed;z-index:9;width:44px;height:44px;margin:-6px 0 0 -22px;pointer-events:none;color:#fff4dc;animation:tut-tap 1.1s ease-in-out infinite}
 #battle .tut-thumb[hidden]{display:none}
 #battle .tut-thumb svg{width:44px;height:44px;stroke-width:2.6}
 #battle .tut-thumb[data-on="joystick"]{animation:tut-drag 1.6s ease-in-out infinite}

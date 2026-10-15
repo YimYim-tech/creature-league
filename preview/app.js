@@ -749,7 +749,9 @@ function showTutorial(){if(!tutorial)return;document.querySelectorAll('.tut-glow
   if(tutorial.step>=3){el.hidden=true;tutThumb(null);sound.cheer?.();return;}if(t)$(t).classList.add('tut-glow');
   if(tutorial.touch){el.hidden=true;tutThumb(t);return;}el.hidden=false;el.dataset.step=tutorial.step;$('tut-text').textContent=TUT_TEXT[tutorial.step];}
 // The thumb sits on the control it teaches and moves the way the child should; it steps aside while a thumb is on the stick.
-function tutThumb(id){const th=$('tut-thumb');if(!th)return;th.hidden=!id;if(id){th.dataset.on=id;placeThumb();}}
+function tutThumb(id){const th=$('tut-thumb');if(!th)return;th.hidden=!id;thumbKey='';thumbUntil=clock+1.5;if(id){th.dataset.on=id;placeThumb();}}
+// The HUD asks 20 times a second; the thumb is measured only when its control or the stick's state changes (a layout read is costly on a phone).
+let thumbKey='',thumbUntil=0;function thumbTick(){const th=$('tut-thumb');if(!th||th.hidden)return;const k=th.dataset.on+'|'+$('joystick').classList.contains('floating');if(k!==thumbKey||clock<thumbUntil){thumbKey=k;placeThumb();}}
 function placeThumb(){const th=$('tut-thumb');if(!th||th.hidden)return;const r=$(th.dataset.on)?.getBoundingClientRect();th.style.visibility=!r?.width||th.dataset.on==='joystick'&&$('joystick').classList.contains('floating')?'hidden':'';
   if(r?.width){th.style.left=Math.round(r.left+r.width/2)+'px';th.style.top=Math.round(r.top+r.height/2)+'px';}}
 // The lesson counts as learned only when every step was done; a fight that ends sooner shows it again next time.
@@ -797,7 +799,7 @@ function renderHUD(){if(!match)return;const [a,b]=match.actors,L=localSide();
   if(match.status!=='countdown')document.querySelector('#battle .rival-info.paint-in')?.classList.remove('paint-in');
   // The friend's pause note on the guest phone stays true when the host stops or goes on.
   if(match.online&&online?.role==='guest'&&$('pause-dialog').open)pauseText(true);
-  almostTick();wonderHUD();cueTick();placeThumb();
+  almostTick();wonderHUD();cueTick();thumbTick();
 }
 // Each whole point a side gains on the armour hill ticks once (the child's climb in pitch, the rival's stay soft).
 let hillSeen=null;
@@ -1691,7 +1693,9 @@ const CCARD_ICON={super:'bolt',crystal:'sparkle',decoy:'pair',speed:'arrow',hear
 // Hats and Lab designs of a player on this device, for a friend battle (a guest player has none).
 const vsHats=pp=>pp?sim.hatMap?.(pp)||pp.hats?.worn||null:null,vsLabs=pp=>pp?sim.labMap?.(pp)||pp.lab||null:null;
 function frame(timestamp){
+  const t0=DIAG?performance.now():0;
   try{frameBody(timestamp);}catch(error){if(frameErrors++<5)console.error('frame',error);window.__LEAGUE_LAST_ERROR__=String(error?.stack||error);}
+  if(DIAG)try{diagFrame(timestamp,performance.now()-t0);}catch{}
   requestAnimationFrame(frame);
 }
 // Every battle event: its sound first, then what the child sees. Only an 'act now' moment gets a chip in the HUD band (a picture and at most
@@ -1790,7 +1794,7 @@ const navLevel=name=>name==='battle'?3:name==='lobby'?0:+($(name)?.dataset.level
 // Up: a briefing (data-brief) goes back to whatever opened it (Home or the map); any other screen to the screen one level up that opened it, else to its parent.
 function upOf(name=screen){const i=navStack.lastIndexOf(name),prev=i>0?navStack[i-1]:null,d=navLevel(name)-(prev?navLevel(prev):9);return prev&&$(prev)&&($(name)?.dataset.brief!=null?d>0:d===1)?prev:navParent(name);}
 // showView tells the shell every screen it shows: the stack of places, the battle's origin (a briefing, data-brief, counts as the screen that opened it), the bar.
-function navShown(name,from){document.body.dataset.screen=name;guard();
+function navShown(name,from){document.body.dataset.screen=name;guard();document.documentElement?.classList.toggle('fit',!!document.querySelector?.('.view.ph-fit:not([hidden])'));
   if(name==='battle'){if(from!=='battle')battleOrigin=$(from)?.dataset.brief!=null?upOf(from):from||'lobby';if(GATE.matches)requestAnimationFrame(()=>pauseBattle({type:'gate'}));return;}
   const L=navLevel(name);navStack=L<=0?['lobby']:['lobby',...navStack.filter(n=>n!=='lobby'&&n!==name&&navLevel(n)<L),name];
   const v=$(name);barTitle(v?.dataset.phoneTitle||v?.querySelector('h1')?.textContent||'');$('bar-up').hidden=!(L>=2&&upOf(name)!=='lobby');}
@@ -1852,7 +1856,7 @@ function bindControls(){
   document.addEventListener('touchmove',e=>{if(e.cancelable&&screen==='battle'&&(e.touches.length>1||!e.target.closest('dialog')))e.preventDefault();},{passive:false});
   $('reveal-dialog').addEventListener('close',()=>{if(screen==='story'&&storyEvent)renderStory();});
   // Phones show the whole arena, still: there is no close camera to choose (wave 3).
-  window.addEventListener('resize',()=>{if(screen==='battle')requestAnimationFrame(measureHud);});
+  window.addEventListener('resize',()=>{if(screen==='battle'){requestAnimationFrame(measureHud);thumbKey='';}});
   $('fullscreen').onclick=()=>{sound.click();if(IOS_WEB){$('install-dialog').showModal();return;}if(document.fullscreenElement){fsOff=true;document.exitFullscreen?.().catch(()=>{});}else{fsOff=false;fullOn(true);}};
   $('help-open').onclick=openHelp;if($('help-inline'))$('help-inline').onclick=openHelp;document.querySelectorAll('[data-close]').forEach(el=>el.onclick=()=>$(el.dataset.close).close());
   $('pause-button').onclick=pauseBattle;$('resume-button').onclick=resumeBattle;$('leave-button').onclick=leaveBattle;
@@ -1924,10 +1928,23 @@ window.__LEAGUE__=Object.freeze({advance,online:()=>online?{role:online.role,cod
 // Verification: the wave-2 parts of a battle, as plain data.
 function wave2Snapshot(m){const plain=v=>v==null?null:JSON.parse(JSON.stringify(v));return {copyStars:plain(m.copyStars),comeback:plain(m.comeback),decoy:plain(m.decoy),hill:plain(m.hill),race:plain(m.race),rhythm:plain(m.rhythm),drums:plain(m.drums),spectacle:plain(m.spectacle),
   wonderX:plain(m.wonderX),hats:plain(m.hats),labs:plain(m.labs),allied:!!m.allied,ccard:plain(m.ccard),copyLog:plain(m.copyLog),arena:m.arena||null,story:m.story||null};}
+// The test copy (window.__CL_PREVIEW__) or ?diag shows a small box: frame rate, the slowest frame, time in the game's own work, the last error,
+// the offline copy's progress and the sound's state, so a screenshot from a phone says what is slow. A tap folds it.
+const DIAG=!!window.__CL_PREVIEW__||/[?&]diag\b/.test(location.search);
+const diag={n:0,t:0,worst:0,work:0,long:0,err:'',sw:'-',files:'-',el:null,small:false};
+if(DIAG){addEventListener('error',e=>{diag.err=String(e.message||e.error||'error').slice(0,90);});addEventListener('unhandledrejection',e=>{diag.err=('promise: '+String(e.reason?.message||e.reason)).slice(0,90);});
+  const sw=async()=>{try{const r=await navigator.serviceWorker?.getRegistration?.();diag.sw=(navigator.serviceWorker?.controller?'ctl ':'free ')+(r?.installing?'installing':r?.waiting?'waiting':r?.active?'active':'none');let n=0;for(const k of await caches.keys())if(/^(creature-league-|clpreview-)/.test(k))n+=(await (await caches.open(k)).keys()).length;diag.files=String(n);}catch(e){diag.sw='?';}};
+  sw();setInterval(sw,4000);}
+function diagFrame(ts,work){diag.n++;diag.work+=work;const gap=diag.last?ts-diag.last:0;diag.last=ts;if(gap>diag.worst)diag.worst=gap;if(gap>100)diag.long++;
+  if(ts-diag.t<1000)return;const fps=Math.round(diag.n*1000/(ts-diag.t||1)),avg=(diag.work/diag.n).toFixed(1);diag.t=ts;
+  if(!diag.el){diag.el=document.createElement('div');diag.el.id='diag';diag.el.style.cssText='position:fixed;left:50%;bottom:2px;transform:translateX(-50%);z-index:2147483647;max-width:96vw;padding:2px 8px;border-radius:8px;background:#000c;color:#fff;font:600 11px/1.35 monospace;direction:ltr;text-align:left;white-space:pre-wrap;pointer-events:auto';diag.el.onclick=()=>{diag.small=!diag.small;};document.body.appendChild(diag.el);}
+  const m=typeof match!=='undefined'&&match?`${match.status} ${(match.countdown??0).toFixed(1)} t${(match.time||0).toFixed(1)}`:'-',err=window.__LEAGUE_LAST_ERROR__?String(window.__LEAGUE_LAST_ERROR__).split('\n')[0].slice(0,90):diag.err;
+  diag.el.textContent=diag.small?`${fps}fps`:`${fps}fps worst ${Math.round(diag.worst)}ms work ${avg}ms long ${diag.long} | ${screen} ${m}\nsw ${diag.sw} files ${diag.files} | audio ${sound?.ctx?.state||'none'} | ${innerWidth}x${innerHeight}@${devicePixelRatio}${navigator.standalone?' app':''}${err?'\nERR '+err:''}`;
+  diag.n=0;diag.work=0;diag.worst=0;}
 async function boot(){
   $('load-retry').hidden=true;try{art=await loadArt(p=>$('loading-bar').style.width=p*100+'%');renderer=new Renderer($('arena'),art);refreshTodayGoals();buildRoster();renderStoryPanel();bindControls();updateHeader();
     {const q=new URLSearchParams(location.search),code=codeFromText(q.get('join'));if(code){q.delete('join');history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:''));showView('online');joinRoom(code);}else showView(players.players.length>1?'players':'lobby');}$('loading').hidden=true;$('app').hidden=false;requestAnimationFrame(frame);
-    if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    if('serviceWorker' in navigator&&location.protocol!=='file:')setTimeout(()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}),navigator.serviceWorker.controller?0:12000);
   }catch(error){console.error(error);$('loading-text').textContent='חלק מהציורים לא נטענו. בדקו שהמשחק נפתח דרך קובץ ההפעלה ונסו שוב.';$('load-retry').hidden=false;}
 }
 $('load-retry').onclick=()=>location.reload();if(location.protocol!=='file:')boot();
